@@ -1,12 +1,17 @@
 # syntax=docker/dockerfile:1
-
 ARG NODE_VERSION=20.10.0
 FROM --platform=amd64 node:${NODE_VERSION}-alpine
+
+ARG FOUNDRY_TOKEN=undefined
+
+ENV FOUNDRY_TOKEN=$FOUNDRY_TOKEN
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json /app/
+# make token available to npm, and copy your auth file
+COPY .npmrc /app/.npmrc
 
 # Install all dependencies for building
 RUN npm ci

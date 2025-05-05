@@ -10,7 +10,7 @@
     "ops:greet": "NODE_ENV=test ts-node -r tsconfig-paths/register ops/index.ts greet",
     "lint": "eslint 'src/**/*.{js,ts}'",
     "build": "tsc",
-    "build:docker": "npm run build && docker build -t codestrap/foundry-developer-foundations .",
+    "build:docker": "npm run build && docker build --build-arg FOUNDRY_TOKEN=${FOUNDRY_TOKEN} -t codestrap/foundry-developer-foundations .",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean"
   },
