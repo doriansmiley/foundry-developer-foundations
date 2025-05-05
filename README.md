@@ -17,6 +17,27 @@ By following this pattern you can:
 3. **Reuse familiar tooling** – npm workspaces, eslint, GitHub Actions, container builds.
 4. **Deploy predictably** – a single Docker image pushed to Foundry’s registry and released via pipeline.
 
+## Getting Started
+1. First download and install the [Hello World](https://drive.google.com/file/d/1haBL6bv1Cy8BRiKt7tqzDL2dsQe5Q2yq/view?usp=sharing) Marketplace application on your Foundry stack. We are working on mocks for Foundry but have not published them yet. Once the mocks are done you no longer will require a Foundry stack.
+2. Set the `$FOUNDRY_TOKEN` env var in your shell session.
+3. Update the `.npmrc` file with the code from your installed OSDK application (this was part of the market place installer)
+4. Run `npm install`
+5. Create a `.env` file and set the following values
+```
+FOUNDRY_STACK_URL=<your stack url>
+OSDK_CLIENT_SECRET=<your osdk client secret>
+OSDK_CLIENT_ID=<your osdk client id>
+OPEN_WEATHER_API_KEY=<an open wheahter API key https://home.openweathermap.org/>
+LOG_PREFIX=foundry-developer-foundations
+```
+6. Run `npm run build` to verify you can build
+7. Run `npm run lint` to verify your eslint setup
+8. Run `npm run ops:greet` to test the code e2e
+9. Run `npm run docker:build` to build the docker container
+10. Create a compute module and follow the instructions to deploy your docker container. Update the content of `buildAndPublish.sh` with your deploy commands from the compute module dashboard in Foundry.
+
+
+
 The rest of the README walks through the folder structure, DI wiring, Compute Module registration, and the build/deploy steps so you can copy‑paste the pattern into your own project and start shipping today.
 
 ## The Foundry Implementations
