@@ -1,5 +1,5 @@
-import { createClient } from "@osdk/client";
 import { createConfidentialOauthClient } from "@osdk/oauth";
+import { createClient } from "@osdk/client";
 import { FoundryClient } from '@hello/types'
 
 export function createFoundryClient(): FoundryClient {
@@ -32,9 +32,7 @@ export function createFoundryClient(): FoundryClient {
     ]
 
     const auth = createConfidentialOauthClient(clientId, clientSecret, url, scopes);
-
     const client = createClient(url, ontologyRid, auth);
 
-
-    return { client, auth };
+    return { auth, ontologyRid, url, client };
 }

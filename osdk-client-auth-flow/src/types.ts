@@ -23,8 +23,10 @@ export interface BaseOauthClient {
 }
 
 export interface FoundryClient {
+    auth: BaseOauthClient;
+    ontologyRid: string;
+    url: string;
     client: Client;
-    auth: BaseOauthClient
 }
 
 // Basic example of calling other services besides Foundry.

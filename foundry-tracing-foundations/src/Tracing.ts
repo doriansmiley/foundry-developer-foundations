@@ -91,8 +91,6 @@ export interface TelemetryPayload {
 }
 
 export class Tracing {
-    @Query({apiName: 'collectTelemetryFetchWrapper'})
-    @ExternalSystems({ sources: [FoundryApis] })
     public async collectTelemetryFetchWrapper(inputJSON: string): Promise<string> {
         const apiKey = FoundryApis.getSecret('additionalSecretOsdkToken');
 
@@ -127,8 +125,6 @@ export class Tracing {
         return JSON.stringify(apiResponse);
     }
 
-    @Edits(Resources, Spans, SpanEvents, SpanLinks)
-    @OntologyEditFunction()
     public async collectTelemetry(inputJSON: string): Promise<void> {
         const payload = JSON.parse(inputJSON) as TelemetryPayload;
 
