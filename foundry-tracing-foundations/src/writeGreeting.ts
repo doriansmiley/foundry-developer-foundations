@@ -1,7 +1,7 @@
-import { TYPES, WeatherService, WorldDao, GreetingResult, UserDao } from "@hello/types";
-import { container } from "@hello/inversify.config";
+import { TYPES, WeatherService, UserDao } from "@tracing/types";
+import { container } from "@tracing/inversify.config";
 
-export async function writeGreeting(city: string): Promise<GreetingResult> {
+export async function writeGreeting(city: string): Promise<string> {
     // example of consuming an vanilla service
     const getWeather = container.get<WeatherService>(TYPES.WeatherService);
     const weather = await getWeather(city);
@@ -9,13 +9,5 @@ export async function writeGreeting(city: string): Promise<GreetingResult> {
     // example dao usage
     const user = await container.get<UserDao>(TYPES.UserDao)();
 
-    const message = `Hello world, the weather in ${city} is ${weather}`;
-
-    // example dao usage
-    const result = await container.get<WorldDao>(TYPES.WorldDao)({
-        message,
-        userId: user.id,
-    });
-
-    return result;
+    return `weather: ${weather}\nuser: ${user}`;
 }

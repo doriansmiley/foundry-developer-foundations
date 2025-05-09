@@ -8,6 +8,7 @@ declare global {
             OSDK_CLIENT_SECRET: string;
             OPEN_WEATHER_API_KEY: string;
             LOG_PREFIX: string;
+            ONTOLOGY_RID: string;
         }
     }
 }

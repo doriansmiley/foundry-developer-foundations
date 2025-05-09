@@ -1,5 +1,4 @@
 import { createClient } from "@osdk/client";
-import { $ontologyRid } from "@hello-world/sdk";
 import { createConfidentialOauthClient } from "@osdk/oauth";
 import { FoundryClient } from '@tracing/types'
 
@@ -19,7 +18,7 @@ export function createFoundryClient(): FoundryClient {
     // setup the OSDK
     const clientId: string = process.env.OSDK_CLIENT_ID;
     const url: string = process.env.FOUNDRY_STACK_URL;
-    const ontologyRid: string = $ontologyRid;
+    const ontologyRid: string = process.env.ONTOLOGY_RID;
     const clientSecret: string = process.env.OSDK_CLIENT_SECRET;
     const scopes: string[] = [
         "api:ontologies-read",

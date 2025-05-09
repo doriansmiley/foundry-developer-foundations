@@ -4,7 +4,6 @@ import type { Client } from "@osdk/client";
 export const TYPES = {
     FoundryClient: Symbol.for("FoundryClient"),
     WeatherService: Symbol.for("WeatherService"),
-    WorldDao: Symbol.for("WorldDao"),
     UserDao: Symbol.for("UserDao"),
 };
 
@@ -70,5 +69,4 @@ export interface User {
     attributes: Record<string, any>;
 }
 
-export type WorldDao = (input: GreetingInput) => Promise<GreetingResult>;
 export type UserDao = () => Promise<User>;

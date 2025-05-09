@@ -15,6 +15,7 @@
     "prebuild": "npm run clean"
   },
   "dependencies": {
+    "@osdk/client": "^2.1.4",
     "@osdk/foundry.admin": "^2.19.0",
     "@osdk/oauth": "^1.1.1",
     "@palantir/compute-module": "^0.2.7",

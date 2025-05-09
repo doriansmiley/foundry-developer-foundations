@@ -9,7 +9,7 @@ dotenv.config();
 const Schemas = {
   WriteGreeting: {
     input: Type.Object({ city: Type.String() }),
-    output: Type.Object({ status: Type.Literal("ok") }),
+    output: Type.String(),
   },
 };
 
@@ -51,8 +51,8 @@ function createComputeModule(): ComputeModuleType {
     definitions: { WriteGreeting: Schemas.WriteGreeting },
   })
     .register("WriteGreeting", async ({ city }) => {
-      await writeGreeting(city);
-      return { status: "ok" };
+      const result = await writeGreeting(city);
+      return result;
     })
     .on("responsive", () => console.log("Yellow‑World ready"));
 
