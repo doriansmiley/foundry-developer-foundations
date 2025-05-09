@@ -1,0 +1,29 @@
+# Environment/Credentials
+.env
+.env.*
+service_account.json
+
+# Dependencies
+node_modules/
+package-lock.json
+
+buildAndPublish.sh
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+coverage/ 

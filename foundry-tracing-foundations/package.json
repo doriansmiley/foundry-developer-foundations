@@ -1,5 +1,5 @@
 {
-  "name": "foundry-developer-foundations",
+  "name": "@foundry-developer-foundations/osdk-client-auth-flow",
   "version": "1.0.0",
   "description": "## Introduction",
   "main": "dist/index.js",
@@ -15,7 +15,6 @@
     "prebuild": "npm run clean"
   },
   "dependencies": {
-    "@hello-world/sdk": "^0.1.0",
     "@osdk/foundry.admin": "^2.19.0",
     "@osdk/oauth": "^1.1.1",
     "@palantir/compute-module": "^0.2.7",
