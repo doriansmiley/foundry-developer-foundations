@@ -1,14 +1,15 @@
 import { ComputeModule } from "@palantir/compute-module";
 import { Type } from "@sinclair/typebox";
-import { writeGreeting } from "@tracing/writeGreeting";
 import dotenv from 'dotenv';
+
+import { collectTelemetryFetchWrapper } from '@tracing/Tracing';
 import { ComputeModuleType, ModuleConfig } from "@tracing/types";
 
 dotenv.config();
 
 const Schemas = {
-  WriteGreeting: {
-    input: Type.Object({ city: Type.String() }),
+  Trace: {
+    input: Type.Object({ inputJSON: Type.String() }),
     output: Type.String(),
   },
 };
@@ -48,13 +49,13 @@ function createComputeModule(): ComputeModuleType {
   const module = new ComputeModule({
     logger: console,
     sources: {},
-    definitions: { WriteGreeting: Schemas.WriteGreeting },
+    definitions: { Trace: Schemas.Trace },
   })
-    .register("WriteGreeting", async ({ city }) => {
-      const result = await writeGreeting(city);
+    .register("Trace", async ({ inputJSON }) => {
+      const result = await collectTelemetryFetchWrapper(inputJSON);
       return result;
     })
-    .on("responsive", () => console.log("Yellow‑World ready"));
+    .on("responsive", () => console.log("Foundry Tracing Foundations is ready"));
 
   module.on("responsive", () => {
     console.log(`${process.env.LOG_PREFIX} Module is now responsive`);

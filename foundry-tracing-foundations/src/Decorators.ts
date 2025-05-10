@@ -1,6 +1,6 @@
 // traceDecorators.ts
 import { randomBytes } from 'crypto';
-import { Tracing } from './Tracing';
+import { collectTelemetryFetchWrapper } from './Tracing';
 import type { ResourceModel, SpanModel, TelemetryPayload } from '@tracing/Tracing';
 import { uuidv4 } from '@tracing/utils/uuid';
 
@@ -82,9 +82,8 @@ export function Trace(opts: TraceOptions) {
                     events: [],
                     links: []
                 };
-                const tracer = new Tracing();
                 try {
-                    const result = await tracer.collectTelemetryFetchWrapper(JSON.stringify(payload));
+                    const result = await collectTelemetryFetchWrapper(JSON.stringify(payload));
                     console.log(`traced output: ${result}`);
                 } catch (e) {
                     console.log(e);
@@ -143,9 +142,8 @@ export function TraceSpan(opts: ChildTraceOptions) {
                     events: [],
                     links: []
                 };
-                const tracer = new Tracing();
                 try {
-                    const result = await tracer.collectTelemetryFetchWrapper(JSON.stringify(payload));
+                    const result = await collectTelemetryFetchWrapper(JSON.stringify(payload));
                     console.log(`traced: ${result}`);
                 } catch (e) {
                     console.log(e);

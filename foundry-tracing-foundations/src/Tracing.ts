@@ -1,6 +1,7 @@
 // Payload interfaces
 import { container } from "@tracing/inversify.config";
-import { TYPES, FoundryClient } from "@tracing/types";
+import { TYPES, TelemtryDao } from "@tracing/types";
+
 export interface ResourceModel {
     resource_id: string;
     service_name: string;
@@ -80,41 +81,9 @@ export interface TelemetryPayload {
     links: LinkModel[];
 }
 
-export class Tracing {
-    public async collectTelemetryFetchWrapper(inputJSON: string): Promise<string> {
-        const client = container.get<FoundryClient>(TYPES.FoundryClient);
-        const token = await client.auth.signIn();
-        const apiKey = token.access_token;
+export async function collectTelemetryFetchWrapper(inputJSON: string): Promise<string> {
+    const collectTelemetry = container.get<TelemtryDao>(TYPES.TelemtryDao);
+    const result = await collectTelemetry(inputJSON);
 
-        const url = `${client.url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/actions/say-hello/apply`;
-
-        const headers = {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-        };
-
-        const body = JSON.stringify({
-            parameters: {
-                inputJSON,
-            },
-            options: {
-                returnEdits: "ALL"
-            }
-        });
-
-        const apiResults = await fetch(`${url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/actions/collect-telemetry/apply`, {
-            method: 'POST',
-            headers,
-            body,
-        });
-
-        const apiResponse = await apiResults.json() as any;
-
-        if (apiResponse.errorCode) {
-            console.log(`errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`);
-            throw new Error(`An error occured while calling update machine errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
-        }
-
-        return JSON.stringify(apiResponse);
-    }
+    return result;
 }

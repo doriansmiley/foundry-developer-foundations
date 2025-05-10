@@ -1,24 +1,23 @@
-import { Tracing, TelemetryPayload } from '../Tracing';
 import {
-  Objects,
-  OpenTracingEventModel as SpanEvents,
-  OpenTracingLinkModel as SpanLinks,
-  OpenTracingResourceModel as Resources,
-  OpenTracingSpanModel as Spans,
-} from '@foundry/ontology-api';
-import {
-  whenObjectSet,
-  verifyOntologyEditFunction,
-} from '@foundry/functions-testing-lib';
-import { Timestamp } from '@foundry/functions-api';
-import { Uuid } from '@foundry/functions-utils';
+  collectTelemetryFetchWrapper,
+  TelemetryPayload,
+} from '../src/Tracing';
+
+global.fetch = jest.fn();
 
 describe('Tracing', () => {
-  let tracing: Tracing;
-
   beforeEach(() => {
-    tracing = new Tracing();
-    jest.spyOn(Uuid, 'random').mockReturnValue('mocked-uuid');
+    jest.clearAllMocks();
+
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (/\/api\/v2\/ontologies\/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d\/actions\/say-hello\/apply/.test(url)) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ message: 'thanks for tracing with us!' }),
+        });
+      }
+      return Promise.reject(new Error('URL not matched'));
+    });
   });
 
   it('should collect telemetry data', async () => {
@@ -57,97 +56,8 @@ describe('Tracing', () => {
       ],
     };
 
-    // 1) No existing resource → create
-    whenObjectSet(
-      Objects.search()
-        .openTracingResourceModel()
-        .filter((r) => r.resourceId.exactMatch('resource-1'))
-        .orderByRelevance()
-        .takeAsync(1)
-    ).thenReturn([]);
-
-    // 2) No existing span → create
-    whenObjectSet(
-      Objects.search()
-        .openTracingSpanModel()
-        .filter((s) => s.spanId.exactMatch('span-1'))
-        .orderByRelevance()
-        .take(1)
-    ).thenReturn([]);
-
-    // 3) No existing event → create
-    whenObjectSet(
-      Objects.search()
-        .openTracingEventModel()
-        .filter((e) => e.eventId.exactMatch('mocked-uuid'))
-        .orderByRelevance()
-        .take(1)
-    ).thenReturn([]);
-
-    // 4) No existing link → create
-    whenObjectSet(
-      Objects.search()
-        .openTracingLinkModel()
-        .filter((l) => l.linkId.exactMatch('mocked-uuid'))
-        .orderByRelevance()
-        .take(1)
-    ).thenReturn([]);
-
-    const result = await verifyOntologyEditFunction(() =>
-      tracing.collectTelemetry(JSON.stringify(mockPayload))
-    );
-
-    result
-      // Resource
-      .createsObject({
-        objectType: Resources,
-        properties: {
-          resourceId: 'resource-1',
-          serviceName: 'test-service',
-        },
-      })
-      // Span
-      .createsObject({
-        objectType: Spans,
-        properties: {
-          spanId: 'span-1',
-          traceId: 'trace-1',
-          name: 'test-span',
-          startTime: Timestamp.fromJsDate(
-            new Date('2023-05-01T00:00:00Z')
-          ),
-          endTime: Timestamp.fromJsDate(
-            new Date('2023-05-01T00:00:01Z')
-          ),
-          traceparent: 'traceparent-1',
-          traceFlags: 1,
-          kind: 'Client',
-          statusCode: 'OK',
-          samplingDecision: 'RECORD',
-        },
-      })
-      // Event (now also checking name, spanId, timestamp)
-      .createsObject({
-        objectType: SpanEvents,
-        properties: {
-          eventId: 'mocked-uuid',
-          spanId: 'span-1',
-          name: 'test-event',
-          timestamp: Timestamp.fromJsDate(
-            new Date('2023-05-01T00:00:00.500Z')
-          ),
-        },
-      })
-      // Link (now also checking sourceSpanId and attributes)
-      .createsObject({
-        objectType: SpanLinks,
-        properties: {
-          linkId: 'mocked-uuid',
-          sourceSpanId: 'span-1',
-          linkedTraceId: 'trace-2',
-          linkedSpanId: 'span-2',
-        },
-      })
-      .hasNoMoreEdits();
+    const result = await collectTelemetryFetchWrapper(JSON.stringify(mockPayload));
+    expect(result).toBeDefined();
+    expect(result).toEqual({ message: 'Hello World' });
   });
 });

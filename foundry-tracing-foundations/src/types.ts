@@ -5,6 +5,7 @@ export const TYPES = {
     FoundryClient: Symbol.for("FoundryClient"),
     WeatherService: Symbol.for("WeatherService"),
     UserDao: Symbol.for("UserDao"),
+    TelemtryDao: Symbol.for("TelemtryDao"),
 };
 
 export interface Token {
@@ -72,4 +73,5 @@ export interface User {
     attributes: Record<string, any>;
 }
 
+export type TelemtryDao = (inputJSON: string) => Promise<string>;
 export type UserDao = () => Promise<User>;
