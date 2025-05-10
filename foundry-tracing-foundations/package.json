@@ -65,7 +65,8 @@
       ".tsx"
     ],
     "moduleNameMapper": {
-      "^(\\.{1,2}/.*)\\.js$": "$1"
+      "^(\\.{1,2}/.*)\\.js$": "$1",
+      "^@tracing/(.*)$": "<rootDir>/src/$1"
     }
   },
   "engines": {
