@@ -1,5 +1,5 @@
 import { createClient } from "@osdk/client";
-import { $ontologyRid } from "@hello-world/sdk";
+import { User, Users } from "@osdk/foundry.admin";
 import { createConfidentialOauthClient } from "@osdk/oauth";
 import { FoundryClient } from '@xreason/types'
 
@@ -19,7 +19,7 @@ export function createFoundryClient(): FoundryClient {
     // setup the OSDK
     const clientId: string = process.env.OSDK_CLIENT_ID;
     const url: string = process.env.FOUNDRY_STACK_URL;
-    const ontologyRid: string = $ontologyRid;
+    const ontologyRid: string = process.env.ONTOLOGY_RID;
     const clientSecret: string = process.env.OSDK_CLIENT_SECRET;
     const scopes: string[] = [
         "api:ontologies-read",
@@ -33,9 +33,12 @@ export function createFoundryClient(): FoundryClient {
     ]
 
     const auth = createConfidentialOauthClient(clientId, clientSecret, url, scopes);
-
     const client = createClient(url, ontologyRid, auth);
+    const getUser = async () => {
+        const user: User = await Users.getCurrent(client);
 
+        return user;
+    };
 
-    return { client, auth };
+    return { auth, ontologyRid, url, client, getUser };
 }

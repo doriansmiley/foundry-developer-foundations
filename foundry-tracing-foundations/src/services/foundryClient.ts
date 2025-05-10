@@ -1,5 +1,6 @@
-import { createClient } from "@osdk/client";
 import { createConfidentialOauthClient } from "@osdk/oauth";
+import { User, Users } from "@osdk/foundry.admin";
+import { createClient } from "@osdk/client";
 import { FoundryClient } from '@tracing/types'
 
 export function createFoundryClient(): FoundryClient {
@@ -32,9 +33,12 @@ export function createFoundryClient(): FoundryClient {
     ]
 
     const auth = createConfidentialOauthClient(clientId, clientSecret, url, scopes);
-
     const client = createClient(url, ontologyRid, auth);
+    const getUser = async () => {
+        const user: User = await Users.getCurrent(client);
 
+        return user;
+    };
 
-    return { client, auth };
+    return { auth, ontologyRid, url, client, getUser };
 }

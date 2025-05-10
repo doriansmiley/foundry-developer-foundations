@@ -24,7 +24,10 @@ export interface BaseOauthClient {
 
 export interface FoundryClient {
     client: Client;
-    auth: BaseOauthClient
+    auth: BaseOauthClient;
+    ontologyRid: string;
+    url: string;
+    getUser: () => Promise<User>;
 }
 
 // Basic example of calling other services besides Foundry.

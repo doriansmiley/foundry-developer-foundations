@@ -1,27 +1,53 @@
 import type { FoundryClient, WorldDao } from "@xreason/types";
-import { sayHello, World } from "@hello-world/sdk";
-import { Osdk } from "@osdk/client";
 
 export function makeWorldDao(client: FoundryClient): WorldDao {
     return async ({ message, userId }) => {
         console.log(`makeWorldDao userId: ${userId}`);
-        const result = await client.client(sayHello).applyAction(
-            {
+
+        const token = await client.auth.signIn();
+        const apiKey = token.access_token;
+
+        const url = `${client.url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/actions/say-hello/apply`;
+
+        const headers = {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+        };
+
+        const body = JSON.stringify({
+            parameters: {
                 message,
             },
-            {
-                $returnEdits: true,
+            options: {
+                returnEdits: "ALL"
             }
-        );
-        console.log('makeWorldDao OSDK returned:', result);
-        if (result.type !== "edits") {
-            throw new Error('Failed to apply action')
+        });
+
+        const apiResult = await fetch(url, {
+            method: "POST",
+            headers: headers,
+            body: body,
+        });
+
+        const result = await apiResult.json() as any;
+
+        if (!result.edits || result.edits.edits.length === 0) {
+            throw new Error('Failed to add hello message to the ontolgoy.');
         }
 
-        const newlyCreatedObjectId = result.addedObjects[0].primaryKey as string;
-        const responseNoErrorWrapper: Osdk.Instance<World> = await client.client(World).fetchOne(newlyCreatedObjectId);
-        console.log(`makeWorldDao got back World: ${JSON.stringify(responseNoErrorWrapper, null, 2)}`);
+        console.log(`create world action returned: ${result?.edits?.edits?.[0]}`);
 
-        return { id: "singleton", greeting: responseNoErrorWrapper.message! };
+        const worldId = result.edits.edits[0].primaryKey as string;
+
+        const getUrl = `${client.url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/objects/World/${worldId}`;
+        const worldFetchResults = await fetch(getUrl, {
+            method: "GET",
+            headers: headers,
+        });
+
+        const world = await worldFetchResults.json() as any;
+        console.log(`the world ontology returned: ${JSON.stringify(world)}`)
+
+        return { id: "singleton", greeting: world.message };
     };
 }

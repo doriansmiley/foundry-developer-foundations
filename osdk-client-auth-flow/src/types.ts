@@ -27,6 +27,7 @@ export interface FoundryClient {
     ontologyRid: string;
     url: string;
     client: Client;
+    getUser: () => Promise<User>;
 }
 
 // Basic example of calling other services besides Foundry.
