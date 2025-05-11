@@ -1,7 +1,31 @@
 {
-  "name": "@foundry-developer-foundations/osdk-client-auth-flow",
+  "name": "@codestrap/developer-foundations.foundry-tracing-foundations",
   "version": "1.0.0",
   "description": "## Introduction",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doriansmiley/foundry-developer-foundations.git"
+  },
+  "bugs": {
+    "url": "https://github.com/doriansmiley/foundry-developer-foundations/issues"
+  },
+  "homepage": "https://github.com/doriansmiley/foundry-developer-foundations/tree/master/foundry-tracing-foundations",
+  "keywords": [
+    "tracing",
+    "otel",
+    "telemetry",
+    "typescript",
+    "decorator",
+    "palantir",
+    "foundry"
+  ],
+  "author": "Dorian Smiley <dsmiley@codestrap.me>",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -13,6 +37,9 @@
     "lint": "eslint 'src/**/*.{js,ts}'",
     "build": "tsc",
     "build:docker": "npm run build && docker build --build-arg FOUNDRY_TOKEN=${FOUNDRY_TOKEN} -t codestrap/foundry-developer-foundations .",
+    "prepublishOnly": "npm run lint && npm run test && npm run build",
+    "publishPackage:dry": "npm publish --dry-run --access public",
+    "publishPackage": "npm publish --access public",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean"
   },
