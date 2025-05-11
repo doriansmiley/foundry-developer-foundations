@@ -1,6 +1,10 @@
 import path from 'path';
 import dotenv from 'dotenv';
 import { writeGreeting } from '../src/writeGreeting';
+import {
+  collectTelemetryFetchWrapper,
+  TelemetryPayload,
+} from '../src/Tracing';
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -18,6 +22,46 @@ async function sendTestGreeting(city?: string): Promise<void> {
   }
 }
 
+async function testCollectTelemetry(): Promise<void> {
+  const mockPayload: TelemetryPayload = {
+    resource: {
+      resource_id: 'resource-1',
+      service_name: 'test-service',
+    },
+    spans: [
+      {
+        trace_id: 'trace-1',
+        span_id: 'span-1',
+        name: 'test-span',
+        start_time: '2023-05-01T00:00:00Z',
+        end_time: '2023-05-01T00:00:01Z',
+        traceparent: 'traceparent-1',
+        trace_flags: 1,
+        kind: 'Client',
+        status_code: 'OK',
+        sampling_decision: 'RECORD',
+      },
+    ],
+    events: [
+      {
+        span_id: 'span-1',
+        name: 'test-event',
+        timestamp: '2023-05-01T00:00:00.500Z',
+      },
+    ],
+    links: [
+      {
+        source_span_id: 'span-1',
+        linked_trace_id: 'trace-2',
+        linked_span_id: 'span-2',
+      },
+    ],
+  };
+
+  const result = await collectTelemetryFetchWrapper(JSON.stringify(mockPayload));
+  console.log(`testCollectTelemetry returned ${result}`)
+}
+
 // Only run CLI code when this file is executed directly
 if (require.main === module) {
   // Handle command line arguments based on the operation
@@ -27,6 +71,9 @@ if (require.main === module) {
   switch (operation) {
     case 'greet':
       sendTestGreeting(arg1);
+      break;
+    case 'telemetry':
+      testCollectTelemetry();
       break;
     default:
       console.error('Invalid operation. Available operations: email, schedule, find-time');

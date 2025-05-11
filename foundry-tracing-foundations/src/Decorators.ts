@@ -1,7 +1,7 @@
 // traceDecorators.ts
 import { randomBytes } from 'crypto';
-import { collectTelemetryFetchWrapper } from './Tracing';
 import type { ResourceModel, SpanModel, TelemetryPayload } from '@tracing/Tracing';
+import { collectTelemetryFetchWrapper } from '@tracing/Tracing';
 import { uuidv4 } from '@tracing/utils/uuid';
 
 // symbol key to store trace context on instance
