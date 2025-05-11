@@ -35,7 +35,7 @@
     "ops:greet": "NODE_ENV=test ts-node -r tsconfig-paths/register ops/index.ts greet",
     "ops:telemetry": "NODE_ENV=test ts-node -r tsconfig-paths/register ops/index.ts telemetry",
     "lint": "eslint 'src/**/*.{js,ts}'",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "build:docker": "npm run build && docker build --build-arg FOUNDRY_TOKEN=${FOUNDRY_TOKEN} -t codestrap/foundry-developer-foundations .",
     "prepublishOnly": "npm run lint && npm run test && npm run build",
     "publishPackage:dry": "npm publish --dry-run --access public",
