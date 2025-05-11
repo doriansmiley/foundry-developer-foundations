@@ -5,6 +5,8 @@ export default {
     // Treat JS and TS as ESM
     extensionsToTreatAsEsm: ['.ts'],
 
+    testPathIgnorePatterns: ['<rootDir>/dist/'],
+
     globals: {
         'ts-jest': {
             tsconfig: 'tsconfig.json',
@@ -31,5 +33,7 @@ export default {
         // Strip `.js` from your TS imports so ESM paths resolve
         '^(\\.{1,2}/.*)\\.js$': '$1',
         '^@tracing/(.*)$': '<rootDir>/src/$1',
+        '^@osdk/shared\\.client$': '<rootDir>/node_modules/@osdk/shared.client/index.js',
+        '^@osdk/shared\\.client2$': '<rootDir>/node_modules/@osdk/shared.client2/index.js',
     },
 };

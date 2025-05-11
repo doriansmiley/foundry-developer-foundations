@@ -1,48 +1,74 @@
 // __tests__/traceDecorators.test.ts
+
+// 1) Mock crypto **before** any imports:
+jest.mock('crypto', () => {
+    const actual = jest.requireActual('crypto');
+    return {
+        ...actual,
+        randomBytes: jest.fn(),
+    };
+});
+
 import * as crypto from 'crypto';
-import * as uuid from '@tracing/utils/uuid';
+import dotenv from 'dotenv';
+import * as uuid from '../src/utils/uuid';
 import { DecoratorTest } from './__fixtures__/mockDecorators';
 import { parentTelemetryPayload } from './__fixtures__/parentTelemetryPayload';
 import { childTelemetryPayload } from './__fixtures__/childTelemetryPayload';
 
+dotenv.config();
+
 global.fetch = jest.fn();
 
 describe('Tracing', () => {
+    afterAll(() => jest.clearAllMocks());
+
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // 0) Fix Date so toISOString() is deterministic:
-        //    1st call → parent start (2025-05-11T00:00:00.000Z)
-        //    2nd call → child start  (2025-05-11T00:00:00.000Z)
-        //    3rd call → child end    (2025-05-11T00:00:00.500Z)
-        //    4th call → parent end   (2025-05-11T00:00:01.000Z)
-        const base = Date.parse('2025-05-11T00:00:00.000Z');
+        // 1) Stub toISOString *in order*:
+        const isoDates = [
+            '2025-05-11T00:00:00.000Z', // outer span start
+            '2025-05-11T00:00:00.000Z', // inner span start
+            '2025-05-11T00:00:00.500Z', // inner span end
+            '2025-05-11T00:00:01.000Z', // outer span end
+        ];
         jest
-            .spyOn(Date, 'now')
-            .mockImplementationOnce(() => base)
-            .mockImplementationOnce(() => base)
-            .mockImplementationOnce(() => base + 500)
-            .mockImplementationOnce(() => base + 1000);
+            .spyOn(Date.prototype, 'toISOString')
+            .mockImplementation(() => isoDates.shift()!);
 
-        // 1) Spy randomBytes for trace & span IDs
-        jest
-            .spyOn(crypto, 'randomBytes')
-            .mockImplementationOnce((size) => Buffer.alloc(size, 0xaa))  // traceId
-            .mockImplementationOnce((size) => Buffer.alloc(size, 0xbb))  // parent spanId
+        // 1) Drive our mocked crypto.randomBytes
+        const rb = crypto.randomBytes as jest.Mock;
+        rb
+            .mockImplementationOnce((size) => Buffer.alloc(size, 0xaa)) // traceId
+            .mockImplementationOnce((size) => Buffer.alloc(size, 0xbb)) // parent spanId
             .mockImplementationOnce((size) => Buffer.alloc(size, 0xcc)); // child spanId
 
-        // 2) Spy uuidv4() to match our fixture resource_id
+        // 2) Spy uuidv4
         jest
             .spyOn(uuid, 'uuidv4')
             .mockReturnValue(parentTelemetryPayload.resource.resource_id);
 
-        // 3) Stub fetch for the telemetry endpoint
-        (global.fetch as jest.Mock).mockImplementation((url: string, opts: any) => {
+        // 3) Stub fetch
+        (global.fetch as jest.Mock).mockImplementation((url: string) => {
             if (/\/actions\/collect-telemetry\/apply/.test(url)) {
                 return Promise.resolve({
                     ok: true,
                     json: () => Promise.resolve({ message: 'OK' }),
                 });
+            }
+            // oauth token calls (adjust your matching as needed)
+            if (url.match(/\/token$/) || url.match(/oauth2/)) {
+                return Promise.resolve(
+                    new Response(
+                        JSON.stringify({
+                            access_token: 'fake-token',
+                            expires_in: 3600,
+                            token_type: 'Bearer',
+                        }),
+                        { status: 200, headers: { 'Content-Type': 'application/json' } }
+                    )
+                );
             }
             return Promise.reject(new Error('URL not matched'));
         });
@@ -57,20 +83,21 @@ describe('Tracing', () => {
         const result = await dt.testDecorator();
         expect(result).toBe('segments traces');
 
-        // two spans → two fetch calls
-        expect(global.fetch).toHaveBeenCalledTimes(2);
+        expect(global.fetch).toHaveBeenCalledTimes(4); // 2 auth calls in addition to our two
         const calls = (global.fetch as jest.Mock).mock.calls as Array<[string, any]>;
 
-        // [0] child span
-        const [childUrl, childOpts] = calls[0];
+        // child span
+        const foundTelemtryCall = calls.filter(item => item[0].match(/\/actions\/collect-telemetry\/apply/));
+        const [childUrl, childOpts] = foundTelemtryCall[0];
         expect(childUrl).toMatch(/\/actions\/collect-telemetry\/apply/);
         expect(childOpts.method).toBe('POST');
-        expect(JSON.parse(childOpts.body)).toEqual(childTelemetryPayload);
+        expect(JSON.parse(JSON.parse(childOpts.body).parameters.inputJSON)).toEqual(childTelemetryPayload);
 
-        // [1] parent span
-        const [parentUrl, parentOpts] = calls[1];
+        // parent span
+        const foundParentTelemtryCall = calls.filter(item => item[0].match(/\/actions\/collect-telemetry\/apply/));
+        const [parentUrl, parentOpts] = foundParentTelemtryCall[1];
         expect(parentUrl).toMatch(/\/actions\/collect-telemetry\/apply/);
         expect(parentOpts.method).toBe('POST');
-        expect(JSON.parse(parentOpts.body)).toEqual(parentTelemetryPayload);
+        expect(JSON.parse(JSON.parse(parentOpts.body).parameters.inputJSON)).toEqual(parentTelemetryPayload);
     });
 });
