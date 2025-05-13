@@ -16,12 +16,12 @@
     "types": ["jest", "node"],
     "baseUrl": ".",
     "paths": {
-        "@hello/*": ["src/*"]
+        "@xreason/*": ["src/*"]
     },
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
-  "include": ["src/**/*", "test/**/*", "src/**/*.d.ts",  "jest.config.js"],
+  "include": ["src/**/*", "src/**/*.d.ts",  "jest.config.js"],
   "exclude": ["node_modules", "dist", "ops", "config"],
   "ts-node": {
     "files": true

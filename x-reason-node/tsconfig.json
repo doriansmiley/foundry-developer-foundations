@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "commonjs",
+    "module": "ESNext",
     "lib": ["ES2020"],
     "declaration": true,
     "outDir": "./dist",
@@ -18,8 +18,10 @@
     "paths": {
         "@xreason/*": ["src/*"]
     },
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
-  "include": ["src/**/*", "test/**/*", "src/**/*.d.ts"],
+  "include": ["src/**/*", "test/**/*", "src/**/*.d.ts",  "jest.config.js"],
   "exclude": ["node_modules", "dist", "ops", "config"],
   "ts-node": {
     "files": true

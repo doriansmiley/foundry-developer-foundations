@@ -1,16 +1,40 @@
 {
-  "name": "@foundry-developer-foundations/x-reason",
+  "name": "@codestrap/developer-foundations.x-reason",
   "version": "1.0.0",
   "description": "## Introduction",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doriansmiley/foundry-developer-foundations.git"
+  },
+  "bugs": {
+    "url": "https://github.com/doriansmiley/foundry-developer-foundations/issues"
+  },
+  "homepage": "https://github.com/doriansmiley/foundry-developer-foundations/tree/master/x-reason-node",
+  "keywords": [
+    "tracing",
+    "otel",
+    "telemetry",
+    "typescript",
+    "decorator",
+    "palantir",
+    "foundry"
+  ],
+  "author": "Dorian Smiley <dsmiley@codestrap.me>",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "type": "module",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "ops:greet": "NODE_ENV=test ts-node -r tsconfig-paths/register ops/index.ts greet",
     "lint": "eslint 'src/**/*.{js,ts}'",
-    "build": "tsc",
-    "build:docker": "npm run build && docker build --build-arg FOUNDRY_TOKEN=${FOUNDRY_TOKEN} -t codestrap/foundry-developer-foundations .",
+    "build": "tsc -p tsconfig.build.json",
+    "build:docker": "npm run build && docker build --build-arg FOUNDRY_TOKEN=${FOUNDRY_TOKEN} -t codestrap/x-reason .",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean"
   },
@@ -45,32 +69,6 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.3"
-  },
-  "jest": {
-    "preset": "ts-jest/presets/js-with-babel",
-    "testEnvironment": "node",
-    "testMatch": [
-      "**/test/**/*.test.ts",
-      "**/test/**/*.test.js"
-    ],
-    "transform": {
-      "^.+\\.tsx?$": [
-        "ts-jest",
-        {
-          "useESM": true
-        }
-      ]
-    },
-    "transformIgnorePatterns": [
-      "/node_modules/(?!@osdk/)"
-    ],
-    "extensionsToTreatAsEsm": [
-      ".ts",
-      ".tsx"
-    ],
-    "moduleNameMapper": {
-      "^(\\.{1,2}/.*)\\.js$": "$1"
-    }
   },
   "engines": {
     "node": ">=20.10.0"

@@ -10,14 +10,12 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json /app/
-# make token available to npm, and copy your auth file
-COPY .npmrc /app/.npmrc
 
 # Install all dependencies for building
 RUN npm ci
 
 # Copy source files
-COPY tsconfig.json /app/
+COPY tsconfig.build.json /app/
 COPY src/ /app/src/
 
 # Build TypeScript
