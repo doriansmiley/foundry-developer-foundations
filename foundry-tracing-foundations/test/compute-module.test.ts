@@ -1,11 +1,12 @@
 import dotenv from 'dotenv';
+import { collectTelemetryFetchWrapper } from '../src/Tracing';
+import { mockPayload } from './__fixtures__/telemetryPayload';
 
 // Load environment variables
 dotenv.config();
 // Mock setup must be before imports
 import { TestModule } from '../src/types';
 import { computeModule } from '../src';
-import { writeGreeting } from '../src/writeGreeting';
 
 // Cast computeModule to TestModule since we're in test environment
 const testModule = computeModule as TestModule;
@@ -15,7 +16,7 @@ describe('Compute Module Registration', () => {
   beforeEach(() => {
 
     // Register operations with actual handlers
-    testModule.register("WriteGreeting", writeGreeting);
+    testModule.register("Trace", collectTelemetryFetchWrapper);
 
     // Register responsive handler
     testModule.on("responsive", () => {
@@ -23,8 +24,8 @@ describe('Compute Module Registration', () => {
     });
   });
 
-  it('should send a greeting', async () => {
-    const operations = ['WriteGreeting'];
+  it('should create trace segments', async () => {
+    const operations = ['Trace'];
 
     // Initial check
     operations.forEach(op => {
@@ -47,9 +48,9 @@ describe('Compute Module Registration', () => {
     }
 
     // Execute calendar operations
-    const result = await testModule.listeners['WriteGreeting'].listener('Los Angeles');
+    const result = await testModule.listeners['Trace'].listener(JSON.stringify(mockPayload));
 
     expect(result).toBeDefined();
-  });
+  }, 10000);
 
 }); 

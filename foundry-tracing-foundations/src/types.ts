@@ -30,11 +30,6 @@ export interface FoundryClient {
     getUser: () => Promise<User>;
 }
 
-// Basic example of calling other services besides Foundry.
-export interface WeatherService {
-    (city: string): Promise<string>;
-}
-
 export interface APIError extends Error {
     response?: {
         data: any;
@@ -52,16 +47,6 @@ export interface TestModule {
 }
 
 export type ComputeModuleType = TestModule | ComputeModule<any>;
-
-export interface GreetingInput {
-    message: string;
-    userId: string;
-}
-
-export interface GreetingResult {
-    id: string;
-    greeting: string;
-}
 
 export interface User {
     id: string;

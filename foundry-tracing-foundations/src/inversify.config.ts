@@ -1,7 +1,6 @@
 import "reflect-metadata";
 import { Container } from "inversify";
 import { TYPES } from "@tracing/types";
-import { openWeatherService } from "@tracing/services/weatherService";
 import { createFoundryClient } from "@tracing/services/foundryClient";
 import { makeUserDao } from "@tracing/domain/userDao";
 import { makeTelemetryDao } from "./domain/telemetryDao";
@@ -24,7 +23,3 @@ container
     .toDynamicValue((ctx) =>
         makeTelemetryDao(ctx.get(TYPES.FoundryClient)),
     );
-
-container
-    .bind(TYPES.WeatherService)
-    .toConstantValue(openWeatherService);
