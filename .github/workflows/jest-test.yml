@@ -1,0 +1,44 @@
+name: jest-tests
+
+on:
+  pull_request:
+    branches:
+      - master
+  deployment_status:
+
+jobs:
+  run-e2es:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect Changed Paths
+        id: detect-paths
+        uses: ./.github/actions/test
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base-ref: ${{ github.base_ref }}
+
+      - name: Install Dependencies and Run Tests
+        if: ${{ steps.detect-paths.outputs.affected-dirs != '' }}
+        run: |
+          AFFECTED_DIRS="${{ steps.detect-paths.outputs.affected-dirs }}"
+          echo "Affected directories: $AFFECTED_DIRS"
+          for DIR in $AFFECTED_DIRS; do
+            echo "Running tests in $DIR"
+            cd $DIR
+            npm ci
+            npm run test
+            cd -
+          done
+        env:
+          BASE_URL: ${{ github.event.deployment_status.environment_url || 'http://localhost:3000' }}
+          GITLAB_HOST: https://gitlabhubdev.chemli.app
+          GITLAB_ROOT_TOKEN: ${{secrets.GITLAB_ROOT_TOKEN}}
+          OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
+          BLOB_READ_WRITE_TOKEN: ${{secrets.BLOB_READ_WRITE_TOKEN}}
+          KV_REST_API_READ_ONLY_TOKEN: ${{secrets.KV_REST_API_READ_ONLY_TOKEN}}
+          KV_REST_API_TOKEN: ${{secrets.KV_REST_API_TOKEN}}
+          KV_REST_API_URL: ${{secrets.KV_REST_API_URL}}
+          KV_URL: ${{secrets.KV_URL}}

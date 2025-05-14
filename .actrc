@@ -1,0 +1,16 @@
+# Use Node.js 20
+-P ubuntu-latest=node:20-buster-slim
+
+# Workflow Path
+-W .github/workflows
+
+# Reuse Containers
+--reuse
+
+# Secrets File
+--secret-file .secrets
+
+#skip download if we have already got it
+--pull=false 
+
+--input base-ref=master

@@ -1,0 +1,16 @@
+name: Detect Changed Paths
+description: Identify directories with changes and output them for use in workflows.
+runs:
+  using: node20
+  main: index.js
+inputs:
+  base-ref:
+    description: The base reference to compare changes against.
+    required: false
+    default: 'origin/master'
+  token:
+    description: GitHub token for authentication.
+    required: true
+outputs:
+  affected-dirs:
+    description: A newline-separated list of affected directories.
