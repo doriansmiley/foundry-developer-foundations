@@ -1,37 +1,16 @@
 name: Detect Changed Paths
 description: Identify directories with changes and output them for use in workflows.
-
+runs:
+  using: node20
+  main: dist/index.js
 inputs:
   base-ref:
     description: The base reference to compare changes against.
     required: false
-    default: origin/master      # no quotes needed here
+    default: 'origin/master'
   token:
     description: GitHub token for authentication.
     required: true
-
 outputs:
   affected-dirs:
     description: A newline-separated list of affected directories.
-
-runs:
-  using: "composite"
-  steps:
-    # 1) Ensure Node 20 is available for this composite action
-    - name: Setup Node 20
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-
-    # 2) Install the action’s dependencies
-    - name: Install dependencies
-      shell: bash
-      working-directory: ${{ github.action_path }}
-      run: |
-        npm ci --omit=dev --no-audit --no-fund
-
-    # 3) Execute the action logic
-    - name: Run Detect Changed Paths
-      shell: bash
-      working-directory: ${{ github.action_path }}
-      run: node index.js
