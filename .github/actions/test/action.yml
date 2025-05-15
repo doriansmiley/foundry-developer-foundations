@@ -19,10 +19,12 @@ runs:
   steps:
     # 1) install the action’s runtime dependencies
     - name: Install dependencies
+      shell: bash
       run: npm ci --omit=dev --no-audit --no-fund
       working-directory: ${{ github.action_path }}
 
     # 2) execute the action logic
     - name: Run Detect Changed Paths
       run: node index.js
+      shell: bash
       working-directory: ${{ github.action_path }}
