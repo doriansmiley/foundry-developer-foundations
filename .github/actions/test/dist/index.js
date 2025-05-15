@@ -24,7 +24,7 @@ async function getChangedPaths(baseRef = 'origin/master') {
 
         compare.files.forEach(file => {
             const dir = file.filename.split('/')[0];
-            if (dir) directories.add(dir);
+            if (dir && dir !== '.github') directories.add(dir);
         });
 
         return Array.from(directories);
@@ -31866,11 +31866,15 @@ module.exports = parseParams
 /************************************************************************/
 var __webpack_exports__ = {};
 const core = __nccwpck_require__(7484);
+const github = __nccwpck_require__(3228);
 const { getChangedPaths } = __nccwpck_require__(2924);
 
 async function run() {
     try {
-        const baseRef = core.getInput('base-ref') || 'origin/master';
+        const baseRef = core.getInput('base-ref') ||
+            process.env.GITHUB_BASE_REF ||     // present on PR events
+            github.context.payload?.repository?.default_branch ||
+            'master';
         const affectedDirs = await getChangedPaths(baseRef);
 
         core.info('Affected directories: ' + affectedDirs.join(', '));
