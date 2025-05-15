@@ -2,7 +2,7 @@ name: Detect Changed Paths
 description: Identify directories with changes and output them for use in workflows.
 runs:
   using: node20
-  main: index.js
+  main: dist/index.js
 inputs:
   base-ref:
     description: The base reference to compare changes against.
