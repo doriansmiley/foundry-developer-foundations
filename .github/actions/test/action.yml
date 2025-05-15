@@ -1,8 +1,6 @@
 name: Detect Changed Paths
 description: Identify directories with changes and output them for use in workflows.
-runs:
-  using: node20
-  main: index.js
+
 inputs:
   base-ref:
     description: The base reference to compare changes against.
@@ -11,6 +9,20 @@ inputs:
   token:
     description: GitHub token for authentication.
     required: true
+
 outputs:
   affected-dirs:
     description: A newline-separated list of affected directories.
+
+runs:
+  using: "composite"
+  steps:
+    # 1) install the action’s runtime dependencies
+    - name: Install dependencies
+      run: npm ci --omit=dev --no-audit --no-fund
+      working-directory: ${{ github.action_path }}
+
+    # 2) execute the action logic
+    - name: Run Detect Changed Paths
+      run: node index.js
+      working-directory: ${{ github.action_path }}
