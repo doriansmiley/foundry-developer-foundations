@@ -15,7 +15,7 @@ outputs:
     description: A newline-separated list of affected directories.
 
 runs:
-  using: "composite"
+  using: node20
   steps:
     # 1) install the action’s runtime dependencies
     - name: Install dependencies
