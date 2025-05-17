@@ -15,15 +15,11 @@ container
 
 container
     .bind(TYPES.WorldDao)
-    .toDynamicValue((ctx) =>
-        makeWorldDao(ctx.get(TYPES.FoundryClient)),
-    );
+    .toConstantValue(makeWorldDao());
 
 container
     .bind(TYPES.UserDao)
-    .toDynamicValue((ctx) =>
-        makeUserDao(ctx.get(TYPES.FoundryClient)),
-    );
+    .toConstantValue(makeUserDao());
 
 container
     .bind(TYPES.WeatherService)
