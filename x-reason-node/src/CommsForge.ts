@@ -1,4 +1,4 @@
-import { Trace } from 'foundry-tracing-foundations/src';
+import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
 
 import { Context, engineV1 as engine, getMachineExecution, getState, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
 import { dateTime, recall } from "@xreason/functions";
@@ -85,7 +85,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
         const communication = Objects.create().communications(uuidv4());
         communication.channel = 'User Defined';
         communication.formattedMessage = 'None, these tasks were entered by a human';
-        communication.createdOn = Timestamp.fromJsDate(new Date())
+        communication.createdOn = Date.now()
         communication.taskList = taskList;
         communication.type = xReasonEngine;
         if (userId) {

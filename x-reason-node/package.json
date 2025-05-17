@@ -39,6 +39,7 @@
     "prebuild": "npm run clean"
   },
   "dependencies": {
+    "@codestrap/developer-foundations.foundry-tracing-foundation": "file:../foundry-tracing-foundations",
     "@osdk/client": "^2.1.4",
     "@osdk/foundry.admin": "^2.20.0",
     "@osdk/oauth": "^1.1.1",

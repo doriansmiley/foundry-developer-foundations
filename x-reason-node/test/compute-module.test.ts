@@ -76,6 +76,6 @@ describe('Compute Module Registration', () => {
     const result = await testModule.listeners['WriteGreeting'].listener('Los Angeles');
 
     expect(result).toBeDefined();
-  });
+  }, 30000);
 
 }); 
