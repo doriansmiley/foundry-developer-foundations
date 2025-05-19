@@ -3,7 +3,7 @@ import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundati
 import { Context, engineV1 as engine, getMachineExecution, getState, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
 import { dateTime, recall } from "@xreason/functions";
 import { uuidv4 } from "@xreason/utils";
-import { TYPES, UserDao } from "@xreason/types";
+import { MachineExecutions, TYPES, UserDao } from "@xreason/types";
 import { container } from "@xreason/inversify.config";
 
 // use classes to take advantage of trace decorator

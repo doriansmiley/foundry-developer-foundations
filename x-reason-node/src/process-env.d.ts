@@ -9,6 +9,7 @@ declare global {
             OPEN_WEATHER_API_KEY: string;
             LOG_PREFIX: string;
             ONTOLOGY_RID: string;
+            ONTOLOGY_ID: string;
         }
     }
 }

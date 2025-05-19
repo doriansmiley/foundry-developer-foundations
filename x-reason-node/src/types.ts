@@ -6,6 +6,7 @@ export const TYPES = {
     WeatherService: Symbol.for("WeatherService"),
     WorldDao: Symbol.for("WorldDao"),
     UserDao: Symbol.for("UserDao"),
+    MachineDao: Symbol.for("MachineDao"),
 };
 
 export interface Token {
@@ -95,4 +96,8 @@ export interface MachineExecutions {
 
 export type WorldDao = (input: GreetingInput) => Promise<GreetingResult>;
 export type UserDao = () => Promise<User>;
-export type MachineDao = (machineExecutionId: string) => Promise<MachineExecutions>;
+export type MachineDao = {
+    upsert: (id: string, stateMachine: string, state: string, logs: string) => Promise<MachineExecutions>,
+    delete: (machineExecutionId: string) => Promise<void>,
+    read: (machineExecutionId: string) => Promise<MachineExecutions>,
+};

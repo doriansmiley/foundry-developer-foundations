@@ -5,6 +5,7 @@ import { openWeatherService } from "@xreason/services/weatherService";
 import { createFoundryClient } from "@xreason/services/foundryClient";
 import { makeWorldDao } from "@xreason/domain/worldDao";
 import { makeUserDao } from "@xreason/domain/userDao";
+import { makeMachineDao } from "@xreason/domain/machineDao";
 
 export const container = new Container();
 
@@ -20,6 +21,10 @@ container
 container
     .bind(TYPES.UserDao)
     .toConstantValue(makeUserDao());
+
+container
+    .bind(TYPES.MachineDao)
+    .toConstantValue(makeMachineDao());
 
 container
     .bind(TYPES.WeatherService)
