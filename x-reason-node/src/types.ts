@@ -7,7 +7,21 @@ export const TYPES = {
     WorldDao: Symbol.for("WorldDao"),
     UserDao: Symbol.for("UserDao"),
     MachineDao: Symbol.for("MachineDao"),
+    CommsDao: Symbol.for("CommsDao"),
+    GeminiService: Symbol.for("GeminiService"),
 };
+
+export interface GeminiParameters {
+    "stopSequences"?: Array<string>;
+    "temperature"?: number;
+    "maxTokens"?: number;
+    "topP"?: number;
+    "extractJsonString"?: boolean;
+};
+
+export interface GeminiService {
+    (user: string, system: string, params?: GeminiParameters): Promise<string>;
+}
 
 export interface Token {
     readonly access_token: string;
@@ -94,10 +108,55 @@ export interface MachineExecutions {
     delete(): void;
 }
 
+export interface Communications {
+    /** Channel */
+    channel: string | undefined;
+    /** Completion Error Task List */
+    completionErrorTaskList: string | undefined;
+    /** Created On */
+    createdOn: number | undefined;
+    /** Formatted Message */
+    formattedMessage: string | undefined;
+    /** Id */
+    readonly id: string;
+    /** Machine */
+    /** Holds the generated state machine for the given task list */
+    machine: string | undefined;
+    /** Owner */
+    owner: string | undefined;
+    /** Question Prompt */
+    questionPrompt: string | undefined;
+    /** Status */
+    /** The current status of the tasks to perform. Must be one of Open, Accepted, or Rejected */
+    status: string | undefined;
+    /** Task List */
+    taskList: string | undefined;
+    /** Tokens */
+    tokens: number | undefined;
+    /** type */
+    type: string | undefined;
+    /** Delete the object. The object will no longer appear in any links and its properties will no longer be accessible. */
+    delete(): void;
+}
+
 export type WorldDao = (input: GreetingInput) => Promise<GreetingResult>;
 export type UserDao = () => Promise<User>;
 export type MachineDao = {
     upsert: (id: string, stateMachine: string, state: string, logs: string) => Promise<MachineExecutions>,
     delete: (machineExecutionId: string) => Promise<void>,
     read: (machineExecutionId: string) => Promise<MachineExecutions>,
+};
+export type CommsDao = {
+    upsert: (
+        channel: string,
+        formattedMessage: string,
+        status: string,
+        taskList: string,
+        comType: string,
+        owner: string,
+        questionPrompt?: string,
+        tokens?: number,
+        id?: string,) => Promise<Communications>,
+    delete: (id: string) => Promise<void>,
+    read: (id: string) => Promise<Communications>,
 };
