@@ -8,7 +8,7 @@ import { makeUserDao } from "@xreason/domain/userDao";
 import { makeMachineDao } from "@xreason/domain/machineDao";
 import { geminiService } from "@xreason/services/geminiService";
 import { makeCommsDao } from "@xreason/domain/commsDao";
-import { geminiSearch } from "@xreason/services/gemeniSearch";
+import { gemeniStockMarketConditions } from "@xreason/services/gemeniStockMarketConditions";
 
 export const container = new Container();
 
@@ -42,5 +42,5 @@ container
     .toConstantValue(geminiService);
 
 container
-    .bind(TYPES.GeminiSearch)
-    .toConstantValue(geminiSearch);
+    .bind(TYPES.GeminiSearchStockMarket)
+    .toConstantValue(gemeniStockMarketConditions);
