@@ -9,7 +9,7 @@ export const TYPES = {
     MachineDao: Symbol.for("MachineDao"),
     CommsDao: Symbol.for("CommsDao"),
     GeminiService: Symbol.for("GeminiService"),
-    GeminiSearch: Symbol.for("GeminiSearch"),
+    GeminiSearchStockMarket: Symbol.for("GeminiSearchStockMarket"),
 };
 
 export interface GeminiParameters {
@@ -51,7 +51,7 @@ export interface WeatherService {
     (city: string): Promise<string>;
 }
 
-export interface GeminiSearch {
+export interface GeminiSearchStockMarket {
     (userQuery: string): Promise<string>;
 }
 
