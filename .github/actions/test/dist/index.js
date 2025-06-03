@@ -9,6 +9,7 @@ const core = __nccwpck_require__(7484);
 
 async function getChangedPaths(baseRef = 'origin/master') {
     try {
+        core.info(`executing getChangedPaths`);
         const token = core.getInput('token', { required: true });
         const octokit = github.getOctokit(token);
         const context = github.context;
@@ -24,7 +25,9 @@ async function getChangedPaths(baseRef = 'origin/master') {
 
         compare.files.forEach(file => {
             const dir = file.filename.split('/')[0];
-            if (dir && dir !== '.github') directories.add(dir);
+            if (dir && dir !== '.github' && dir !== '.gitignore') {
+                directories.add(dir)
+            };
         });
 
         return Array.from(directories);
