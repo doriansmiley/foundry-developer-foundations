@@ -1,4 +1,4 @@
-import { TYPES, WeatherService, UserDao } from "@xreason/types";
+import { TYPES, WeatherService, UserDao, WorldDao } from "@xreason/types";
 import { container } from "@xreason/inversify.config";
 
 export async function writeGreeting(city: string): Promise<string> {
@@ -8,6 +8,7 @@ export async function writeGreeting(city: string): Promise<string> {
 
     // example dao usage
     const user = await container.get<UserDao>(TYPES.UserDao)();
+    const greeting = await container.get<WorldDao>(TYPES.WorldDao)({ message: weather, userId: user.id });
 
-    return `weather: ${weather}\nuser: ${user}`;
+    return `weather: ${weather}\nuser: ${user} greeting: ${greeting}`;
 }

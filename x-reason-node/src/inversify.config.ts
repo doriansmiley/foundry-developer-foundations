@@ -5,6 +5,10 @@ import { openWeatherService } from "@xreason/services/weatherService";
 import { createFoundryClient } from "@xreason/services/foundryClient";
 import { makeWorldDao } from "@xreason/domain/worldDao";
 import { makeUserDao } from "@xreason/domain/userDao";
+import { makeMachineDao } from "@xreason/domain/machineDao";
+import { geminiService } from "@xreason/services/geminiService";
+import { makeCommsDao } from "@xreason/domain/commsDao";
+import { geminiSearch } from "@xreason/services/gemeniSearch";
 
 export const container = new Container();
 
@@ -15,16 +19,28 @@ container
 
 container
     .bind(TYPES.WorldDao)
-    .toDynamicValue((ctx) =>
-        makeWorldDao(ctx.get(TYPES.FoundryClient)),
-    );
+    .toConstantValue(makeWorldDao());
 
 container
     .bind(TYPES.UserDao)
-    .toDynamicValue((ctx) =>
-        makeUserDao(ctx.get(TYPES.FoundryClient)),
-    );
+    .toConstantValue(makeUserDao());
+
+container
+    .bind(TYPES.MachineDao)
+    .toConstantValue(makeMachineDao());
+
+container
+    .bind(TYPES.CommsDao)
+    .toConstantValue(makeCommsDao());
 
 container
     .bind(TYPES.WeatherService)
     .toConstantValue(openWeatherService);
+
+container
+    .bind(TYPES.GeminiService)
+    .toConstantValue(geminiService);
+
+container
+    .bind(TYPES.GeminiSearch)
+    .toConstantValue(geminiSearch);

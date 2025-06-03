@@ -1,6 +1,10 @@
 import type { FoundryClient, WorldDao } from "@xreason/types";
+import { TYPES } from "@xreason/types";
+import { container } from "@xreason/inversify.config";
 
-export function makeWorldDao(client: FoundryClient): WorldDao {
+export function makeWorldDao(): WorldDao {
+    const client = container.get<FoundryClient>(TYPES.FoundryClient);
+
     return async ({ message, userId }) => {
         console.log(`makeWorldDao userId: ${userId}`);
 

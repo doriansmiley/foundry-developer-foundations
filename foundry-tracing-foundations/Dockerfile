@@ -38,4 +38,4 @@ RUN ls -la /app/src/domain && \
     ls -la /app/src/services
 
 # Specify the entrypoint explicitly as required
-ENTRYPOINT ["node", "dist/src/index.js"] 
+ENTRYPOINT ["node", "dist/src/computeModule.js"] 

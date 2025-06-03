@@ -20,17 +20,17 @@ import {
 
 // Define the shape of the clients map
 export type XReasonEngine = (config: Record<string, any>) => {
-        programmer: typeof comsProgrammer;
-        aiTransition: typeof comsAiTrasition;
-        evaluate: typeof comsEvaluate;
-        functionCatalog: typeof comsFunctionCatalog;
-        solver: typeof comsSolver;
-    };
+    programmer: typeof comsProgrammer;
+    aiTransition: typeof comsAiTrasition;
+    evaluate: typeof comsEvaluate;
+    functionCatalog: typeof comsFunctionCatalog;
+    solver: typeof comsSolver;
+};
 
 export enum SupportedEngines {
- COMS = 'coms',
- CONTEXT = 'context',
- SALES = 'sales',
+    COMS = 'coms',
+    CONTEXT = 'context',
+    SALES = 'sales',
 }
 
 export enum SupportTrainingDataTypes {
@@ -52,6 +52,8 @@ const factory = curry((map, key, config) => {
 // in your config
 const clients = {
     'coms': (config: Record<string, any>) => {
+        console.log(`config for comms xreason is: ${config}`);
+
         return {
             programmer: comsProgrammer,
             aiTransition: comsAiTrasition,
@@ -61,6 +63,8 @@ const clients = {
         }
     },
     'context': (config: Record<string, any>) => {
+        console.log(`config for context xreason is: ${config}`);
+
         return {
             programmer: contextProgrammer,
             aiTransition: contextAiTrasition,
@@ -70,6 +74,8 @@ const clients = {
         }
     },
     'sales': (config: Record<string, any>) => {
+        console.log(`config for sales xreason is: ${config}`);
+
         return {
             programmer: salesProgrammer,
             aiTransition: salesAiTrasition,

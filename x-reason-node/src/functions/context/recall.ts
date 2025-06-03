@@ -1,11 +1,7 @@
-import { Text_Embedding_3_Small } from "@foundry/models-api/language-models";
-import { Objects, Contacts } from "@foundry/ontology-api";
-import { Gemini_2_0_Flash } from "@foundry/models-api/language-models";
 
-import { UserProfile } from "./userProfile";
-import { Context, MachineEvent } from "../../reasoning/types";
-import { extractJsonFromBackticks } from "../../utils";
-import { Filters } from "@foundry/functions-api";
+import { UserProfile } from "@xreason/functions/context/userProfile";
+import { Context, MachineEvent } from "@xreason/reasoning/types";
+import { extractJsonFromBackticks } from "@xreason/utils";
 
 export type ModelMemory = {
     contacts: {
@@ -18,7 +14,7 @@ export type ModelMemory = {
         id: string,
         timezone: string,
     },
-    messages: string [];
+    messages: string[];
     reasoning: string;
 }
 
@@ -41,22 +37,22 @@ export async function recall(context: Context, event?: MachineEvent, task?: stri
     }
 
     const embeddings = await Text_Embedding_3_Small.createEmbeddings({ inputs: [task!] });
-    
+
     // find any daily briefs that are relevant here
     const matchedMessages = await Objects.search()
-    .memoryRecall()
-    .nearestNeighbors(message => message.embedding.near(embeddings.embeddings[0], { kValue: 1 }))
-    .allAsync();
-    
+        .memoryRecall()
+        .nearestNeighbors(message => message.embedding.near(embeddings.embeddings[0], { kValue: 1 }))
+        .allAsync();
+
     // match any relevant contacts based on name and the task
     const matchedContacts = await Objects.search()
-    .contacts()
-    .filter(contact => Filters.or(
-        contact.fullName.matchAnyToken(task!),
-        contact.company.matchAnyToken(task!)
-    ))
-    .orderByRelevance()
-    .takeAsync(10);
+        .contacts()
+        .filter(contact => Filters.or(
+            contact.fullName.matchAnyToken(task!),
+            contact.company.matchAnyToken(task!)
+        ))
+        .orderByRelevance()
+        .takeAsync(10);
 
     const messagesString = JSON.stringify(matchedMessages.map(message => ({
         messageText: JSON.stringify(message.originalText),

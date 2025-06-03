@@ -1,9 +1,9 @@
-import { Trace } from 'foundry-tracing-foundations/src';
+import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
 
-import { Context, engineV1 as engine, getMachineExecution, getState, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
+import { Context, engineV1 as engine, getState, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
 import { dateTime, recall } from "@xreason/functions";
 import { uuidv4 } from "@xreason/utils";
-import { TYPES, UserDao } from "@xreason/types";
+import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao } from "@xreason/types";
 import { container } from "@xreason/inversify.config";
 
 // use classes to take advantage of trace decorator
@@ -67,30 +67,18 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
 "C0825R4EHMK": "Public relations - used for all items related to PR and marketing"
 "C08LX9DDMRB": "External Partner Datalinks - used for all communications with DataLinks and us (CodeStrap). DataLinks provides data products and data negineering services. Team members at DataLinks are Andrzej Grzesik - CTO, Francisco Ferrera - CEO, Rui Valente - developer, and Timur - developer"
 "C08LMJDQ25C": "Etneral partner 11 Labs" - used for all communications with 11 Labs. 11 Labs makes generative voice models and is used by our customers for call center operations and voice enabled applications. 11 Labs team members are Alox Holt Lead Developer, Jack Piunti Enterprise Sales, and Kabir Gill Enterprise Sales"
-`
-        // I have to include this call or I will get an error that I am attempting to call a function not in the function registry
-        // This is due to the GPT_4o being tree shaked by their algorithm
-        // I did report the issue to Palantir but they likely will not fix
-        const response = Gemini_2_0_Flash.createGenericChatCompletion(
-            {
-                messages: [
-                    { role: "SYSTEM", contents: [{ text: 'You are a helpful AI assistant' }] },
-                    { role: "USER", contents: [{ text: 'what is your name?' }] },
-                ]
-            }
-        );
+`;
 
         const taskList = await engine.solver.solve(`${query}\n\n${groudingContext}`, solver);
-        // TODO replace with DAO that is hacked by OSDK
-        const communication = Objects.create().communications(uuidv4());
-        communication.channel = 'User Defined';
-        communication.formattedMessage = 'None, these tasks were entered by a human';
-        communication.createdOn = Timestamp.fromJsDate(new Date())
-        communication.taskList = taskList;
-        communication.type = xReasonEngine;
-        if (userId) {
-            communication.owner = userId;
-        }
+        const comsDao = container.get<CommsDao>(TYPES.CommsDao);
+        const communication = await comsDao.upsert(
+            'User Defined',
+            'None, these tasks were entered by a human',
+            'Accept',
+            taskList,
+            xReasonEngine,
+            userId,
+        );
 
         return JSON.stringify(communication);
 
@@ -201,63 +189,23 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
         executionId?: string,
         inputs: string = '{}',
         xreason: string = SupportedEngines.COMS): Promise<MachineExecutions> {
-        // I have to include this call or I will get an error that I am attempting to call a function not in the function registry
-        // This is due to the GPT_4o being tree shaked by their algorithm
-        // I did report the issue to Palantir but they likely will not fix
-        const response = Gemini_2_0_Flash.createGenericChatCompletion(
-            {
-                messages: [
-                    { role: "SYSTEM", contents: [{ text: 'You are a helpful AI assistant' }] },
-                    { role: "USER", contents: [{ text: 'what is your name?' }] },
-                ]
-            }
-        );
 
         const solution = {
             input: '', //not relevant for this
-            id: executionId || Uuid.random(),
+            id: executionId || uuidv4(),
             plan: plan || '',
         };
 
         const result = await getState(solution, forward, JSON.parse(inputs), xreason as SupportedEngines);
-        const apiKey = FoundryApis.getSecret('additionalSecretOsdkToken');
 
-        const baseUrl = FoundryApis.getHttpsConnection().url;
-        const headers = {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-        };
+        const machineDao = container.get<MachineDao>(TYPES.MachineDao);
+        const machine = await machineDao.upsert(
+            solution.id,
+            JSON.stringify(result.stateMachine),
+            result.jsonState,
+            result.logs ?? ''
+        );
 
-        const body = JSON.stringify({
-            parameters: {
-                id: solution.id,
-                stateMachine: JSON.stringify(result.stateMachine),
-                state: result.jsonState,
-                logs: result.logs || '',
-            },
-            options: {
-                returnEdits: "ALL"
-            }
-        });
-
-        const apiResults = await fetch(`${baseUrl}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/actions/upsert-machine/apply`, {
-            method: 'POST',
-            headers,
-            body,
-        });
-
-        const apiResponse = await apiResults.json();
-
-        if (apiResponse.errorCode) {
-            console.log(`errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`);
-            throw new Error(`An error occured while calling update machine errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
-        }
-
-        console.log(JSON.stringify(apiResponse));
-
-        // because we are calling the API here and running a query by ID we are 100% certain we can now read the data after write
-        const machine = getMachineExecution(solution);
-
-        return machine!;
+        return machine;
     }
 }

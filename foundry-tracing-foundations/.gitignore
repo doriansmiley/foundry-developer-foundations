@@ -5,7 +5,6 @@ service_account.json
 
 # Dependencies
 node_modules/
-package-lock.json
 
 buildAndPublish.sh
 

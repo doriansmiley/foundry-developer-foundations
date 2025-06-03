@@ -17,5 +17,5 @@ describe('Tracing', () => {
         const result = await collectTelemetryFetchWrapper(JSON.stringify(mockPayload));
         expect(result).toBeDefined();
         expect(JSON.parse(result).edits.addedObjectCount).toEqual(2);
-    });
+    }, 10000);
 });

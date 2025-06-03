@@ -1,18 +1,11 @@
-import { Function, OntologyEditFunction, Edits, Integer, Double, Query, LocalDate, FunctionsMap, Timestamp } from "@foundry/functions-api";
-import { Objects, MachineExecutions, Communications } from "@foundry/ontology-api";
-import { Uuid } from "@foundry/functions-utils";
-import { GPT_4o, Gemini_2_0_Flash } from '@foundry/models-api/language-models';
-import { ExternalSystems } from "@foundry/functions-api";
-import { FoundryApis, Slack, OpenAICodeStrapEng, RangrApis } from "@foundry/external-systems/sources";
-import { Trace } from 'foundry-tracing-foundations/src';
+import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
 
-import { Context, EvaluatorResult, MachineEvent, Solutions, StateConfig, Workflow, engineV1 as engine } from "./reasoning";
-import { SupportedEngines, xReasonFactory } from "./reasoning/factory";
-import { Text2Action } from ".";
-import { uuidv4 } from "./utils";
+import { SupportedEngines } from "@xreason/reasoning/factory";
+import { Text2Action } from "@xreason/CommsForge";
+import { uuidv4 } from "@xreason/utils";
 
 interface SalesForgeTaskListResponse {
-    status: Integer;
+    status: number;
     message: string;
     executionId: string;
     taskList?: string;
@@ -36,13 +29,13 @@ export type RfpResponse = {
 }
 
 interface RfpResponseReceipt {
-    status: Integer;
+    status: number;
     message: string;
     machineExecutionId: string;
     error?: string;
     reciept?: {
         id: string,
-        timestamp: Timestamp,
+        timestamp: number,
     };
 }
 
@@ -53,8 +46,6 @@ export class SalesForge {
         this.text2ActionInstance = new Text2Action();
     }
 
-    @Query({ apiName: 'askBennie' })
-    @ExternalSystems({ sources: [FoundryApis, Slack, OpenAICodeStrapEng, RangrApis] })
     @Trace({
         resource: {
             service_name: 'bennie',
@@ -70,7 +61,7 @@ export class SalesForge {
         samplingRate: 1.0,
         attributes: { endpoint: '/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/queries/askBennie/execute' }
     })
-    public async askBennie(query: string, userId: string, threadId?:string): Promise<string> {
+    public async askBennie(query: string, userId: string, threadId?: string): Promise<string> {
         // if threadId is defined look it up, else create a new thread in the ontology using fetch
         // create a new threadId in the ontology threads object if one isn't supplied or not found
         // call createSalesTasksFunction with the full thread history
@@ -87,8 +78,6 @@ export class SalesForge {
         return results;
     }
 
-    @Query({ apiName: "createSalesTasksFunction" })
-    @ExternalSystems({ sources: [FoundryApis, RangrApis] })
     @Trace({
         resource: {
             service_name: 'bennie',
@@ -108,7 +97,7 @@ export class SalesForge {
         console.log('createSalesTasksTasksFunction called')
         // if no threadId create one
         // call the solver to get back the task list. 
-        const taskList = await this.text2ActionInstance.createCommunicationsTasksFunction(query, userId, SupportedEngines.SALES)
+        const taskList = await this.text2ActionInstance.createCommunicationsTasks(query, userId, SupportedEngines.SALES)
         // If incomplete information is provided the solver will return Missing Infromation
         // If the request is unsupported the solver will return Usupported Questions
         // If it's a complete supported query the solver will return a well formatted task list that we can use to execute
@@ -134,8 +123,6 @@ export class SalesForge {
      * if any required parameters are missing return a a textual response stating what is missing along with a machine execution ID
      * Once all required parameters are retireved execute the request
      */
-    @Query({ apiName: "submitRfpResponse" })
-    @ExternalSystems({ sources: [FoundryApis, RangrApis] })
     @Trace({
         resource: {
             service_name: 'bennie',
@@ -152,6 +139,7 @@ export class SalesForge {
         attributes: { endpoint: '/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/queries/submitRfpResponse/execute' }
     })
     public async submitRfpResponse(query: string, userId: string, machineExecutionId: string): Promise<RfpResponseReceipt> {
+        console.log(`submitRfpResponse received: ${query} from user: ${userId} for machine execution: ${machineExecutionId}`);
 
         return {
             status: 200,
@@ -159,7 +147,7 @@ export class SalesForge {
             machineExecutionId: '123344jkl',
             reciept: {
                 id: '',
-                timestamp: Timestamp.now(),
+                timestamp: Date.now(),
             },
         }
     }
