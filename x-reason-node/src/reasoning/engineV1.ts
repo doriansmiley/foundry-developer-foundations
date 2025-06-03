@@ -204,9 +204,9 @@ async function evaluate(input: EvaluationInput, evaluate: Prompt): Promise<Evalu
 
 async function transition(taskList: string, currentState: string, payload: string, aiTransition: Prompt): Promise<string> {
     const { user, system } = await aiTransition(taskList, currentState, payload);
-    const {logger} = getLogger();
+    const { logger } = getLogger();
 
-    const result = await GPT_4o.createChatCompletion(
+    const response = await Gemini_2_0_Flash.createGenericChatCompletion(
         {
             messages: [
                 { role: "SYSTEM", contents: [{ text: system }] },
@@ -214,12 +214,13 @@ async function transition(taskList: string, currentState: string, payload: strin
             ]
         }
     );
-    let value = result.choices[0].message.content ?? '';
+    let value = extractJsonFromBackticks(response.completion).trim() ?? '';
+
     console.log(`engine.v2.ts.transition result is: ${value}`);
     logger(value);
 
     // coerce the reasoning step into a state ID
-    const coercedResponse = await GPT_4o.createChatCompletion(
+    const coercedResponse = await Gemini_2_0_Flash.createGenericChatCompletion(
         {
             messages: [
                 { role: 'system', contents: [{ text: system }] },
@@ -234,12 +235,12 @@ async function transition(taskList: string, currentState: string, payload: strin
             ]
         }
     );
-    let coerced = coercedResponse.choices[0].message.content ?? '';
-    coerced = extractJsonFromBackticks(coerced);
+    value = coercedResponse.completion ?? '';
+    value = extractJsonFromBackticks(value).trim();
 
     // TODO improve retry mechanism
-    if (currentState.indexOf(coerced) < 0) {
-        const result = await GPT_4o.createChatCompletion(
+    if (currentState.indexOf(value) < 0) {
+        const result = await Gemini_2_0_Flash.createGenericChatCompletion(
             {
                 messages: [
                     { role: 'system', contents: [{ text: system }] },
@@ -247,7 +248,7 @@ async function transition(taskList: string, currentState: string, payload: strin
                     {
                         role: 'user', contents: [{
                             text: `your generated solution:
-                ${coerced}
+                ${value}
                 does not include a valid transition ID! Make sure your are picking a transition ID from the provided state's transitions array
                 Do not be chatty!
                 ` }]
@@ -255,14 +256,14 @@ async function transition(taskList: string, currentState: string, payload: strin
                 ]
             }
         );
-        coerced = result.choices[0].message.content ?? '';
-        coerced = extractJsonFromBackticks(coerced);
-        if (currentState.indexOf(coerced) < 0) {
-            throw new Error(`Invalid model response: ${coerced}`);
+        value = result.completion ?? '';
+        value = extractJsonFromBackticks(value);
+        if (currentState.indexOf(value) < 0 && value !== 'CONTINUE' && value !== 'success' && value !== 'failure') {
+            throw new Error(`Invalid model response: ${value}`);
         }
     }
 
-    return coerced;
+    return value;
 }
 
 const implementation: ReasoningEngine = {

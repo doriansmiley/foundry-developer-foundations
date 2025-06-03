@@ -9,6 +9,7 @@ export const TYPES = {
     MachineDao: Symbol.for("MachineDao"),
     CommsDao: Symbol.for("CommsDao"),
     GeminiService: Symbol.for("GeminiService"),
+    GeminiSearch: Symbol.for("GeminiSearch"),
 };
 
 export interface GeminiParameters {
@@ -48,6 +49,10 @@ export interface FoundryClient {
 // Basic example of calling other services besides Foundry.
 export interface WeatherService {
     (city: string): Promise<string>;
+}
+
+export interface GeminiSearch {
+    (userQuery: string): Promise<string>;
 }
 
 export interface APIError extends Error {

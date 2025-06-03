@@ -8,6 +8,8 @@ export type CurrentDateTime = {
 }
 
 export async function dateTime(context: Context, event?: MachineEvent, task?: string): Promise<CurrentDateTime> {
+    console.log(`dateTime called with context ${context} event ${event} task ${task}`);
+
     // find the user profile state
     const lastStackKey = context?.stack?.find(stackItem => stackItem.indexOf('userProfile') >= 0);
     const userDetails: UserProfile = {
@@ -30,8 +32,8 @@ export async function dateTime(context: Context, event?: MachineEvent, task?: st
         timeZone: userDetails.timezone ?? "America/Los_Angeles",
         timeZoneName: "short" // This will produce "PST" or "PDT"
     };
-    //@ts-ignore
-    const formatter = new Intl.DateTimeFormat("en-US", options);
+
+    const formatter = new Intl.DateTimeFormat("en-US", options as Intl.DateTimeFormatOptions);
     const formatted = formatter.format(new Date());
 
     console.log(`formatted int date: ${formatted}`);

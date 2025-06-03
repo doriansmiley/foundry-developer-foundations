@@ -10,6 +10,12 @@ declare global {
             LOG_PREFIX: string;
             ONTOLOGY_RID: string;
             ONTOLOGY_ID: string;
+            GOOGLE_SEARCH_API_KEY: string;
+            GOOGLE_SEARCH_ENGINE_ID: string;
+            GOOGLE_SEARCH_ENGINE_MARKETS: string;
+            GEMINI_API_KEY: string;
+            BROWSERFY_KEY: string;
+            BROWSERFY_BROWSER_URL: string;
         }
     }
 }

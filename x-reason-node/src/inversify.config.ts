@@ -8,6 +8,7 @@ import { makeUserDao } from "@xreason/domain/userDao";
 import { makeMachineDao } from "@xreason/domain/machineDao";
 import { geminiService } from "@xreason/services/geminiService";
 import { makeCommsDao } from "@xreason/domain/commsDao";
+import { geminiSearch } from "@xreason/services/gemeniSearch";
 
 export const container = new Container();
 
@@ -39,3 +40,7 @@ container
 container
     .bind(TYPES.GeminiService)
     .toConstantValue(geminiService);
+
+container
+    .bind(TYPES.GeminiSearch)
+    .toConstantValue(geminiSearch);

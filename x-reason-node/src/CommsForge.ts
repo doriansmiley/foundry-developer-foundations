@@ -1,9 +1,9 @@
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
 
-import { Context, engineV1 as engine, getMachineExecution, getState, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
+import { Context, engineV1 as engine, getState, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
 import { dateTime, recall } from "@xreason/functions";
 import { uuidv4 } from "@xreason/utils";
-import { CommsDao, MachineExecutions, TYPES, UserDao } from "@xreason/types";
+import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao } from "@xreason/types";
 import { container } from "@xreason/inversify.config";
 
 // use classes to take advantage of trace decorator
@@ -192,49 +192,20 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
 
         const solution = {
             input: '', //not relevant for this
-            id: executionId || Uuid.random(),
+            id: executionId || uuidv4(),
             plan: plan || '',
         };
 
         const result = await getState(solution, forward, JSON.parse(inputs), xreason as SupportedEngines);
-        const apiKey = FoundryApis.getSecret('additionalSecretOsdkToken');
 
-        const baseUrl = FoundryApis.getHttpsConnection().url;
-        const headers = {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-        };
+        const machineDao = container.get<MachineDao>(TYPES.MachineDao);
+        const machine = await machineDao.upsert(
+            solution.id,
+            JSON.stringify(result.stateMachine),
+            result.jsonState,
+            result.logs ?? ''
+        );
 
-        const body = JSON.stringify({
-            parameters: {
-                id: solution.id,
-                stateMachine: JSON.stringify(result.stateMachine),
-                state: result.jsonState,
-                logs: result.logs || '',
-            },
-            options: {
-                returnEdits: "ALL"
-            }
-        });
-
-        const apiResults = await fetch(`${baseUrl}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/actions/upsert-machine/apply`, {
-            method: 'POST',
-            headers,
-            body,
-        });
-
-        const apiResponse = await apiResults.json();
-
-        if (apiResponse.errorCode) {
-            console.log(`errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`);
-            throw new Error(`An error occured while calling update machine errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
-        }
-
-        console.log(JSON.stringify(apiResponse));
-
-        // because we are calling the API here and running a query by ID we are 100% certain we can now read the data after write
-        const machine = getMachineExecution(solution);
-
-        return machine!;
+        return machine;
     }
 }
