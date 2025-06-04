@@ -45,7 +45,7 @@
     "@osdk/foundry.admin": "^2.20.0",
     "@osdk/oauth": "^1.1.1",
     "@palantir/compute-module": "^0.2.7",
-    "@playwright/test": "1.20",
+    "@playwright/test": "1.52",
     "@sinclair/typebox": "^0.34.33",
     "eslint-plugin-import": "^2.31.0",
     "googleapis": "^149.0.0",
