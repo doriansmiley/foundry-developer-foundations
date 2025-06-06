@@ -3,10 +3,10 @@ import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundati
 import { SupportedEngines } from "@xreason/reasoning/factory";
 import { Text2Action } from "@xreason/CommsForge";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
-import { GeminiService, MachineDao, Threads, TYPES } from '@xreason/types';
+import { GeminiService, MachineDao, RfpRequestsDao, Threads, ThreadsDao, TYPES } from '@xreason/types';
 import { container } from "@xreason/inversify.config";
 import { StateConfig } from '@xreason/reasoning';
-import { RfpRequestResponse, RfpResponsesResult } from '@xreason/functions';
+import { dateTime, recall, requestRfp, RfpRequestResponse, RfpResponsesResult, userProfile } from '@xreason/functions';
 
 interface SalesForgeTaskListResponse {
     status: number;
@@ -110,24 +110,17 @@ ExecutionID: ${executionId}
 
 # Summary
 ${result}`;
+
         // persist the constructed response to the the threads object
-        // create the object
-        const body = JSON.stringify({
-            parameters: {
-                messages: `# User Query:
+        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+
+        const messages = `# User Query:
 ${query}
 
-${result}`,
-                id: executionId,
-                app_id: `bennie`, // TODO think about better app id values that include version numbers
-            },
-            options: {
-                returnEdits: "ALL"
-            }
-        });
+${result}`;
 
-        // TODO replace with a DAO
-        await this.executeAction(body, 'create-threads');
+        await threadsDao.upsert(messages, 'bennie', executionId)
+
         // return the structured response
         return {
             status: 200,
@@ -285,28 +278,22 @@ ${result}`,
             stateDefinition.history.context = stateDefinition.context;
         }
 
-        let body = JSON.stringify({
-            parameters: {
-                id: machineExecutionId,
-                stateMachine: JSON.stringify(machine),
-                state: JSON.stringify(stateDefinition),
-                logs: execution.logs, // consider appending to logs
-            },
-            options: {
-                returnEdits: "ALL"
-            }
-        });
-
         execution.state = JSON.stringify(stateDefinition);
-        // TODO replace with a DAO
-        await this.executeAction(body, 'upsert-machine');
+        // update the machine
+        await machineDao.upsert(
+            machineExecutionId,
+            JSON.stringify(machine),
+            JSON.stringify(stateDefinition),
+            execution.logs!,
+        );
 
+        const threadDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
         let thread: Threads | undefined = undefined;
 
         try {
-            // TODO replace with DAO
-            thread = await this.executeOntologyReadOne('Threads', machineExecutionId) as Threads;
+            thread = await threadDao.read(machineExecutionId);
         } catch (e) {
+            console.log(e);
             console.log(`thread not found for id: ${machineExecutionId}, creating a new one`);
         }
 
@@ -319,76 +306,27 @@ ${result}`,
 Your RFP for ${vendorRfpRequest.vendorName} using ID: ${vendorRfpRequest.vendorId} was sent and we received the following response from their agent:
 ${vendorRfpRequest.response}
 `;
-
-        if (!thread?.id) {
-            // create the object
-            body = JSON.stringify({
-                parameters: {
-                    messages: threadMessage,
-                    id: machineExecutionId,
-                    app_id: `bennie`, // TODO think about better app id values that include version numbers
-                },
-                options: {
-                    returnEdits: "ALL"
-                }
-            });
-
-            //TODO replace with DAO
-            await this.executeAction(body, 'create-threads');
-        } else {
-            const appendedMessage = `${thread.messages}
+        const appendedMessage = `${thread?.messages}
 ${threadMessage};
 `
-            // create the object
-            body = JSON.stringify({
-                parameters: {
-                    "threads": machineExecutionId,
-                    messages: appendedMessage,
-                    app_id: `bennie`, // TODO think about better app id values that include version numbers
-                },
-                options: {
-                    returnEdits: "ALL"
-                }
-            });
-
-            // TODO replace with DAO
-            await this.executeAction(body, 'modify-threads');
-        }
+        await threadDao.upsert(appendedMessage, 'bennie', machineExecutionId);
         // We pass machine execution because of this issue:
         // https://community.palantir.com/t/is-there-an-eventually-consistency-problem-in-the-ontology-when-executing-fetch-vs-edits/4015/2
-        await this.text2ActionInstance.upsertState(undefined, true, machineExecutionId, undefined, SupportedEngines.SALES, execution);
+        await this.text2ActionInstance.upsertState(undefined, true, machineExecutionId, undefined, SupportedEngines.SALES);
 
-        const refpRequest = await Objects.search()
-            .rfpRequests()
-            .filter(item => Filters.and(
-                item.machineExecutionId.exactMatch(machineExecutionId),
-                item.vendorId.exactMatch(vendorId)
-            ))
-            .allAsync();
-
-        // create the object
-        body = JSON.stringify({
-            parameters: {
-                RfpRequests: refpRequest[0].id,
-                machine_execution_id: machineExecutionId,
-                vendor_id: vendorId,
-                rfp: refpRequest[0].rfp,
-                rfp_response: rfpResponse,
-            },
-            options: {
-                returnEdits: "ALL"
-            }
-        });
-
-        await this.executeAction(body, 'edit-rfp-requests');
+        const rfpDao = container.get<RfpRequestsDao>(TYPES.RfpRequestsDao);
+        // find the associated RFP
+        const rfpRequest = await rfpDao.search(machineExecutionId, vendorId);
+        // there should be only one matching record
+        await rfpDao.upsert(rfpRequest.rfp!, rfpResponse, vendorId, machineExecutionId, rfpRequest.id);
 
         return {
             status: 200,
-            message: `We've received your RFP response and are reviewing it with the customer. We'll get back to you shoortly.`,
+            message: `We've received your RFP response and are reviewing it with the customer. We'll get back to you shortly.`,
             machineExecutionId,
             reciept: {
                 id: '',
-                timestamp: Timestamp.now(),
+                timestamp: Date.now(),
             },
         }
     }
@@ -411,10 +349,8 @@ ${threadMessage};
     public async sendThreadMessage(message: string, userId: string, machineExecutionId: string): Promise<void> {
         // I changed the response of this function to void to it can be triggered as an action. Once refactored to compute modules it can return a response
         // rehydrate the machine
-        const retrievedThread = Objects.search()
-            .threads()
-            .filter((thread) => thread.id.exactMatch(machineExecutionId))
-            .all()?.[0];
+        const threadDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+        const retrievedThread = await threadDao.read(machineExecutionId);
 
         const messageHistory = retrievedThread.messages;
 
@@ -534,15 +470,11 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
         Explination: the vendor array correctly includes Northslope and the correct vendorID <northslopetech.com>. It also reiterates the RFP from the original user query so it can be resubmitted correctly inserting the start and end dates wupplied by the sales agent int he field.
         `;
 
-        const response = await Gemini_2_0_Flash.createGenericChatCompletion(
-            {
-                messages: [
-                    { role: "SYSTEM", contents: [{ text: system }] },
-                    { role: "USER", contents: [{ text: user }] }
-                ]
-            }
-        );
-        const result = extractJsonFromBackticks(response.completion);
+        const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+
+        const response = await geminiService(user, system);
+        const result = extractJsonFromBackticks(response);
+
         const parsedResult = JSON.parse(result) as { action: string, emailAddresses: string[], slackChannelID: string[], message: string, vendors: string[] };
         const category = parsedResult.action as 'Resubmit RFP to resolve missing information' | 'Send Email' | 'Send Slack Message' | 'No supported action found' | undefined;
 
@@ -555,6 +487,8 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
         if (category === 'Resubmit RFP to resolve missing information') {
 
             const promises = parsedResult.vendors.map(async vendorId => {
+                console.log(`resubmitting RFP for ${vendorId}`);
+
                 return requestRfp(
                     {
                         requestId: uuidv4(),
@@ -585,19 +519,9 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
 
         const appendedMessage = `${messageHistory}
 ${newThreadMessage}`;
-        // create the object
-        const body = JSON.stringify({
-            parameters: {
-                "threads": machineExecutionId,
-                messages: appendedMessage,
-                app_id: `bennie`, // TODO think about better app id values that include version numbers
-            },
-            options: {
-                returnEdits: "ALL"
-            }
-        });
 
-        retrievedThread.messages = appendedMessage;
-
+        // update the thread with the new message
+        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+        threadsDao.upsert(appendedMessage, 'bennie', machineExecutionId);
     }
 }

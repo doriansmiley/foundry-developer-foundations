@@ -1,12 +1,12 @@
-import { FoundryClient, MachineExecutions } from "@xreason/types";
+import { FoundryClient, Threads } from "@xreason/types";
 
-export async function upsertMachineExecution(id: string, stateMachine: string, state: string, logs: string, client: FoundryClient): Promise<MachineExecutions> {
-    console.log(`upsertMachineExecution machineId: ${id}`);
+export async function upsertThread(messages: string, appId: string, client: FoundryClient, id?: string): Promise<Threads> {
+    console.log(`upsertThread threadId: ${id}`);
 
     const token = await client.auth.signIn();
     const apiKey = token.access_token;
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/actions/upsert-machine/apply`;
+    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/actions/upsert-thread/apply`;
 
     const headers = {
         Authorization: `Bearer ${apiKey}`,
@@ -16,9 +16,8 @@ export async function upsertMachineExecution(id: string, stateMachine: string, s
     const body = JSON.stringify({
         parameters: {
             id,
-            stateMachine,
-            state,
-            logs,
+            messages,
+            appId,
         },
         options: {
             returnEdits: "ALL"
@@ -34,21 +33,21 @@ export async function upsertMachineExecution(id: string, stateMachine: string, s
     const result = await apiResult.json() as any;
 
     if (!result.edits || result.edits.edits.length === 0) {
-        throw new Error('Failed to upsert machine message to the ontolgoy.');
+        throw new Error('Failed to upsert thread message to the ontology.');
     }
 
-    console.log(`upsert machine action returned: ${result?.edits?.edits?.[0]}`);
+    console.log(`upsert thread action returned: ${result?.edits?.edits?.[0]}`);
 
-    const machineId = result.edits.edits[0].primaryKey as string;
+    const threadId = result.edits.edits[0].primaryKey as string;
 
-    const getUrl = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/MachineExecutions/${machineId}`;
+    const getUrl = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/Threads/${threadId}`;
     const machineFetchResults = await fetch(getUrl, {
         method: "GET",
         headers: headers,
     });
 
-    const machine = await machineFetchResults.json() as MachineExecutions;
-    console.log(`the machine execution ontology returned: ${JSON.stringify(machine)}`)
+    const thread = await machineFetchResults.json() as Threads;
+    console.log(`the thread execution ontology returned: ${JSON.stringify(thread)}`)
 
-    return machine;
+    return thread;
 }

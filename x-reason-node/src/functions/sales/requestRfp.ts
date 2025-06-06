@@ -10,6 +10,8 @@ export type RfpRequestResponse = {
     machineExecutionId: string;
     vendorName: string;
     vendorId: string;
+    received: boolean;
+    response?: string;
     error?: string;
     reciept?: {
         id: string,

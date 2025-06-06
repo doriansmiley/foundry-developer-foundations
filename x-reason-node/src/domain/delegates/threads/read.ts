@@ -1,7 +1,7 @@
-import { FoundryClient, MachineExecutions } from "@xreason/types";
+import { FoundryClient, Threads } from "@xreason/types";
 
-export async function readMachineExecution(id: string, client: FoundryClient): Promise<MachineExecutions> {
-    console.log(`readMachineExecution id: ${id}`);
+export async function readThread(id: string, client: FoundryClient): Promise<Threads> {
+    console.log(`readThread id: ${id}`);
 
     const token = await client.auth.signIn();
     const apiKey = token.access_token;
@@ -11,14 +11,20 @@ export async function readMachineExecution(id: string, client: FoundryClient): P
         "Content-Type": "application/json",
     };
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/MachineExecutions/${id}`;
-    const machineFetchResults = await fetch(url, {
+    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/Threads/${id}`;
+    const threadFetchResults = await fetch(url, {
         method: "GET",
         headers: headers,
     });
 
-    const machine = await machineFetchResults.json() as MachineExecutions;
-    console.log(`the machine execution ontology returned: ${JSON.stringify(machine)}`)
+    const apiResponse = await threadFetchResults.json() as any;
 
-    return machine;
+    if (apiResponse.errorCode) {
+        console.log(`errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`);
+        throw new Error(`An error occurred while calling read thread errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
+    }
+
+    console.log(`the threads ontology returned: ${JSON.stringify(apiResponse)}`)
+
+    return apiResponse as Threads;
 }

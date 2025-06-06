@@ -9,6 +9,8 @@ import { makeMachineDao } from "@xreason/domain/machineDao";
 import { geminiService } from "@xreason/services/geminiService";
 import { makeCommsDao } from "@xreason/domain/commsDao";
 import { gemeniStockMarketConditions } from "@xreason/services/gemeniStockMarketConditions";
+import { makeThreadsDao } from "./domain/threadsDao";
+import { makeRfpRequestsDao } from "./domain/rfpRequestsDao";
 
 export const container = new Container();
 
@@ -32,6 +34,14 @@ container
 container
     .bind(TYPES.CommsDao)
     .toConstantValue(makeCommsDao());
+
+container
+    .bind(TYPES.ThreadsDao)
+    .toConstantValue(makeThreadsDao());
+
+container
+    .bind(TYPES.RfpRequestsDao)
+    .toConstantValue(makeRfpRequestsDao());
 
 container
     .bind(TYPES.WeatherService)

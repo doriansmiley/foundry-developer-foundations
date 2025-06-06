@@ -8,6 +8,8 @@ export const TYPES = {
     UserDao: Symbol.for("UserDao"),
     MachineDao: Symbol.for("MachineDao"),
     CommsDao: Symbol.for("CommsDao"),
+    ThreadsDao: Symbol.for("ThreadsDao"),
+    RfpRequestsDao: Symbol.for("RfpRequestsDao"),
     GeminiService: Symbol.for("GeminiService"),
     GeminiSearchStockMarket: Symbol.for("GeminiSearchStockMarket"),
 };
@@ -109,8 +111,6 @@ export interface MachineExecutions {
     /** State */
     /** The current state of the state machine execution */
     state: string | undefined;
-    /** Delete the object. The object will no longer appear in any links and its properties will no longer be accessible. */
-    delete(): void;
 }
 
 export interface Communications {
@@ -140,8 +140,6 @@ export interface Communications {
     tokens: number | undefined;
     /** type */
     type: string | undefined;
-    /** Delete the object. The object will no longer appear in any links and its properties will no longer be accessible. */
-    delete(): void;
 }
 
 export interface Threads {
@@ -153,8 +151,22 @@ export interface Threads {
     messages: string | undefined;
     /** userId */
     userId: string | undefined;
-    /** Delete the object. The object will no longer appear in any links and its properties will no longer be accessible. */
-    delete(): void;
+}
+
+/** Holds notional rfp responses */
+export interface RfpRequests {
+    /** Created On */
+    createdOn: number;
+    /** id */
+    readonly id: string;
+    /** machineExecutionId */
+    machineExecutionId: string | undefined;
+    /** rfp */
+    rfp: string | undefined;
+    /** rfpResponse */
+    rfpResponse: string | undefined;
+    /** vendorId */
+    vendorId: string | undefined;
 }
 
 export type WorldDao = (input: GreetingInput) => Promise<GreetingResult>;
@@ -179,7 +191,20 @@ export type CommsDao = {
     read: (id: string) => Promise<Communications>,
 };
 export type ThreadsDao = {
-    upsert: (id: string, messages: string, appId: string) => Promise<Threads>,
+    upsert: (messages: string, appId: string, id?: string) => Promise<Threads>,
     delete: (id: string) => Promise<void>,
     read: (id: string) => Promise<Threads>,
+};
+//RfpRequestsDao
+export type RfpRequestsDao = {
+    upsert: (
+        rfp: string,
+        rfpVendorResponse: string,
+        vendorId: string,
+        machineExecutionId: string,
+        id?: string,
+    ) => Promise<RfpRequests>,
+    delete: (id: string) => Promise<void>,
+    read: (id: string) => Promise<RfpRequests>,
+    search: (machineExecutionId: string, vendorId: string,) => Promise<RfpRequests>,
 };
