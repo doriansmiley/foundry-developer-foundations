@@ -11,7 +11,7 @@ export async function readCommunications(id: string, client: FoundryClient): Pro
         "Content-Type": "application/json",
     };
 
-    const url = `${client.url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/objects/Communications/${id}`;
+    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/Communications/${id}`;
     const fetchResults = await fetch(url, {
         method: "GET",
         headers: headers,

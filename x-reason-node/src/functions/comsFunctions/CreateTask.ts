@@ -29,7 +29,7 @@ export async function createTask(context: Context, event?: MachineEvent, task?: 
     The current month is ${new Date().toLocaleDateString('en-US', { month: 'long' })}. 
     When creating a task you always create a task title, description, and point estimation.
     You also careful decide on the severity based on the ask from the end user.`;
-    
+
     const user = `
     Using the ask from the end user below create a ticket. You must:
     1. Create a title
@@ -126,7 +126,7 @@ export async function createTask(context: Context, event?: MachineEvent, task?: 
         }
     });
 
-    const apiResults = await fetch(`${baseUrl}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/actions/create-ticket/apply`, {
+    const apiResults = await fetch(`${baseUrl}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/actions/create-ticket/apply`, {
         method: 'POST',
         headers,
         body,
@@ -144,15 +144,15 @@ export async function createTask(context: Context, event?: MachineEvent, task?: 
     `);
 
     const parameters: TaskDetails = {
-            id: apiResponse.edits.edits[0].primaryKey,
-            status: 'Open',
-            title,
-            description,
-            asignee,
-            taskType,
-            severity,
-            points,
-        }
+        id: apiResponse.edits.edits[0].primaryKey,
+        status: 'Open',
+        title,
+        description,
+        asignee,
+        taskType,
+        severity,
+        points,
+    }
 
     return parameters;
 }

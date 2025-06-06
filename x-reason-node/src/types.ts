@@ -144,6 +144,19 @@ export interface Communications {
     delete(): void;
 }
 
+export interface Threads {
+    /** appId */
+    appId: string | undefined;
+    /** id */
+    readonly id: string;
+    /** messages */
+    messages: string | undefined;
+    /** userId */
+    userId: string | undefined;
+    /** Delete the object. The object will no longer appear in any links and its properties will no longer be accessible. */
+    delete(): void;
+}
+
 export type WorldDao = (input: GreetingInput) => Promise<GreetingResult>;
 export type UserDao = () => Promise<User>;
 export type MachineDao = {
@@ -164,4 +177,9 @@ export type CommsDao = {
         id?: string,) => Promise<Communications>,
     delete: (id: string) => Promise<void>,
     read: (id: string) => Promise<Communications>,
+};
+export type ThreadsDao = {
+    upsert: (id: string, messages: string, appId: string) => Promise<Threads>,
+    delete: (id: string) => Promise<void>,
+    read: (id: string) => Promise<Threads>,
 };

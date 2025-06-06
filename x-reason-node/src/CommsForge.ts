@@ -21,7 +21,7 @@ export class Text2Action {
         kind: 'Server',
         samplingDecision: 'RECORD_AND_SAMPLE',
         samplingRate: 1.0,
-        attributes: { endpoint: '/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/queries/createCommunicationsTasks/execute' }
+        attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/createCommunicationsTasks/execute` }
     })
     public async createCommunicationsTasks(query: string, userId?: string, xReasonEngine: string = SupportedEngines.COMS): Promise<string> {
         const { solver } = xReasonFactory(xReasonEngine as SupportedEngines)({});
@@ -97,7 +97,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
         kind: 'Server',
         samplingDecision: 'RECORD_AND_SAMPLE',
         samplingRate: 1.0,
-        attributes: { endpoint: '/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/queries/vickie/execute' }
+        attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/vickie/execute` }
     })
     public async vickie(query: string, userId?: string): Promise<string> {
         const taskList = await this.createCommunicationsTasks(query, userId);
@@ -139,7 +139,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
         kind: 'Server',
         samplingDecision: 'RECORD_AND_SAMPLE',
         samplingRate: 1.0,
-        attributes: { endpoint: '/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/queries/executeTaskList/execute' }
+        attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/executeTaskList/execute` }
     })
     public async executeTaskList(plan: string,
         forward: boolean = true,
@@ -181,7 +181,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
         kind: 'Server',
         samplingDecision: 'RECORD_AND_SAMPLE',
         samplingRate: 1.0,
-        attributes: { endpoint: '/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/queries/upsertState/execute' }
+        attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/upsertState/execute` }
     })
     public async upsertState(
         plan?: string,
