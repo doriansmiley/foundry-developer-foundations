@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { Container } from "inversify";
+
 import { TYPES } from "@xreason/types";
 import { openWeatherService } from "@xreason/services/weatherService";
 import { createFoundryClient } from "@xreason/services/foundryClient";
@@ -13,6 +14,7 @@ import { gemeniStockMarketConditions } from "@xreason/services/gemeniStockMarket
 import { makeThreadsDao } from "@xreason/domain/threadsDao";
 import { makeRfpRequestsDao } from "@xreason/domain/rfpRequestsDao";
 import { makeRangrRfpRequestsDao } from "@xreason/domain/rangrRfpRequestsDao";
+import { makeTicketsDao } from "@xreason/domain/ticketsDao";
 
 export const container = new Container();
 
@@ -37,6 +39,10 @@ container
 container
     .bind(TYPES.MachineDao)
     .toConstantValue(makeMachineDao());
+
+container
+    .bind(TYPES.TicketDao)
+    .toConstantValue(makeTicketsDao());
 
 container
     .bind(TYPES.CommsDao)

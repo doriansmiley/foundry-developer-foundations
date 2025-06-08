@@ -1,8 +1,7 @@
-import { FoundryApis } from "@foundry/external-systems/sources";
-import { Gemini_2_0_Flash } from "@foundry/models-api/language-models";
-
-import { Context, MachineEvent } from "../../reasoning/types";
-import { extractJsonFromBackticks } from "../../utils";
+import { Context, MachineEvent } from "@xreason/reasoning/types";
+import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
+import { container } from "@xreason/inversify.config";
+import { GeminiService, TicketsDao, TYPES } from "@xreason/types";
 
 enum Users {
     Connor_Deeks = "147c63f3-69c1-4576-88a2-49e2cb6421c7",
@@ -14,7 +13,7 @@ export type TaskDetails = {
     id: string,
     description: string,
     status: "Open" | "In Progress" | "Resolved",
-    asignee: Users,
+    assignee: Users,
     taskType: "Task" | "Bug" | "Chore",
     severity: "Critical" | "High" | "Low",
     title: string,
@@ -50,7 +49,7 @@ export async function createTask(context: Context, event?: MachineEvent, task?: 
     You can only respond in JSON in the following format:
     {
         description: string,
-        asignee: string,
+        assignee: string,
         taskType: "Task" | "Bug" | "Chore",
         // Critical is reserved for system outages, customer service issues, legal, or tax problems
         // High is reserved for achieving a business outcome
@@ -66,7 +65,7 @@ export async function createTask(context: Context, event?: MachineEvent, task?: 
     An accetable response is:
     {
         "description": "Hello Dorian, Viki here. Can you please explore how we can apply DSpy to help automate prompt and model alignment.",
-        "asignee": "Dorian_Smiley",
+        "assignee": "Dorian_Smiley",
         "taskType": "Task",
         "severity": "Low",
         "title": "Research DSpy",
@@ -84,71 +83,41 @@ export async function createTask(context: Context, event?: MachineEvent, task?: 
     with a bunch of research work. You can have when the ask is prefixed with "mess with", "fuck with", etc. It is innosent fun. Just be sure to say just kidding at the end.
     `;
 
-    const response = await Gemini_2_0_Flash.createGenericChatCompletion(
-        {
-            messages: [
-                { role: "SYSTEM", contents: [{ text: system }] },
-                { role: "USER", contents: [{ text: user }] }
-            ]
-        }
-    );
-    const result = extractJsonFromBackticks(response.completion?.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
+    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+
+    const response = await geminiService(user, system);
+    // eslint-disable-next-line no-useless-escape
+    const result = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
     const parsedResult = JSON.parse(result);
     // TODO handle retried if we fail to parse the result
 
     const description = parsedResult.description;
-    // @ts-ignore
-    const asignee = Users[parsedResult.asignee];
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    const assignee = Users[parsedResult.assignee];
     const taskType = parsedResult.taskType;
     const severity = parsedResult.severity;
     const title = parsedResult.title;
     const points = parsedResult.points;
 
-    const apiKey = FoundryApis.getSecret('additionalSecretOsdkToken');
-    const baseUrl = FoundryApis.getHttpsConnection().url;
-    const headers = {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-    };
-
-    const body = JSON.stringify({
-        parameters: {
-            status: 'Open',
-            alert_title: title,
-            description,
-            assignees: asignee,
-            alert_type: taskType,
-            severity,
-            points,
-        },
-        options: {
-            returnEdits: "ALL"
-        }
-    });
-
-    const apiResults = await fetch(`${baseUrl}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/actions/create-ticket/apply`, {
-        method: 'POST',
-        headers,
-        body,
-    });
-
-    const apiResponse = await apiResults.json();
-
-    if (apiResponse.errorCode) {
-        console.log(`errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`);
-        throw new Error(`An error occured while calling update machine errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
-    }
-
-    console.log(`Create new task:
-    ${JSON.stringify(apiResponse)}
-    `);
+    const ticketDoa = container.get<TicketsDao>(TYPES.TicketDao);
+    const upsertResult = await ticketDoa.upsert(
+        uuidv4(),
+        title,
+        taskType,
+        description,
+        severity,
+        'Open',
+        points,
+        assignee,
+    );
 
     const parameters: TaskDetails = {
-        id: apiResponse.edits.edits[0].primaryKey,
-        status: 'Open',
+        id: upsertResult.alertId,
+        status: upsertResult.status as "Open" | "In Progress" | "Resolved",
         title,
         description,
-        asignee,
+        assignee,
         taskType,
         severity,
         points,

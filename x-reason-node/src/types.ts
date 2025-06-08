@@ -8,6 +8,7 @@ export const TYPES = {
     WorldDao: Symbol.for("WorldDao"),
     UserDao: Symbol.for("UserDao"),
     MachineDao: Symbol.for("MachineDao"),
+    TicketDao: Symbol.for("TicketDao"),
     CommsDao: Symbol.for("CommsDao"),
     ThreadsDao: Symbol.for("ThreadsDao"),
     RfpRequestsDao: Symbol.for("RfpRequestsDao"),
@@ -179,6 +180,32 @@ export interface RfpRequests {
     vendorId: string | undefined;
 }
 
+export interface Tickets {
+    /** Ticket Id */
+    readonly alertId: string;
+    /** Ticket Title */
+    alertTitle: string | undefined;
+    /** Ticket Type */
+    alertType: string | undefined;
+    /** Assignee */
+    assignees: string | undefined;
+    /** createdOn */
+    createdOn: number;
+    /** Description */
+    description: string | undefined;
+    /** Machine */
+    /** Holds the generated state machine based on the Task List */
+    machine: string | undefined;
+    /** modifiedOn */
+    modifiedOn: number;
+    /** points */
+    points: number;
+    /** Severity */
+    severity: string | undefined;
+    /** Status */
+    status: string | undefined;
+}
+
 /** Holds rfp responses */
 export type RfpRequestResponse = {
     status: number;
@@ -195,13 +222,31 @@ export type RfpRequestResponse = {
     };
 }
 
+export type TicketsDao = {
+    upsert: (
+        id: string,
+        alertTitle: string,
+        alertType: string,
+        description: string,
+        severity: string,
+        status: string,
+        points?: number,
+        assignees?: string,
+    ) => Promise<Tickets>,
+    delete: (id: string) => Promise<void>,
+    read: (id: string) => Promise<Tickets>,
+};
+
 export type WorldDao = (input: GreetingInput) => Promise<GreetingResult>;
+
 export type UserDao = () => Promise<User>;
+
 export type MachineDao = {
     upsert: (id: string, stateMachine: string, state: string, logs: string) => Promise<MachineExecutions>,
     delete: (machineExecutionId: string) => Promise<void>,
     read: (machineExecutionId: string) => Promise<MachineExecutions>,
 };
+
 export type CommsDao = {
     upsert: (
         channel: string,
@@ -216,11 +261,13 @@ export type CommsDao = {
     delete: (id: string) => Promise<void>,
     read: (id: string) => Promise<Communications>,
 };
+
 export type ThreadsDao = {
     upsert: (messages: string, appId: string, id?: string) => Promise<Threads>,
     delete: (id: string) => Promise<void>,
     read: (id: string) => Promise<Threads>,
 };
+
 //RfpRequestsDao
 export type RfpRequestsDao = {
     upsert: (
