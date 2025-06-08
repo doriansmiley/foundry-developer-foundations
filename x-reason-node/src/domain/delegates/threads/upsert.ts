@@ -6,7 +6,7 @@ export async function upsertThread(messages: string, appId: string, client: Foun
     const token = await client.auth.signIn();
     const apiKey = token.access_token;
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/actions/upsert-thread/apply`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-thread/apply`;
 
     const headers = {
         Authorization: `Bearer ${apiKey}`,
@@ -40,7 +40,7 @@ export async function upsertThread(messages: string, appId: string, client: Foun
 
     const threadId = result.edits.edits[0].primaryKey as string;
 
-    const getUrl = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/Threads/${threadId}`;
+    const getUrl = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/Threads/${threadId}`;
     const machineFetchResults = await fetch(getUrl, {
         method: "GET",
         headers: headers,

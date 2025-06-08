@@ -18,7 +18,7 @@ export async function upsertCommunications(
     const token = await client.auth.signIn();
     const apiKey = token.access_token;
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/actions/upsert-communication/apply`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-communication/apply`;
 
     const headers = {
         Authorization: `Bearer ${apiKey}`,
@@ -58,7 +58,7 @@ export async function upsertCommunications(
 
     const commsId = result.edits.edits[0].primaryKey as string;
 
-    const getUrl = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/Communications/${commsId}`;
+    const getUrl = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/Communications/${commsId}`;
     const fetchResults = await fetch(getUrl, {
         method: "GET",
         headers: headers,

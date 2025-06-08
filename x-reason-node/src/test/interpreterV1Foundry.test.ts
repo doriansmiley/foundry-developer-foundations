@@ -15,15 +15,15 @@ jest.mock('../utils', () => ({
 }));
 
 jest.mock('../functions', () => ({
-  ...jest.requireActual('../functions'),
-  sendEmail: jest.fn(),
+    ...jest.requireActual('../functions'),
+    sendEmail: jest.fn(),
 }));
 
 // Mock email response data
 const mockEmailResponse = {
-  id: '8675309',
-  threadId: '2468',
-  labels: ['labels', 'schmabels'],
+    id: '8675309',
+    threadId: '2468',
+    labels: ['labels', 'schmabels'],
 };
 
 // Mock the GPT_4o module
@@ -49,10 +49,10 @@ jest.mock('@foundry/external-systems/sources', () => ({
 }));
 
 // Mock fetch globally since it's used in SendSlackMessage
-global.fetch = jest.fn().mockImplementation(() => 
+global.fetch = jest.fn().mockImplementation(() =>
     Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ 
+        json: () => Promise.resolve({
             ok: true,
             channel: 'test-channel',
             ts: '1234567890.123456'
@@ -70,11 +70,11 @@ describe('testing interpreterV1Foundry', () => {
         mockExecution.machine = `
         [
             {
-                "id": "sendEmail",
+                "id": "sendEmail|2",
                 "transitions": [
                     {
                         "on": "CONTINUE",
-                        "target": "sendSlackMessage"
+                        "target": "sendSlackMessage|3"
                     },
                     {
                         "on": "pause",
@@ -87,11 +87,11 @@ describe('testing interpreterV1Foundry', () => {
                 ]
             },
             {
-                "id": "sendSlackMessage",
+                "id": "sendSlackMessage|3",
                 "transitions": [
                     {
                         "on": "CONTINUE",
-                        "target": "sendEmail"
+                        "target": "sendEmail|4"
                     },
                     {
                         "on": "ERROR",
@@ -100,7 +100,7 @@ describe('testing interpreterV1Foundry', () => {
                 ]
             },
             {
-                "id": "sendEmail",
+                "id": "sendEmail|4",
                 "transitions": [
                     {
                         "on": "CONTINUE",
@@ -315,7 +315,7 @@ describe('testing interpreterV1Foundry', () => {
 
         // setup functions mocks
         (sendEmail as jest.Mock).mockResolvedValue(mockEmailResponse);
-        
+
         // Set up the mock
         whenObjectSet(
             Objects.search()
@@ -333,12 +333,12 @@ describe('testing interpreterV1Foundry', () => {
 
         whenObjectSet(
             Objects.search().xReasonTrainingData()
-            .filter(item => Filters.and(
-            item.xReason.exactMatch(SupportedEngines.COMS),
-            item.type.exactMatch(SupportTrainingDataTypes.PROGRAMMER),
-            item.isGood.isTrue(),
-            ))
-            .all()
+                .filter(item => Filters.and(
+                    item.xReason.exactMatch(SupportedEngines.COMS),
+                    item.type.exactMatch(SupportTrainingDataTypes.PROGRAMMER),
+                    item.isGood.isTrue(),
+                ))
+                .all()
         ).thenReturn([]);
     })
 
@@ -415,7 +415,7 @@ describe('testing interpreterV1Foundry', () => {
         "type": "final"
     }
 ]`,
-};
+        };
         // Configure the mock to return the mockResponse
         (Gemini_2_0_Flash.createGenericChatCompletion as jest.Mock).mockResolvedValue(mockResponse);
 

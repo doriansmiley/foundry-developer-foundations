@@ -1,5 +1,5 @@
 import { interpret } from "xstate";
-import { GPT_4o, Gemini_2_0_Flash } from "@foundry/models-api/language-models";
+import { Gemini_2_0_Flash } from "@foundry/models-api/language-models";
 
 import {
     StateConfig,

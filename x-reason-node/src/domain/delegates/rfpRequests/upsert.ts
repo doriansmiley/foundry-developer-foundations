@@ -13,7 +13,7 @@ export async function upsertRfpRequest(
     const token = await client.auth.signIn();
     const apiKey = token.access_token;
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/actions/upsert-rfp-requests/apply`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-rfp-requests/apply`;
 
     const headers = {
         Authorization: `Bearer ${apiKey}`,
@@ -49,7 +49,7 @@ export async function upsertRfpRequest(
 
     const rfpId = result.edits.edits[0].primaryKey as string;
 
-    const getUrl = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/RfpRequests/${rfpId}`;
+    const getUrl = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/RfpRequests/${rfpId}`;
     const machineFetchResults = await fetch(getUrl, {
         method: "GET",
         headers: headers,

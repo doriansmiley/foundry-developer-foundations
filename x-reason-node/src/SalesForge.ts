@@ -256,7 +256,7 @@ ${result}`;
                 break;
         }
         // figure out if all responses from the vendors have been received
-        const allResponsesRecieved = Object.keys(context)
+        const allResponsesReceived = Object.keys(context)
             .filter(key => key.indexOf('requestRfp') >= 0)
             .map(key => context[key])
             .every(item => item.received);
@@ -270,7 +270,7 @@ ${result}`;
             throw new Error('Could not locate awaitRfpResponseState state');
         }
 
-        awaitRfpResponseState.allResponsesRecieved = allResponsesRecieved;
+        awaitRfpResponseState.allResponsesReceived = allResponsesReceived;
         awaitRfpResponseState.vendors.push(vendorId);
 
         // reset the history as it seems x-state will hydrate the state from the history context

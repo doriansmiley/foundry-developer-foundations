@@ -8,7 +8,7 @@ export async function geminiService(user: string, system: string, params?: Gemin
     const token = await client.auth.signIn();
     const apiKey = token.access_token;
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/gemniFlash20Proxy/execute`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/queries/gemniFlash20Proxy/execute`;
 
     const headers = {
         Authorization: `Bearer ${apiKey}`,

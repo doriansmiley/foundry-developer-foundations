@@ -98,7 +98,7 @@ export async function solver(query: string) {
     `
   });
 
-  const dateTimeResult = await dateTime({requestId: '1234', status: 0});
+  const dateTimeResult = await dateTime({ requestId: '1234', status: 0 });
 
   const system = `You are a helpful AI assistant tasked with ensuring user quieres are enriched with the appropriate context.
 You thoughtfully assemble the prerequite infromation retrieval steps in the correct order to ensure the user query can be answered with all approrpiate context such as user prole data, contacts, and message history.

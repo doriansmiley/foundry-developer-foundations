@@ -11,7 +11,7 @@ export async function readMachineExecution(id: string, client: FoundryClient): P
         "Content-Type": "application/json",
     };
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/MachineExecutions/${id}`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/MachineExecutions/${id}`;
     const machineFetchResults = await fetch(url, {
         method: "GET",
         headers: headers,

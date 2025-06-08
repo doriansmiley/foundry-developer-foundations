@@ -3,20 +3,27 @@ import { Container } from "inversify";
 import { TYPES } from "@xreason/types";
 import { openWeatherService } from "@xreason/services/weatherService";
 import { createFoundryClient } from "@xreason/services/foundryClient";
+import { createRangrClient } from "@xreason/services/rangrClient";
 import { makeWorldDao } from "@xreason/domain/worldDao";
 import { makeUserDao } from "@xreason/domain/userDao";
 import { makeMachineDao } from "@xreason/domain/machineDao";
 import { geminiService } from "@xreason/services/geminiService";
 import { makeCommsDao } from "@xreason/domain/commsDao";
 import { gemeniStockMarketConditions } from "@xreason/services/gemeniStockMarketConditions";
-import { makeThreadsDao } from "./domain/threadsDao";
-import { makeRfpRequestsDao } from "./domain/rfpRequestsDao";
+import { makeThreadsDao } from "@xreason/domain/threadsDao";
+import { makeRfpRequestsDao } from "@xreason/domain/rfpRequestsDao";
+import { makeRangrRfpRequestsDao } from "@xreason/domain/rangrRfpRequestsDao";
 
 export const container = new Container();
 
 container
     .bind(TYPES.FoundryClient)
     .toDynamicValue(createFoundryClient)
+    .inSingletonScope();
+
+container
+    .bind(TYPES.RangrClient)
+    .toDynamicValue(createRangrClient)
     .inSingletonScope();
 
 container
@@ -42,6 +49,10 @@ container
 container
     .bind(TYPES.RfpRequestsDao)
     .toConstantValue(makeRfpRequestsDao());
+
+container
+    .bind(TYPES.RangrRfpRequestsDao)
+    .toConstantValue(makeRangrRfpRequestsDao());
 
 container
     .bind(TYPES.WeatherService)

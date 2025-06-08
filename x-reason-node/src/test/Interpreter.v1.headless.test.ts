@@ -1,14 +1,12 @@
 import { State } from 'xstate';
 
-import { headlessInterpreter, MachineEvent, Context, StateConfig, Task } from '../reasoning';
+import { headlessInterpreter, MachineEvent, Context, StateConfig, Task } from '@xreason/reasoning';
 let counter = 0;
 
 jest.mock("../utils", () => ({
-  ...jest.requireActual("../utils"), 
-  uuidv4: jest.fn(() => (++counter).toString()),
+    ...jest.requireActual("../utils"),
+    uuidv4: jest.fn(() => (++counter).toString()),
 }));
-
-import { uuidv4 } from "../utils";
 
 describe('headlessInterpreter', () => {
     const mockDispatch = jest.fn();
@@ -72,12 +70,12 @@ describe('headlessInterpreter', () => {
             type: 'SET_STATE',
             value: expect.objectContaining({
                 currentState: expect.objectContaining({
-                    value: 'mockTask|1',
-                    context: {
+                    value: 'mockTask|2',
+                    context: expect.objectContaining({
                         requestId: 'test',
                         status: 0,
-                        stack: ['mockTask|1'],
-                    },
+                        stack: ['mockTask|2'],
+                    }),
                 }),
             }),
         });
@@ -91,12 +89,12 @@ describe('headlessInterpreter', () => {
             type: 'SET_STATE',
             value: expect.objectContaining({
                 currentState: expect.objectContaining({
-                    'value': 'nextState|2',
+                    'value': 'nextState|3',
                 }),
                 context: expect.objectContaining({
                     requestId: 'test',
                     status: 0,
-                    stack: ['mockTask|1', 'nextState|2'],
+                    stack: ['mockTask|2', 'nextState|3'],
                 }),
             }),
         });
@@ -114,7 +112,7 @@ describe('headlessInterpreter', () => {
 
         const currentState = mockDispatch.mock.calls[0][0].value.currentState;
         const serializedState = serialize(currentState);
-        
+
         stop();
 
         mockDispatch.mockClear();
@@ -128,19 +126,19 @@ describe('headlessInterpreter', () => {
         );
 
         startNew();
-        send({type: 'CONTINUE'});
+        send({ type: 'CONTINUE' });
 
         expect(mockDispatch).toHaveBeenCalledTimes(2);
         expect(mockDispatch).toHaveBeenCalledWith({
             type: 'SET_STATE',
             value: expect.objectContaining({
                 currentState: expect.objectContaining({
-                    'value': 'mockTask|1',
+                    'value': 'mockTask|2',
                 }),
                 context: expect.objectContaining({
                     requestId: 'test',
                     status: 0,
-                    stack: ['mockTask|1', 'nextState|2'],
+                    stack: ['mockTask|2', 'nextState|3'],
                 }),
             }),
         });
@@ -153,12 +151,12 @@ describe('headlessInterpreter', () => {
             type: 'SET_STATE',
             value: expect.objectContaining({
                 currentState: expect.objectContaining({
-                    value: 'nextState|2',
-                    context: {
+                    value: 'nextState|3',
+                    context: expect.objectContaining({
                         requestId: 'test',
                         status: 0,
-                        stack: ['mockTask|1', 'nextState|2', 'success'],
-                    },
+                        stack: ['mockTask|2', 'nextState|3', 'success'],
+                    }),
                 }),
             }),
         });

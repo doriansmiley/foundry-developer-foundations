@@ -11,7 +11,7 @@ export async function searchRfpRequest(machineExecutionId: string, vendorId: str
         "Content-Type": "application/json",
     };
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/RfpRequests/search`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/RfpRequests/search`;
 
     const body = JSON.stringify({
         where: {

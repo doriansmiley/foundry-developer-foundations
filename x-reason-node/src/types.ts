@@ -3,6 +3,7 @@ import type { Client } from "@osdk/client";
 
 export const TYPES = {
     FoundryClient: Symbol.for("FoundryClient"),
+    RangrClient: Symbol.for("RangrClient"),
     WeatherService: Symbol.for("WeatherService"),
     WorldDao: Symbol.for("WorldDao"),
     UserDao: Symbol.for("UserDao"),
@@ -10,6 +11,7 @@ export const TYPES = {
     CommsDao: Symbol.for("CommsDao"),
     ThreadsDao: Symbol.for("ThreadsDao"),
     RfpRequestsDao: Symbol.for("RfpRequestsDao"),
+    RangrRfpRequestsDao: Symbol.for("RangrRfpRequestsDao"),
     GeminiService: Symbol.for("GeminiService"),
     GeminiSearchStockMarket: Symbol.for("GeminiSearchStockMarket"),
 };
@@ -41,6 +43,14 @@ export interface BaseOauthClient {
 }
 
 export interface FoundryClient {
+    client: Client;
+    auth: BaseOauthClient;
+    ontologyRid: string;
+    url: string;
+    getUser: () => Promise<User>;
+}
+
+export interface RangrClient {
     client: Client;
     auth: BaseOauthClient;
     ontologyRid: string;
@@ -153,7 +163,7 @@ export interface Threads {
     userId: string | undefined;
 }
 
-/** Holds notional rfp responses */
+/** Holds rfp requests */
 export interface RfpRequests {
     /** Created On */
     createdOn: number;
@@ -167,6 +177,22 @@ export interface RfpRequests {
     rfpResponse: string | undefined;
     /** vendorId */
     vendorId: string | undefined;
+}
+
+/** Holds rfp responses */
+export type RfpRequestResponse = {
+    status: number;
+    message: string;
+    machineExecutionId: string;
+    vendorName: string;
+    vendorId: string;
+    received: boolean;
+    response?: string;
+    error?: string;
+    receipt?: {
+        id: string,
+        timestamp: Date,
+    };
 }
 
 export type WorldDao = (input: GreetingInput) => Promise<GreetingResult>;
@@ -207,4 +233,12 @@ export type RfpRequestsDao = {
     delete: (id: string) => Promise<void>,
     read: (id: string) => Promise<RfpRequests>,
     search: (machineExecutionId: string, vendorId: string,) => Promise<RfpRequests>,
+};
+
+//RfpRequestsDao
+export type RangrRequestsDao = {
+    submit: (
+        rfp: string,
+        machineExecutionId: string,
+    ) => Promise<RfpRequestResponse>,
 };

@@ -11,7 +11,7 @@ export async function readThread(id: string, client: FoundryClient): Promise<Thr
         "Content-Type": "application/json",
     };
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/Threads/${id}`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/Threads/${id}`;
     const threadFetchResults = await fetch(url, {
         method: "GET",
         headers: headers,

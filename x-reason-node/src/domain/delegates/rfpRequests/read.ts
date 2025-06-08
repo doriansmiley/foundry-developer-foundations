@@ -11,7 +11,7 @@ export async function readRfpRequest(id: string, client: FoundryClient): Promise
         "Content-Type": "application/json",
     };
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/objects/RfpRequests/${id}`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/RfpRequests/${id}`;
     const fetchResult = await fetch(url, {
         method: "GET",
         headers: headers,

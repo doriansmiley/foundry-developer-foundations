@@ -1,9 +1,4 @@
-import { Context, MachineEvent } from "../../reasoning/types";
-/**
-Project Objectives
-Project Deliverables
-Project Timeline
- */
+import { Context, MachineEvent } from "@xreason/reasoning/types";
 
 export type IncompleteQuestionResponse = {
     summary: string,

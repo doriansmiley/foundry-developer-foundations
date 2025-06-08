@@ -16,7 +16,7 @@ export async function getUserProfileFromToken() {
     headers,
   });
 
-  const apiResponse = await apiResults.json();
+  const apiResponse = await apiResults.json() as any;
 
   if (apiResponse.errorCode) {
     console.log(`errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`);

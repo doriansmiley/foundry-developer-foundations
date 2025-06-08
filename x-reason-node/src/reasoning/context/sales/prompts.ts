@@ -321,10 +321,85 @@ export async function aiTransition(
   1. The task list - this is the list of tasks to perform
   2. The current state - this is the current state of the application performing the task list
   3. The context - the context contains all the work performed so far. The stack array attribute denotes which states have been executed and in what order.
+  
+  When handling RFP responses you always wait for all responses to be recieved before transitioning to another state.
+  If all rfp responses are not recieved return the current await state. For example awaitRfpResponses|902fe5f3-d84c-459d-af4c-af82cede5b8d. It must be the exact stateId including the pipe and GUID! This allows the machine to continue to wait for responses.
+  If all rfp responses are receved but some are missing information, you must target the await state. For example awaitRfpResponses|902fe5f3-d84c-459d-af4c-af82cede5b8d. Again, the full state ID must be returned including the pipe and GUID.
+  If all rfp responses are recieved and valid you must target the CONTINUE state. 
   `;
 
   const user = `
   ### Start training data ###
+  Q: Based on the following task list:
+  1. **Create RFP** - **Vendor**: TeamB <teamb.com>, TeamA <teama.com> **Objectives**: Create a contracts and pricing solution in Foundry that includes support for Cournot models, simulations, and A/B testing of the outcomes., **Timeline**: 8 weeks starting June 1st 2025 with a team of 1 Python engineer, 1 TypeScript engineer, and 1 SME on developing Cournot pricing models
+  2. **Write Email** - **To**: Bryce Leszczynski <bryce@codestrap.me> - **Subject**: RFP Pricing Module Responses - **Body**: "Hey Bryce, Bennie here. Hope you are enjoying your Saturday. Below is the RFP responses. Best, Bennie"
+  3. **Send Email** - **To**: Bryce Leszczynski <bryce@codestrap.me> - **Subject**: RFP Pricing Module Responses - **Body**: "Hey Bryce, Bennie here. Hope you are enjoying your Saturday. Below is the RFP responses. Best, Bennie"
+
+  The current state of the application is:
+  {
+    "id": "awaitRfpResponses|4bc74786-12e6-4cef-83f4-be4af505fb29",
+    "task": "**Await RFP Responses** - **Vendors**: TeamB <teamb.com>, TeamA <teama.com>",
+    "includesLogic": true,
+    "transitions": [
+      {
+        "on": "CONTINUE",
+        "target": "writeEmail|0a64031a-c0a1-439e-8bfb-69b189228009"
+      },
+      {
+        "on": "ERROR",
+        "target": "failure"
+      }
+    ]
+  }
+  And the current context is:
+  {
+        "requestId": "c15e116a-73be-449c-9ffb-f489813ee40a",
+        "status": 0,
+        "childToParentStateMap": {
+            "requestRfp|1cebc011-42fa-410e-a540-72155fe74a3d": "parallelRfpRequests|0a64031a-c0a1-439e-8bfb-69b189228009",
+            "requestRfp|d3bddc2d-3cdd-40f9-b1a8-a90ce5551959": "parallelRfpRequests|0a64031a-c0a1-439e-8bfb-69b189228009"
+        },
+        "machineExecutionId": "4bc74786-12e6-4cef-83f4-be4af505fb29",
+        "stack": [
+            "requestRfp|1cebc011-42fa-410e-a540-72155fe74a3d",
+            "requestRfp|d3bddc2d-3cdd-40f9-b1a8-a90ce5551959",
+            "awaitRfpResponses|802fe5f2-d84c-459d-af4c-af82cede5b9b"
+        ],
+        "stateId": "awaitRfpResponses|802fe5f2-d84c-459d-af4c-af82cede5b9b",
+        "requestRfp|1cebc011-42fa-410e-a540-72155fe74a3d": {
+            "status": 200,
+            "message": "TODO add the actual response message",
+            "vendorName": "TeamA",
+            "vendorId": "teama.com",
+            "received": false,
+            "reciept": {
+                "id": "149ab267-a3ec-4f40-90f6-00e178d08907",
+                "timestamp": "2025-05-25T17:32:15.183Z"
+            }
+        },
+        "requestRfp|d3bddc2d-3cdd-40f9-b1a8-a90ce5551959": {
+            "status": 200,
+            "message": "{\"validation\":{\"result\":\"VALID\",\"submissionCriteria\":[],\"parameters\":{}}}",
+            "vendorName": "TeamB",
+            "vendorId": "teamB.com",
+            "received": true,
+            "reciept": {
+                "id": "f69d5a47-75c1-47ed-a967-8bb88d760edf",
+                "timestamp": "2025-05-25T17:32:25.040Z"
+            },
+            "response": "### 📋 Proposed Staffing Plan\n\n- **Engagement Director**: 0.25 FTE\n- **Solutions Engineer – Senior**: 0.5 FTE\n- **Solutions Engineer – Junior**: 1.0 FTE\n\n**✅ Available Start Date**: June 17, 2025  \n**💵 Estimated Weekly Cost**: $3,842.50  \n**💰 Estimated Total Cost (8 weeks)**: $30,740.00\nThe earliest date when all required roles are simultaneously available is June 17, 2025, based on the provided availability information.\n\nThe weekly blended cost is calculated as follows:\n\nEngagement Director: 0.25 FTE x $3,192 = $798\nSolutions Engineer - Senior: 0.5 FTE x $3,192 = $1,596\nSolutions Engineer - Junior: 1.0 FTE x $1,942 = $1,942\nTotal weekly cost: $798 + $1,596 + $1,942 = $3,842.50\nMultiplying the weekly blended cost of $3,842.50 by the project duration of 8 weeks results in an estimated total cost of $30,740.00."
+        },
+        "awaitRfpResponses|4bc74786-12e6-4cef-83f4-be4af505fb29": {
+            "allResponsesRecieved": false,
+            "vendors": [
+                "teamb.com",
+                "teamb.com",
+            ]
+        }
+    }
+  The Return the target for the next state is:
+  A: awaitRfpResponses|4bc74786-12e6-4cef-83f4-be4af505fb29
+
   Q: Based on the following task list:
   1. Recall solution for sku #1234 face cream.
   2. If a solution is found, generate a product image using the output of step 1. If the solution is not found, exit.

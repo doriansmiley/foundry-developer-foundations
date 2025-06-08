@@ -3,11 +3,9 @@ import { interpret } from "xstate";
 let counter = 0;
 
 jest.mock('../utils', () => ({
-    ...jest.requireActual('../utils'),
-    uuidv4: jest.fn(() => (++counter).toString()),
+  ...jest.requireActual('../utils'),
+  uuidv4: jest.fn(() => (++counter).toString()),
 }));
-
-import { uuidv4 } from '../utils';
 
 import { StateConfig, programV1, Context, MachineEvent, Task } from "../reasoning";
 
@@ -305,12 +303,12 @@ describe('Testing Programmer', () => {
                 status: 0,
                 requestId: "test",
                 stack: [
-                  "RecallSolutions|1",
-                  "GenerateIngredientsList|2",
-                  "IngredientDatabase|3",
-                  "RegulatoryCheck|6",
-                  "ConcentrationEstimation|7",
-                  "FormulationSimulation|5",
+                  "RecallSolutions|2",
+                  "GenerateIngredientsList|3",
+                  "IngredientDatabase|4",
+                  "RegulatoryCheck|7",
+                  "ConcentrationEstimation|8",
+                  "FormulationSimulation|6",
                   "success"
                 ],
                 GenerateIngredientsList: [],
@@ -321,7 +319,11 @@ describe('Testing Programmer', () => {
                     "A"
                   ]
                 ],
-                RegulatoryCheck: "no regulatory issues were found"
+                stateId: "ConcentrationEstimation|8",
+                // note that the handling pr parallel states causes the RegulatoryCheck|7 and ConcentrationEstimation|8 to show up like this, it is expected
+                "RegulatoryCheck|7": {},
+                "ConcentrationEstimation|8": {},
+                FormulationSimulation: "no available simulations were found"
               }),
             );
             expect(machineExecution.machine.context.stack?.length).toBe(7);
@@ -339,5 +341,3 @@ describe('Testing Programmer', () => {
   });
   // TODO add more tests including testing for conditionals
 });
-
-

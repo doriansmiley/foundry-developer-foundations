@@ -16,6 +16,10 @@ declare global {
             GEMINI_API_KEY: string;
             BROWSERFY_KEY: string;
             BROWSERFY_BROWSER_URL: string;
+            RANGR_OSDK_CLIENT_ID: string;
+            RANGR_OSDK_CLIENT_SECRET: string;
+            RANGR_FOUNDRY_STACK_URL: string;
+            RANGR_ONTOLOGY_RID: string;
         }
     }
 }
