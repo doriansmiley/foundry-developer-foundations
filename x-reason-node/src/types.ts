@@ -1,5 +1,6 @@
 import { ComputeModule } from '@palantir/compute-module';
 import type { Client } from "@osdk/client";
+import { Type, Static } from '@sinclair/typebox';
 
 export const TYPES = {
     FoundryClient: Symbol.for("FoundryClient"),
@@ -15,7 +16,170 @@ export const TYPES = {
     RangrRfpRequestsDao: Symbol.for("RangrRfpRequestsDao"),
     GeminiService: Symbol.for("GeminiService"),
     GeminiSearchStockMarket: Symbol.for("GeminiSearchStockMarket"),
+    OfficeService: Symbol.for("OfficeService"),
 };
+
+// Schema Definitions for compute module
+// IMPORTANT:  @sinclair/typebox is required!!!
+// https://github.com/palantir/typescript-compute-module?tab=readme-ov-file#schema-registration
+export const Schemas = {
+    SendEmail: {
+        input: Type.Object({
+            recipients: Type.Array(Type.String()),
+            subject: Type.String(),
+            message: Type.String()
+        }),
+        output: Type.Object({
+            id: Type.String(),
+            threadId: Type.String(),
+            labelIds: Type.Array(Type.String())
+        })
+    },
+    ScheduleMeeting: {
+        input: Type.Object({
+            summary: Type.String(),
+            description: Type.Optional(Type.String()),
+            start: Type.String(),
+            end: Type.String(),
+            attendees: Type.Array(Type.String())
+        }),
+        output: Type.Object({
+            id: Type.String(),
+            htmlLink: Type.String(),
+            status: Type.String()
+        })
+    },
+    FindOptimalMeetingTime: {
+        input: Type.Object({
+            participants: Type.Array(Type.String()),
+            timeframe_context: Type.String(),
+            duration_minutes: Type.Optional(Type.Number({ default: 30 })),
+            working_hours: Type.Optional(Type.Object({
+                start_hour: Type.Number({ default: 9 }),
+                end_hour: Type.Number({ default: 17 })
+            })),
+            timezone: Type.String(),
+        }),
+        output: Type.Object({
+            suggested_times: Type.Array(Type.Object({
+                start: Type.String(),
+                end: Type.String(),
+                score: Type.Number()
+            })),
+            message: Type.String()
+        })
+    }
+};
+
+// Types from Schemas
+export type ScheduleMeetingInput = Static<typeof Schemas.ScheduleMeeting.input>;
+export type ScheduleMeetingOutput = Static<typeof Schemas.ScheduleMeeting.output>;
+export type SendEmailOutput = Static<typeof Schemas.SendEmail.output>;
+export type SendEmailInput = Static<typeof Schemas.SendEmail.input>;
+export type FindOptimalMeetingTimeInput = Static<typeof Schemas.FindOptimalMeetingTime.input>;
+export type FindOptimalMeetingTimeOutput = Static<typeof Schemas.FindOptimalMeetingTime.output>;
+
+export interface EmailConfig {
+    recipients: string[];
+    defaultSubject: string;
+    defaultMessage: string;
+}
+
+export interface CalendarConfig {
+    attendees: string[];
+    defaultSummary: string;
+    defaultDescription: string;
+    defaultTimeframe: string;
+    defaultDuration: number;
+    defaultWorkingHours: WorkingHours;
+}
+
+export interface Config {
+    email: EmailConfig;
+    calendar: CalendarConfig;
+}
+
+export interface WorkingHours {
+    start_hour: number;
+    end_hour: number;
+}
+
+export interface TimeSlot {
+    start: string;
+    end: string;
+    score?: number;
+    attendees?: string;
+    id?: string;
+    startLocalDate?: string;
+    endLocalDate?: string;
+    duration?: number;
+}
+
+export interface EmailContext {
+    from: string;
+    recipients: string[];
+    subject: string;
+    message: string;
+}
+
+export interface CalendarContext {
+    summary: string;
+    description?: string;
+    start: string;
+    end: string;
+    attendees: string[];
+}
+
+export interface OptimalTimeContext {
+    participants: string[];
+    timeframe_context: string;
+    duration_minutes?: number;
+    working_hours?: WorkingHours;
+    timezone?: string;
+}
+
+export interface TimeRange {
+    startTime: Date;
+    endTime: Date;
+}
+
+export interface BusyPeriod {
+    start: string;
+    end: string;
+}
+
+export type AvailableTime = {
+    start: string; // Available start time
+    end: string; // IANA time zone (e.g., "America/New_York")
+    availableAttendees: string[]; // Attendees available at this time
+    unavailableAttendees: string[]; // Attendees unavailable at this time
+};
+
+export type ProposedTimes = {
+    times: AvailableTime[]; // Array of available time slots
+    subject: string; // Meeting subject or title
+    agenda?: string; // Optional agenda
+    durationInMinutes: number; // Meeting duration in minutes
+    allAvailable: boolean; // are all required attendees available
+};
+
+export type MeetingRequest = {
+    participants: Array<string>;
+    subject: string;
+    timeframe_context: 'user defined exact date/time' | 'as soon as possible' | 'this week' | 'next week';
+    localDateString?: string,
+    duration_minutes: number;
+    working_hours: {
+        start_hour: number;
+        end_hour: number;
+    }
+}
+
+export type Meeting = {
+    "id": string;
+    "status": string;
+    "htmlLink": string;
+}
 
 export interface GeminiParameters {
     "stopSequences"?: Array<string>;
@@ -204,6 +368,12 @@ export interface Tickets {
     severity: string | undefined;
     /** Status */
     status: string | undefined;
+}
+
+export type OfficeService = {
+    getAvailableMeetingTimes: (meetingRequest: MeetingRequest) => Promise<FindOptimalMeetingTimeOutput>,
+    scheduleMeeting: (meeting: CalendarContext) => Promise<ScheduleMeetingOutput>,
+    sendEmail: (email: EmailContext) => Promise<SendEmailOutput>,
 }
 
 /** Holds rfp responses */

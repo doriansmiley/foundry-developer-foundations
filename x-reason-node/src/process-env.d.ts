@@ -20,6 +20,7 @@ declare global {
             RANGR_OSDK_CLIENT_SECRET: string;
             RANGR_FOUNDRY_STACK_URL: string;
             RANGR_ONTOLOGY_RID: string;
+            OFFICE_SERVICE_ACCOUNT: string;
         }
     }
 }

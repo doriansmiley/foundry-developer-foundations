@@ -1,12 +1,7 @@
-import { Context, MachineEvent } from "../../reasoning/types";
-import { ProposedTimes } from '.';
+import { Context, MachineEvent } from "@xreason/reasoning/types";
 import { scheduleMeeting as scheduleMeetingFunction } from "@gsuite/computemodules";
+import { Meeting, ProposedTimes } from "@xreason/types";
 
-export type Meeting = {
-    "id": string;
-    "status": string;
-    "htmlLink": string;
-}
 
 // This function extracts the proposed time slot found on the input context and the attendees and schedules a meeting with Google Calander API
 export async function scheduleMeeting(context: Context, event?: MachineEvent, task?: string): Promise<Meeting> {
@@ -24,7 +19,7 @@ export async function scheduleMeeting(context: Context, event?: MachineEvent, ta
         const schedulingResult = await scheduleMeetingFunction(inputs);
 
         console.log('schedulingResult response:', JSON.stringify(schedulingResult));
-        
+
         return schedulingResult;
     }
     catch (e) {

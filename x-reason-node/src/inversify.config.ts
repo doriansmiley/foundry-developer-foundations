@@ -15,6 +15,7 @@ import { makeThreadsDao } from "@xreason/domain/threadsDao";
 import { makeRfpRequestsDao } from "@xreason/domain/rfpRequestsDao";
 import { makeRangrRfpRequestsDao } from "@xreason/domain/rangrRfpRequestsDao";
 import { makeTicketsDao } from "@xreason/domain/ticketsDao";
+import { makeGSuiteClient } from "./services/gsuiteClient";
 
 export const container = new Container();
 
@@ -71,3 +72,7 @@ container
 container
     .bind(TYPES.GeminiSearchStockMarket)
     .toConstantValue(gemeniStockMarketConditions);
+
+container
+    .bind(TYPES.OfficeService)
+    .toConstantValue(makeGSuiteClient(process.env.OFFICE_SERVICE_ACCOUNT));
