@@ -21,6 +21,7 @@ declare global {
             RANGR_FOUNDRY_STACK_URL: string;
             RANGR_ONTOLOGY_RID: string;
             OFFICE_SERVICE_ACCOUNT: string;
+            OPEN_AI_KEY: string;
         }
     }
 }

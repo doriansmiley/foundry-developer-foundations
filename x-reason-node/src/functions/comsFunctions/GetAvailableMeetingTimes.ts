@@ -1,7 +1,7 @@
 import { Context, MachineEvent } from "@xreason/reasoning/types";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
 import { container } from "@xreason/inversify.config";
-import { GeminiService, ProposedTimes, TYPES, MeetingRequest } from "@xreason/types";
+import { GeminiService, ProposedTimes, TYPES, MeetingRequest, OfficeService } from "@xreason/types";
 
 
 // This function gets the attendees from the input context and then
@@ -118,15 +118,20 @@ Your response is:
         const inputs = {
             participants: codeStrapParticipants,
             timeframe_context: timeFrame,
+            subject: parsedResult.subject,
             duration_minutes: parsedResult.duration_minutes,
             working_hours: {
                 start_hour: 8,
                 end_hour: 17,
             },
             timezone: "America/Los_Angeles", // hard code for now, should be the organizer's time zone
-        }
+        } as MeetingRequest;
 
-        let availableTimes = await findOptimalMeetingTime(inputs);
+
+
+        const officeService = container.get<OfficeService>(TYPES.OfficeService);
+
+        let availableTimes = await officeService.getAvailableMeetingTimes(inputs);
 
         // no times found
         if (availableTimes.suggested_times.length === 0) {
@@ -138,13 +143,13 @@ Your response is:
                     inputs.timeframe_context = 'next week';
                     break;
             }
-            availableTimes = await findOptimalMeetingTime(inputs);
+            availableTimes = await officeService.getAvailableMeetingTimes(inputs);
         }
 
         // try next week
         if (availableTimes.suggested_times.length === 0 && inputs.timeframe_context !== 'next week') {
             inputs.timeframe_context = 'next week';
-            availableTimes = await findOptimalMeetingTime(inputs);
+            availableTimes = await officeService.getAvailableMeetingTimes(inputs);
         }
 
         // still nothing, return allAvailable false to resolve manually

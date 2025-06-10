@@ -1,7 +1,5 @@
-import { FoundryApis, OpenAICodeStrapEng } from "@foundry/external-systems/sources";
-
-import { Context, MachineEvent } from "../../reasoning/types";
-import { uuidv4 } from "../../utils";
+import { Context, MachineEvent } from "@xreason/reasoning/types";
+import { uuidv4 } from "@xreason/utils";
 
 // TODO finish this type
 export type ResearchReport = {
@@ -14,7 +12,7 @@ export async function researchReport(context: Context, event?: MachineEvent, tas
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OpenAICodeStrapEng.getSecret("additionalSecretToken")}`
+            'Authorization': `Bearer ${process.env.OPEN_AI_KEY}`
         },
         body: JSON.stringify({
             model: "gpt-4o",
@@ -61,7 +59,7 @@ export async function researchReport(context: Context, event?: MachineEvent, tas
         })
     });
 
-    const data = await response.json();
+    const data = await response.json() as any;
     const content = data.output?.filter((message: { type: string }) => message.type === 'message')?.[0]?.content?.[0]?.text
 
     return {
