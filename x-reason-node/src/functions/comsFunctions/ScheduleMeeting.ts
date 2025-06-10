@@ -1,7 +1,6 @@
 import { Context, MachineEvent } from "@xreason/reasoning/types";
-import { scheduleMeeting as scheduleMeetingFunction } from "@gsuite/computemodules";
-import { Meeting, ProposedTimes } from "@xreason/types";
-
+import { Meeting, ProposedTimes, TYPES, OfficeService } from "@xreason/types";
+import { container } from "@xreason/inversify.config";
 
 // This function extracts the proposed time slot found on the input context and the attendees and schedules a meeting with Google Calander API
 export async function scheduleMeeting(context: Context, event?: MachineEvent, task?: string): Promise<Meeting> {
@@ -16,7 +15,9 @@ export async function scheduleMeeting(context: Context, event?: MachineEvent, ta
             attendees: availableTimes.times[0].availableAttendees,
         };
 
-        const schedulingResult = await scheduleMeetingFunction(inputs);
+        const officeService = container.get<OfficeService>(TYPES.OfficeService);
+
+        const schedulingResult = await officeService.scheduleMeeting(inputs);
 
         console.log('schedulingResult response:', JSON.stringify(schedulingResult));
 

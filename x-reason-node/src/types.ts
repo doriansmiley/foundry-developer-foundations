@@ -17,6 +17,7 @@ export const TYPES = {
     GeminiService: Symbol.for("GeminiService"),
     GeminiSearchStockMarket: Symbol.for("GeminiSearchStockMarket"),
     OfficeService: Symbol.for("OfficeService"),
+    MessageService: Symbol.for("MessageService"),
 };
 
 // Schema Definitions for compute module
@@ -78,6 +79,18 @@ export type SendEmailOutput = Static<typeof Schemas.SendEmail.output>;
 export type SendEmailInput = Static<typeof Schemas.SendEmail.input>;
 export type FindOptimalMeetingTimeInput = Static<typeof Schemas.FindOptimalMeetingTime.input>;
 export type FindOptimalMeetingTimeOutput = Static<typeof Schemas.FindOptimalMeetingTime.output>;
+
+export type MessageResponse = {
+    ok: boolean,
+    channel: string,
+    ts: number,
+    error?: string
+}
+
+export type Message = {
+    channelId: string,
+    message: string,
+}
 
 export interface EmailConfig {
     recipients: string[];
@@ -374,6 +387,10 @@ export type OfficeService = {
     getAvailableMeetingTimes: (meetingRequest: MeetingRequest) => Promise<FindOptimalMeetingTimeOutput>,
     scheduleMeeting: (meeting: CalendarContext) => Promise<ScheduleMeetingOutput>,
     sendEmail: (email: EmailContext) => Promise<SendEmailOutput>,
+}
+
+export type MessageService = {
+    sendMessage: (message: Message) => Promise<MessageResponse>,
 }
 
 /** Holds rfp responses */

@@ -1,8 +1,7 @@
-import { Context, MachineEvent } from "../../reasoning/types";
-import { Gemini_2_0_Flash } from "@foundry/models-api/language-models";
-import { extractJsonFromBackticks } from "../../utils";
-import { ProposedTimes } from "./GetAvailableMeetingTimes";
-import { sendEmail as sendEmailFromComputeModule } from "@gsuite/computemodules"; 
+import { Context, MachineEvent } from "@xreason/reasoning/types";
+import { extractJsonFromBackticks } from "@xreason/utils";
+import { GeminiService, ProposedTimes, TYPES, OfficeService } from "@xreason/types";
+import { container } from "@xreason/inversify.config";
 
 export type DraftAtendeeEmailResponse = {
     emailId: string,
@@ -78,24 +77,26 @@ export async function resolveUnavailableAttendees(context: Context, event?: Mach
     You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}. 
     You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
     The current month is ${new Date().toLocaleDateString('en-US', { month: 'long' })}.`;
-    const response = await Gemini_2_0_Flash.createGenericChatCompletion(
-            {
-                messages: [
-                    { role: "SYSTEM", contents: [{ text: system }] },
-                    { role: "USER", contents: [{ text: user }] }
-                ]
-            }
-        );
-    const result = extractJsonFromBackticks(response.completion?.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
+
+    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+
+    const response = await geminiService(user, system);
+    // eslint-disable-next-line no-useless-escape
+    const result = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
     const parsedResult = JSON.parse(result);
     const message = parsedResult.message;
     const modelDialog = parsedResult.message;
 
-    const emailResponse = await sendEmailFromComputeModule({
-        recipients: parsedResult.recipients,
-        subject: resultOfMeetingSchedulingAttempt.subject,
-        message,
-    });
+    const officeService = container.get<OfficeService>(TYPES.OfficeService);
+
+    const emailResponse = await officeService.sendEmail(
+        {
+            from: process.env.OFFICE_SERVICE_ACCOUNT,
+            recipients: parsedResult.recipients,
+            subject: resultOfMeetingSchedulingAttempt.subject,
+            message,
+        }
+    );
 
     // TODO: implement email threading with event listeners
     // This will involve saving this intital email to a "threads" ontology object
