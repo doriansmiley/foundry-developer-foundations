@@ -5,8 +5,6 @@ import { submitRangrRfp } from "@xreason/domain/delegates/rangr/submit";
 
 export function makeRangrRfpRequestsDao(): RangrRequestsDao {
     const client = container.get<RangrClient>(TYPES.RangrClient);
-    // TODO remove once Foundry client is used
-    console.log(client.ontologyRid);
 
     return {
         // TODO code out all methods using OSDK API calls

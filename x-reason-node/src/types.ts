@@ -14,10 +14,13 @@ export const TYPES = {
     ThreadsDao: Symbol.for("ThreadsDao"),
     RfpRequestsDao: Symbol.for("RfpRequestsDao"),
     RangrRfpRequestsDao: Symbol.for("RangrRfpRequestsDao"),
+    MemoryRecallDao: Symbol.for("MemoryRecallDao"),
+    ContactsDao: Symbol.for("ContactsDao"),
     GeminiService: Symbol.for("GeminiService"),
     GeminiSearchStockMarket: Symbol.for("GeminiSearchStockMarket"),
     OfficeService: Symbol.for("OfficeService"),
     MessageService: Symbol.for("MessageService"),
+    EmbeddingsService: Symbol.for("EmbeddingsService"),
 };
 
 // Schema Definitions for compute module
@@ -79,6 +82,13 @@ export type SendEmailOutput = Static<typeof Schemas.SendEmail.output>;
 export type SendEmailInput = Static<typeof Schemas.SendEmail.input>;
 export type FindOptimalMeetingTimeInput = Static<typeof Schemas.FindOptimalMeetingTime.input>;
 export type FindOptimalMeetingTimeOutput = Static<typeof Schemas.FindOptimalMeetingTime.output>;
+
+export type UserProfile = {
+    name: string | undefined,
+    id: string | undefined,
+    email: string | undefined,
+    timezone: string | undefined,
+}
 
 export type MessageResponse = {
     ok: boolean,
@@ -204,6 +214,10 @@ export interface GeminiParameters {
 
 export interface GeminiService {
     (user: string, system: string, params?: GeminiParameters): Promise<string>;
+}
+
+export interface EmbeddingsService {
+    (input: string): Promise<[number[]]>;
 }
 
 export interface Token {
@@ -383,6 +397,77 @@ export interface Tickets {
     status: string | undefined;
 }
 
+/** This is the object type for all names of partners, palantir and customers */
+export interface Contacts {
+    /** This is an array that stores the key CodeStrap contacts and aligns to the relationship status array. */
+    codestrapPoc: ReadonlyArray<string> | undefined;
+    /** Company */
+    /** This property is the company the individual works at directly. This is the employer or the company they run/own. */
+    company: string | undefined;
+    /** Contact Category */
+    /** This stores the values in three categories: Palantir, Partner, or Client. Palantir stores all objects for individuals who work at Palantir. Partner stores all objects for individuals who work at a partner organization (e.g., Northslope, PwC, Axis, Rangr). Client stores all objects for individuals who work at a client or customer. */
+    contactCategory: string | undefined;
+    /** Country Of Residence */
+    /** This is where this person's home is located and where they are located. It can be used for scheduling for timezones as well. */
+    countryOfResidence: string | undefined;
+    /** Email */
+    /** This is the individual's email address, used for direct communication. */
+    email: string | undefined;
+    /** Executive Assistant */
+    /** This is someone who can help schedule meetings for this person */
+    executiveAssistant: string | undefined;
+    /** First Name */
+    /** This is the individual's first name. */
+    firstName: string | undefined;
+    /** Full Name */
+    /** This is the full name of the individual that combines the First Name and the Last Name of the individual. */
+    fullName: string | undefined;
+    /** Key Accounts */
+    /** These are the key accounts we know these individuals work on and may lead from a relationship perspective */
+    keyAccounts: string | undefined;
+    /** Last Name */
+    /** This is the individual's last name. */
+    lastName: string | undefined;
+    /** LinkedIn */
+    /** This is the individual's profile on the social media site LinkedIn. */
+    linkedIn: string | undefined;
+    /** Notes */
+    /** These are all the notes from everyone for this client. This will be the starting point for SalesForge, the notes were */
+    notes: ReadonlyArray<string> | undefined;
+    /** Phone Number Main */
+    /** This is the phone number most used by the individual and should be used for the main reach out from calling and texting. */
+    phoneNumberMain: string | undefined;
+    /** Phone Number Secondary */
+    /** This is the phone number used as a backup by the individual and should be used only when Phone Number Main is NOT successful */
+    phoneNumberSecondary: string | undefined;
+    /** Primary Key */
+    /** This is the primary key derived from concatenating the full name of the individual and their email */
+    readonly primaryKey_: string;
+    /** Relationship Status */
+    /** This is an array that stores the relationship status aligned to the CodeStrap poc stored in the same order. */
+    relationshipStatus: ReadonlyArray<string> | undefined;
+    /** Role */
+    /** This is the individual's job title or role they hold at the Company they work for or manage */
+    role: string | undefined;
+    /** Talks To */
+    /** These are the people the individual talks to and is the main point of contact */
+    talksTo: string | undefined;
+}
+
+/** Used for retrieving relevant context for LLMs */
+export interface MemoryRecall {
+    /** Created On */
+    createdOn: number;
+    /** Id */
+    readonly id: string;
+    /** Original Text */
+    originalText: string | undefined;
+    /** Source */
+    source: string | undefined;
+    /** User Id */
+    userId: string | undefined;
+}
+
 export type OfficeService = {
     getAvailableMeetingTimes: (meetingRequest: MeetingRequest) => Promise<FindOptimalMeetingTimeOutput>,
     scheduleMeeting: (meeting: CalendarContext) => Promise<ScheduleMeetingOutput>,
@@ -426,7 +511,7 @@ export type TicketsDao = {
 
 export type WorldDao = (input: GreetingInput) => Promise<GreetingResult>;
 
-export type UserDao = () => Promise<User>;
+export type UserDao = (userId?: string) => Promise<User>;
 
 export type MachineDao = {
     upsert: (id: string, stateMachine: string, state: string, logs: string) => Promise<MachineExecutions>,
@@ -455,7 +540,6 @@ export type ThreadsDao = {
     read: (id: string) => Promise<Threads>,
 };
 
-//RfpRequestsDao
 export type RfpRequestsDao = {
     upsert: (
         rfp: string,
@@ -469,10 +553,47 @@ export type RfpRequestsDao = {
     search: (machineExecutionId: string, vendorId: string,) => Promise<RfpRequests>,
 };
 
-//RfpRequestsDao
 export type RangrRequestsDao = {
     submit: (
         rfp: string,
         machineExecutionId: string,
     ) => Promise<RfpRequestResponse>,
+};
+
+export type MemoryRecallDao = {
+    upsert: (
+        id: string,
+        originalText: string,
+        source: string,
+        userId?: string,
+    ) => Promise<MemoryRecall>,
+    delete: (id: string) => Promise<void>,
+    read: (id: string) => Promise<MemoryRecall>,
+    search: (input: string, kValue: number,) => Promise<MemoryRecall[]>,
+};
+
+export type ContactsDao = {
+    upsert: (
+        primaryKey_: string,
+        email: string,
+        firstName: string,
+        lastName: string,
+        codestrapPoc?: string[],
+        company?: string,
+        contactCategory?: string,
+        countryOfResidence?: string,
+        executiveAssistant?: string,
+        fullName?: string,
+        keyAccounts?: string,
+        linkedIn?: string,
+        notes?: string[],
+        phoneNumberMain?: string,
+        phoneNumberSecondary?: string,
+        relationshipStatus?: string[],
+        role?: string,
+        talksTo?: string,
+    ) => Promise<Contacts>,
+    delete: (id: string) => Promise<void>,
+    read: (id: string) => Promise<Contacts>,
+    search: (fullName: string, company: string, pageSize?: number) => Promise<Contacts[]>,
 };

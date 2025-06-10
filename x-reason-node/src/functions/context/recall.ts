@@ -1,7 +1,8 @@
 
-import { UserProfile } from "@xreason/functions/context/userProfile";
 import { Context, MachineEvent } from "@xreason/reasoning/types";
 import { extractJsonFromBackticks } from "@xreason/utils";
+import { container } from "@xreason/inversify.config";
+import { ContactsDao, GeminiService, MemoryRecallDao, TYPES, UserDao, UserProfile } from "@xreason/types";
 
 export type ModelMemory = {
     contacts: {
@@ -19,6 +20,11 @@ export type ModelMemory = {
 }
 
 export async function recall(context: Context, event?: MachineEvent, task?: string): Promise<ModelMemory> {
+
+    const memoryRecallDao = container.get<MemoryRecallDao>(TYPES.MemoryRecallDao);
+    const contactsDao = container.get<ContactsDao>(TYPES.ContactsDao);
+    const userDao = container.get<UserDao>(TYPES.UserDao);
+
     // find the user profile state
     const lastStackKey = context?.stack?.find(stackItem => stackItem.indexOf('userProfile') >= 0);
     const userDetails: UserProfile = {
@@ -27,32 +33,28 @@ export async function recall(context: Context, event?: MachineEvent, task?: stri
         email: undefined,
         timezone: undefined,
     };
-    // if we found a state that retrieved a user profile grab it
+
+    // prefer the user profile loaded as a result of the previous state being executed
     if (lastStackKey) {
         const retrievedUser = context[lastStackKey] as UserProfile;
         userDetails.name = retrievedUser.name;
         userDetails.id = retrievedUser.id;
         userDetails.email = retrievedUser.email;
         userDetails.timezone = retrievedUser.timezone;
+    } else if (context.userId) {
+        // use the context as a fallback
+        const user = await userDao(context.userId);
+        userDetails.name = `${user.givenName} ${user.familyName}`;
+        userDetails.id = user.id;
+        userDetails.email = user.email;
+        userDetails.timezone = 'America/Los_Angeles'; // hard code for now, will need some way to look this up in the future
     }
 
-    const embeddings = await Text_Embedding_3_Small.createEmbeddings({ inputs: [task!] });
-
     // find any daily briefs that are relevant here
-    const matchedMessages = await Objects.search()
-        .memoryRecall()
-        .nearestNeighbors(message => message.embedding.near(embeddings.embeddings[0], { kValue: 1 }))
-        .allAsync();
+    const matchedMessages = await memoryRecallDao.search(task!, 1)
 
     // match any relevant contacts based on name and the task
-    const matchedContacts = await Objects.search()
-        .contacts()
-        .filter(contact => Filters.or(
-            contact.fullName.matchAnyToken(task!),
-            contact.company.matchAnyToken(task!)
-        ))
-        .orderByRelevance()
-        .takeAsync(10);
+    const matchedContacts = await contactsDao.search(task!, task!);
 
     const messagesString = JSON.stringify(matchedMessages.map(message => ({
         messageText: JSON.stringify(message.originalText),
@@ -169,15 +171,14 @@ export async function recall(context: Context, event?: MachineEvent, task?: stri
 
     const system = `You are a helpful AI assistant tasked with extracting relevant context details for user tasks. 
     You always obey the user instructions and pay close attention to detail. You are not chatty and always respond in the requested JSON structure, nothing else.`;
-    const response = await Gemini_2_0_Flash.createGenericChatCompletion(
-        {
-            messages: [
-                { role: "SYSTEM", contents: [{ text: system }] },
-                { role: "USER", contents: [{ text: user }] }
-            ]
-        }
-    );
-    const result = extractJsonFromBackticks(response.completion?.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}").replace(/(\r\n|\n|\r)/gm, "");
+
+    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+
+    const response = await geminiService(user, system);
+
+    // eslint-disable-next-line no-useless-escape
+    const result = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}").replace(/(\r\n|\n|\r)/gm, "");
+
     const parsedResult = JSON.parse(result) as ModelMemory;
 
     return parsedResult;

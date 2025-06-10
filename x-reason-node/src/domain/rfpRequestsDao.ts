@@ -7,8 +7,6 @@ import { searchRfpRequest } from "./delegates/rfpRequests/search";
 
 export function makeRfpRequestsDao(): RfpRequestsDao {
     const client = container.get<FoundryClient>(TYPES.FoundryClient);
-    // TODO remove once Foundry client is used
-    console.log(client.ontologyRid);
 
     return {
         // TODO code out all methods using OSDK API calls

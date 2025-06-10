@@ -1,5 +1,5 @@
-import { UserProfile } from "./userProfile";
-import { Context, MachineEvent } from "../../reasoning/types";
+import { UserProfile } from "@xreason/functions/context/userProfile";
+import { Context, MachineEvent } from "@xreason/reasoning/types";
 
 export type CurrentDateTime = {
     currentLocalDateTime: string,

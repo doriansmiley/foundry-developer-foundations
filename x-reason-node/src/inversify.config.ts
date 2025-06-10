@@ -15,8 +15,11 @@ import { makeThreadsDao } from "@xreason/domain/threadsDao";
 import { makeRfpRequestsDao } from "@xreason/domain/rfpRequestsDao";
 import { makeRangrRfpRequestsDao } from "@xreason/domain/rangrRfpRequestsDao";
 import { makeTicketsDao } from "@xreason/domain/ticketsDao";
-import { makeGSuiteClient } from "./services/gsuiteClient";
-import { makeSlackClient } from "./services/slack";
+import { makeGSuiteClient } from "@xreason/services/gsuiteClient";
+import { makeSlackClient } from "@xreason/services/slack";
+import { embeddingsService } from "@xreason/services/embeddingsService";
+import { makeMemoryRecallDao } from "@xreason/domain/memoryRecallDao";
+import { makeContactsDao } from "./domain/contactsDao";
 
 export const container = new Container();
 
@@ -63,12 +66,24 @@ container
     .toConstantValue(makeRangrRfpRequestsDao());
 
 container
+    .bind(TYPES.MemoryRecallDao)
+    .toConstantValue(makeMemoryRecallDao());
+
+container
+    .bind(TYPES.ContactsDao)
+    .toConstantValue(makeContactsDao());
+
+container
     .bind(TYPES.WeatherService)
     .toConstantValue(openWeatherService);
 
 container
     .bind(TYPES.GeminiService)
     .toConstantValue(geminiService);
+
+container
+    .bind(TYPES.EmbeddingsService)
+    .toConstantValue(embeddingsService);
 
 container
     .bind(TYPES.GeminiSearchStockMarket)
