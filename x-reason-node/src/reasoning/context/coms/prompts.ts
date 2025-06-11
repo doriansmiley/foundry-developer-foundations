@@ -1,8 +1,7 @@
 import { SupportedEngines, xReasonFactory, SupportTrainingDataTypes } from "@xreason/reasoning/factory";
 import { ActionType } from "@xreason/reasoning/types";
-import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
 import { container } from "@xreason/inversify.config";
-import { GeminiService, TicketsDao, TrainingDataDao, TYPES } from "@xreason/types";
+import { TrainingDataDao, TYPES } from "@xreason/types";
 
 // TODO get this data from the ontology
 async function getProgrammingTrainingData() {
@@ -105,36 +104,34 @@ export async function solver(query: string) {
   console.log(`formatted int date: ${formatted}`);
   const isPDT = formatted.includes("PDT");
 
-  const system = `You are a helpful AI assistant tasked with ensuring tasks lists are properly defined with all required identitying information such as email addresses, meeting day and time, slack channel IDs, etc.
+  const system = `You are a helpful AI assistant tasked with ensuring tasks lists are properly defined with all required identifying information such as email addresses, meeting day and time, slack channel IDs, etc.
 You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Vickie, Code's AI EA" or similar. 
 You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}. 
 You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
 You always obey the users instructions and understand the people you work for are busy executives and sometimes need help in their personal lives
-These tasks are not beneith you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
+These tasks are not beneath you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
 It means we all pull together to get things done.
 The current local date/time is ${new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}.
 The current day/time in your timezone is: ${new Date().toString()}
 PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}
   `;
 
-  // TODO import the personel and channel info from ontology object
-  // IMPORTANT this prompt is optimized for reasoning models like o1 and o1-mini
-  // notice the abscense of CoT and K-Shot prompting! This hurts reasoning models
+  // TODO import the personnel and channel info from ontology object
   const user = `
   Using the user query below output a properly defined task list.
   Your rules for outputting properly formatted task lists are:
-    1. Emails must include the reciepient(s) name and emaill address along with a subject and body
+    1. Emails must include the recipient(s) name and email address along with a subject and body
       1.1 You must always write an email before sending an email
     2. Slack messages must include the channel ID and message to send.
       2.1 You must write a slack message before sending a slack message
     3. Meetings must include all attendees with their name and email, have a start and end time, duration and subject
-      3.1 You must look for availabel times before you schedule a meeting. If everyone is not available you must resolve conflicts.
+      3.1 You must look for available times before you schedule a meeting. If everyone is not available you must resolve conflicts.
       3.2 Always include the current user in meetings unless they specifically ask to be excluded
     5. Project reports must have the name of the project specified
     6. Any part of a user query that include the phrase "create a task" or similar should map to the create task action
     7. When creating tasks determine who is the mostly likely person to assign based on the user query and provided context. Be sure to incude a name and email
     8. When reasoning about the resolution of contacts from incomplete name be sure to consider carefully any provided messages that provide the missing context required to figure out the person being referenced
-    9. If a particular task can not be achieved using one or more of the supported actions you must prune it from your outputed list
+    9. If a particular task can not be achieved using one or more of the supported actions you must prune it from your outputted list
     10. If no supported tasks can be achieved using one or more of the supported actions respond with "Unsupported Question" 
   
   User Query:
@@ -144,7 +141,7 @@ PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}
   You can only perform the following actions. 
   ${toolsCatalog}
 
-  To create and actionable task list let's take this steo by step:
+  To create and actionable task list let's take this step by step:
     1. First, cross check the supplied list of tasks against the tasks you can perform and determine if you can perform the action using one or more actions.
     2. Second, include any missing information using only the provided team and slack channel information. Email addresses that are not found in the provided list are fine, just make sure they are valid email addresses
     3. Lastly, ensure you have explicitly listed all required meeting attendees by name and included all other identifiers such as channel IDs and email addresses
@@ -170,8 +167,8 @@ PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}
        2. **Write Email** - **To**: Bryce Leszczynski <bryce@codestrap.me> - **Subject**: Komatsu Phase 1 Project Status REport - **Body**: "Hey Bryce, Vickie here. Hope you are enjoying your Saturday. Below is a link to the project status report. Best, Vickie"
        3. **Send Email** - **To**: Bryce Leszczynski <bryce@codestrap.me> - **Subject**: Komatsu Phase 1 Project Status REport - **Body**: "Hey Bryce, Vickie here. Hope you are enjoying your Saturday. Below is a link to the project status report. Best, Vickie"
     
-    Q: "Create a task for a report on market opportunities in the automative space to Text2Action"
-    A: 1. **Create Task** - Create a task for Dave Dziedzic <dave@codestrap.me> to create a report on market opportunities in the automative space to Text2Action
+    Q: "Create a task for a report on market opportunities in the automotive space to Text2Action"
+    A: 1. **Create Task** - Create a task for Dave Dziedzic <dave@codestrap.me> to create a report on market opportunities in the automotive space to Text2Action
 
     Q: "Send a reminder email to Connor about the demo this Friday and to accept the meeting"
     A: 1. **Write Email** - **To**: Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Demo next week, please confirm - **Body**: "Hey Connor, it's Vickie here. Happy humpday! This is just a friendly reminder we have a demo this Friday. Please accept the invite. Cheers, Vickie"
@@ -184,13 +181,13 @@ PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}
        If all attendees are not available, resolve unavailable attendees
        2. **Schedule a meeting** - Subject: Marketing strategy session. - Attendees: Dorian Smiley <dsmiley@codestrap.me>, Connor Deeks <connor.deeks@codestrap.me>
        Duration: 1 hour
-       3. **Write Slack message** - Channel ID: C082XAZ9A1E - Recipients: Team members - Message: Please remeber the current sprint wraps by EOD Friday.
-       4. **Send Slack message** - Channel ID: C082XAZ9A1E - Recipients: Team members - Message: Please remeber the current sprint wraps by EOD Friday.
+       3. **Write Slack message** - Channel ID: C082XAZ9A1E - Recipients: Team members - Message: Please remember the current sprint wraps by EOD Friday.
+       4. **Send Slack message** - Channel ID: C082XAZ9A1E - Recipients: Team members - Message: Please remember the current sprint wraps by EOD Friday.
 
-    Q "Create a research report on the effects of weightlessnes on astronaughts and limit it to a few pages. Then email it to jane.doe@someurl.com and Connor."
-    A: 1. **Research Report** - Create a research report on the effects of weightlessnes on astronaughts and limit it to a few pages
-       2. **Write Email** - **To**: Jane Doe <jane.doe@someurl.com>, Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Research Report on the Effects of Weightlessnes - **Body**: "Hey Jane and Connor, I've included a fascinating report for you below on the effects of weightlessnes on astronaughts. Enjoy the report, Vickie"
-       3. **Send Email** - **To**: Jane Doe <jane.doe@someurl.com>, Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Research Report on the Effects of Weightlessnes - **Body**: "Hey Jane and Connor, I've included a fascinating report for you below on the effects of weightlessnes on astronaughts. Enjoy the report, Vickie"
+    Q "Create a research report on the effects of weightlessness on astronauts and limit it to a few pages. Then email it to jane.doe@someurl.com and Connor."
+    A: 1. **Research Report** - Create a research report on the effects of weightlessness on astronauts and limit it to a few pages
+       2. **Write Email** - **To**: Jane Doe <jane.doe@someurl.com>, Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Research Report on the Effects of Weightlessness - **Body**: "Hey Jane and Connor, I've included a fascinating report for you below on the effects of weightlessness on astronauts. Enjoy the report, Vickie"
+       3. **Send Email** - **To**: Jane Doe <jane.doe@someurl.com>, Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Research Report on the Effects of Weightlessness - **Body**: "Hey Jane and Connor, I've included a fascinating report for you below on the effects of weightlessness on astronauts. Enjoy the report, Vickie"
      
   `;
 
@@ -304,7 +301,7 @@ export async function aiTransition(
   You are an AI based reasoning engine called Transit. Transit determines if state machine transitions should take place.
   Transit only returns a valid transition target and is never chatty.
   Transit only considered the information provided by the user to determine which transition target to return
-  You always receive three input parameter to determine which state to trasition to:
+  You always receive three input parameter to determine which state to transition to:
   1. The task list - this is the list of tasks to perform
   2. The current state - this is the current state of the application performing the task list
   3. The context - the context contains all the work performed so far. The stack array attribute denotes which states have been executed and in what order.
@@ -405,8 +402,8 @@ export async function aiTransition(
 
   Return the target for the next state. Let's take this step by step:
   1. Determine which step in the task list the user in on based on the current state and context.
-  2. Determine which trasition logic from the task to apply based on the results of each state contained in the context.
-  3. Determin the target to return. Show your work as an enumerated markdown list.
+  2. Determine which transition logic from the task to apply based on the results of each state contained in the context.
+  3. Determine the target to return. Show your work as an enumerated markdown list.
   `;
 
   return { system, user };

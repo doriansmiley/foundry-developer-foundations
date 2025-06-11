@@ -1,18 +1,14 @@
-import { Objects } from "@foundry/ontology-api";
-import { Filters } from "@foundry/functions-api";
-import { SupportedEngines, xReasonFactory, SupportTrainingDataTypes } from "../../factory";
-import { ActionType } from "../../";
-import { dateTime } from "../../../functions";
+import { SupportedEngines, xReasonFactory, SupportTrainingDataTypes } from "@xreason/reasoning/factory";
+import { ActionType } from "@xreason/reasoning/types";
+import { container } from "@xreason/inversify.config";
+import { TrainingDataDao, TYPES } from "@xreason/types";
+import { dateTime } from "@xreason/functions";
 
 // TODO get this data from the ontology
 async function getProgrammingTrainingData() {
-  const trainingExamples = Objects.search().xReasonTrainingData()
-    .filter(item => Filters.and(
-      item.xReason.exactMatch(SupportedEngines.CONTEXT),
-      item.type.exactMatch(SupportTrainingDataTypes.PROGRAMMER),
-      item.isGood.isTrue(),
-    ))
-    .all()
+  const trainingDataDao = container.get<TrainingDataDao>(TYPES.TrainingDataDao);
+  const searchResults = await trainingDataDao.search(SupportedEngines.CONTEXT, SupportTrainingDataTypes.PROGRAMMER);
+  const trainingExamples = searchResults
     .reduce((acc, cur) => {
       acc = `${acc}
       If the task list is:
@@ -100,26 +96,24 @@ export async function solver(query: string) {
 
   const dateTimeResult = await dateTime({ requestId: '1234', status: 0 });
 
-  const system = `You are a helpful AI assistant tasked with ensuring user quieres are enriched with the appropriate context.
-You thoughtfully assemble the prerequite infromation retrieval steps in the correct order to ensure the user query can be answered with all approrpiate context such as user prole data, contacts, and message history.
+  const system = `You are a helpful AI assistant tasked with ensuring user quires are enriched with the appropriate context.
+You thoughtfully assemble the prerequire information retrieval steps in the correct order to ensure the user query can be answered with all appropriate context such as user prole data, contacts, and message history.
 You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Vickie, Code's AI EA" or similar. 
 You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}. 
 You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
 You always obey the users instructions and understand the people you work for are busy executives and sometimes need help in their personal lives
-These tasks are not beneith you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
+These tasks are not beneath you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
 It means we all pull together to get things done.
 The current local date/time is ${dateTimeResult.currentLocalDateTime}.
 The current day/time in your timezone is: ${dateTimeResult.currentGMTDateTme}
 PDT in effect (indicated if Pacific Daylight Time is in effect): ${dateTimeResult.isPacificDaylightTime}
   `;
 
-  // TODO import the personel and channel info from ontology object
-  // IMPORTANT this prompt is optimized for reasoning models like o1 and o1-mini
-  // notice the abscense of CoT and K-Shot prompting! This hurts reasoning models
+  // TODO import the personnel and channel info from ontology object
   const user = `
-  Using the user query below output a properly defined task list for context enrighment.
+  Using the user query below output a properly defined task list for context enrichment.
   Your rules for outputting properly formatted task lists are:
-    1. User Profiles must always be trieved
+    1. User Profiles must always be retrieved
     2. Date and time must always be retrieved.
     3. Include the recall function if contacts have to be resolved. For example the user has provided only a first name (full name and a valid email is required) or company. Also use this function if the query involves references to past conversations or the user is asking for a meeting to be scheduled. 
   User Query:
@@ -129,9 +123,9 @@ PDT in effect (indicated if Pacific Daylight Time is in effect): ${dateTimeResul
   You can only perform the following actions. 
   ${toolsCatalog}
 
-  To create and actionable task list let's take this steo by step:
-    1. First, cross check the supplied list of context enrighment tasks against the tasks you can perform and determine if you can perform the action using one or more actions.
-    2. Lastly, ensure you have included all the relevant context enrighment tasks based on the user query.
+  To create and actionable task list let's take this step by step:
+    1. First, cross check the supplied list of context enrichment tasks against the tasks you can perform and determine if you can perform the action using one or more actions.
+    2. Lastly, ensure you have included all the relevant context enrichment tasks based on the user query.
     
     Always respond with an ordered list in markdown format.
     
@@ -139,7 +133,7 @@ PDT in effect (indicated if Pacific Daylight Time is in effect): ${dateTimeResul
     Q: "Send a slack message announcing that the new marketing strategy will focus on digital outreach and social media engagement"
     A: 1. **Get User Profile**: Retrieve the current user profile"
        2. **Get the current date/time**: Retrieve the current date time"
-       3. **Call the recall function**: Call the recall function to retreieve slack channel information such as channel ID and members"
+       3. **Call the recall function**: Call the recall function to retrieve slack channel information such as channel ID and members"
 
     Q: "I need a TPS report emailed to John"
     A:"Unsupported Question"
@@ -153,24 +147,24 @@ PDT in effect (indicated if Pacific Daylight Time is in effect): ${dateTimeResul
     Q: "Create a project report for the Komatsu Phase 1 and send an email to the OEM lead"
     A: 1. **Get User Profile**: Retrieve the current user profile"
        2. **Get the current date/time**: Retrieve the current date time"
-       3. **Call the recall function**: Call the recall function to retreieve the name and email of tje OEM Lead as well as any relevant communications about Phase 1"
+       3. **Call the recall function**: Call the recall function to retrieve the name and email of tje OEM Lead as well as any relevant communications about Phase 1"
 
-    Q: "Create a task for John to create a report on market opportunities in the automative space to Text2Action"
+    Q: "Create a task for John to create a report on market opportunities in the automatize space to Text2Action"
     A: 1. **Get User Profile**: Retrieve the current user profile"
        2. **Get the current date/time**: Retrieve the current date time"
-       3. **Call the recall function**: Call the recall function to retreieve John\'s full name and email"
+       3. **Call the recall function**: Call the recall function to retrieve Johns full name and email"
 
     Q: "Send a reminder email to Connor about the demo this Friday and to accept the meeting"
     A: 1. **Get User Profile**: Retrieve the current user profile"
        2. **Get the current date/time**: Retrieve the current date time"
-       3. **Call the recall function**: Call the recall function to retreieve Connor\'s full name and email and retreive message history about the meeting Friday"
+       3. **Call the recall function**: Call the recall function to retrieve Connors full name and email and retrieve message history about the meeting Friday"
 
     Q: "Schedule a meeting to discuss marketing with Dorian and Connor, then send a slack message to the Foundry Devs channel reminding them the sprint wraps Friday"
     A: 1. **Get User Profile**: Retrieve the current user profile"
        2. **Get the current date/time**: Retrieve the current date time"
-       3. **Call the recall function**: Call the recall function to retreieve Dorian and Connor\'s full name and email and to get the channel ID for the Foundry Devs channel."
+       3. **Call the recall function**: Call the recall function to retrieve Dorian and Connors full name and email and to get the channel ID for the Foundry Devs channel."
 
-    Q "Create a research report on the effects of weightlessnes on astronaughts and limit it to a few pages. Then email it to Jane Doe <jane.doe@someurl.com>"
+    Q "Create a research report on the effects of weightlessness on astronauts and limit it to a few pages. Then email it to Jane Doe <jane.doe@someurl.com>"
     A: 1. **Get User Profile**: Retrieve the current user profile"
        2. **Get the current date/time**: Retrieve the current date time"
   `;
@@ -285,7 +279,7 @@ export async function aiTransition(
   You are an AI based reasoning engine called Transit. Transit determines if state machine transitions should take place.
   Transit only returns a valid transition target and is never chatty.
   Transit only considered the information provided by the user to determine which transition target to return
-  You always receive three input parameter to determine which state to trasition to:
+  You always receive three input parameter to determine which state to transition to:
   1. The task list - this is the list of tasks to perform
   2. The current state - this is the current state of the application performing the task list
   3. The context - the context contains all the work performed so far. The stack array attribute denotes which states have been executed and in what order.
@@ -386,8 +380,8 @@ export async function aiTransition(
 
   Return the target for the next state. Let's take this step by step:
   1. Determine which step in the task list the user in on based on the current state and context.
-  2. Determine which trasition logic from the task to apply based on the results of each state contained in the context.
-  3. Determin the target to return. Show your work as an enumerated markdown list.
+  2. Determine which tradition logic from the task to apply based on the results of each state contained in the context.
+  3. Determine the target to return. Show your work as an enumerated markdown list.
   `;
 
   return { system, user };

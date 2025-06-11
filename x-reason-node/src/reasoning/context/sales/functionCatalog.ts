@@ -1,8 +1,8 @@
-import { Context, MachineEvent, Task, ActionType } from "../../types";
-import { incompleteQuestion, requestRfp, awaitRfpResponses, writeEmail, sendEmail, sendSlackMessage, writeSlackMessage } from '../../../functions';
+import { Context, MachineEvent, Task, ActionType } from "@xreason/reasoning/types";
+import { incompleteQuestion, requestRfp, awaitRfpResponses, writeEmail, sendEmail, sendSlackMessage, writeSlackMessage } from '@xreason/functions';
 
 function getPayload(context: Context, result: Record<string, any>) {
-    let stateId = context.stack?.[context.stack?.length - 1]
+    const stateId = context.stack?.[context.stack?.length - 1]
     if (!stateId) {
         throw new Error('Unable to find associated state in the machine stack.')
     }
@@ -46,14 +46,14 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log('requestRfp function catalog implementation called');
                     const result = await requestRfp(context, event, task);
                     const payload = getPayload(context, result);
-                    console.log('requestRfp function response recieved, calling dispatch');
+                    console.log('requestRfp function response received, calling dispatch');
                     const parentId = context.childToParentStateMap[payload.stateId];
 
                     if (!parentId) {
                         // if the state has a parent, meaning it's executed as part of a parallel state
                         // do not dispatch continue. I haven't figured out how to get the targeting to work correctly
                         // ie send('CONTINUE', {to: id}) to send the event to a specific state
-                        // so I used invoke for parrelell states as a hack. This means we do not want to trigger
+                        // so I used invoke for parallel states as a hack. This means we do not want to trigger
                         // a transition here as the onDone handler of invoke will take care of it
                         dispatch({
                             type: 'CONTINUE',
@@ -70,18 +70,18 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
             "awaitRfpResponses",
             {
                 description:
-                    "Waits until all rfp responses are recieved before proceeding.",
+                    "Waits until all rfp responses are received before proceeding.",
                 implementation: async (context: Context, event?: MachineEvent, task?: string) => {
                     console.log('awaitRfpResponses function catalog implementation called');
                     const result = await awaitRfpResponses(context, event, task);
                     const payload = getPayload(context, result);
-                    if (result.allResponsesRecieved) {
+                    if (result.allResponsesReceived) {
                         return dispatch({
                             type: 'CONTINUE',
                             payload,
                         });
                     }
-                    // pause untill all responses recieved
+                    // pause untill all responses received
                     dispatch({
                         type: 'pause',
                         payload,
