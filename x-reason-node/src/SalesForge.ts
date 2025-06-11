@@ -3,10 +3,10 @@ import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundati
 import { SupportedEngines } from "@xreason/reasoning/factory";
 import { Text2Action } from "@xreason/CommsForge";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
-import { GeminiService, MachineDao, RfpRequestsDao, Threads, ThreadsDao, TYPES } from '@xreason/types';
+import { GeminiService, MachineDao, RfpRequestsDao, Threads, ThreadsDao, TYPES, RfpRequestResponse, RfpResponsesResult } from '@xreason/types';
 import { container } from "@xreason/inversify.config";
 import { StateConfig } from '@xreason/reasoning';
-import { dateTime, recall, requestRfp, RfpRequestResponse, RfpResponsesResult, userProfile } from '@xreason/functions';
+import { dateTime, recall, requestRfp, userProfile } from '@xreason/functions';
 
 interface SalesForgeTaskListResponse {
     status: number;

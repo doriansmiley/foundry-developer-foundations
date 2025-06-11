@@ -1,7 +1,7 @@
 import { createMachine, assign, StateNode, MachineConfig } from "xstate";
-import { getUniqueStateIds, uuidv4 } from "../utils";
+import { getUniqueStateIds, uuidv4 } from "@xreason/utils";
 
-import { Context, MachineEvent, StateConfig, Task, Transition } from "@xreason/reasoning/types"; // Import your types
+import { Context, MachineEvent, StateConfig, Task, Transition } from "@xreason/reasoning/types";
 
 function getTransition(transition: { target: string; cond?: string; actions?: string }, task: Task, transitionEvent: 'CONTINUE' | 'ERROR') {
     const transitionConfig: any = {

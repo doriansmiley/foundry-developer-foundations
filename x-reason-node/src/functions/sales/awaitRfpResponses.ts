@@ -1,9 +1,5 @@
 import { Context, MachineEvent } from "@xreason/reasoning/types";
-
-export type RfpResponsesResult = {
-    allResponsesReceived: boolean,
-    vendors: string[],
-}
+import { RfpResponsesResult } from '@xreason/types';
 
 export async function awaitRfpResponses(context: Context, event?: MachineEvent, task?: string): Promise<RfpResponsesResult> {
     /*

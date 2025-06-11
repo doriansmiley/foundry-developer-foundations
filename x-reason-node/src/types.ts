@@ -498,6 +498,11 @@ export type MessageService = {
     sendMessage: (message: Message) => Promise<MessageResponse>,
 }
 
+export type RfpResponsesResult = {
+    allResponsesReceived: boolean,
+    vendors: string[],
+}
+
 /** Holds rfp responses */
 export type RfpRequestResponse = {
     status: number;

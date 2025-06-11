@@ -60,7 +60,7 @@ global.fetch = jest.fn().mockImplementation(() =>
     })
 ) as jest.Mock;
 
-describe('testing interpreterV1Foundry', () => {
+describe('testing orchestrator', () => {
     const machineId = 'mock-execution-id';
     const machineId2 = 'mock-execution-id2';
 

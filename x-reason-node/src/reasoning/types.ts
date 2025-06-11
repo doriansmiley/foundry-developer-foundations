@@ -13,7 +13,7 @@ export type Context = {
   machineExecutionId?: string;
   stack?: string[];
   userId?: string,
-  solution?: string; // holds the ouput from the solver which is the solution plan to execute. This is used by individual state functions to assemble their required input parameters
+  solution?: string; // holds the output from the solver which is the solution plan to execute. This is used by individual state functions to assemble their required input parameters
   // Index signature for additional properties
   [key: string]: any;
 };
