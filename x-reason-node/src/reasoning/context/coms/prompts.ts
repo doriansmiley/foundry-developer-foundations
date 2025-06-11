@@ -1,17 +1,14 @@
-import { Objects } from "@foundry/ontology-api";
-import { Filters } from "@foundry/functions-api";
-import { SupportedEngines, xReasonFactory, SupportTrainingDataTypes } from "../../factory";
-import { ActionType } from "../../";
+import { SupportedEngines, xReasonFactory, SupportTrainingDataTypes } from "@xreason/reasoning/factory";
+import { ActionType } from "@xreason/reasoning/types";
+import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
+import { container } from "@xreason/inversify.config";
+import { GeminiService, TicketsDao, TrainingDataDao, TYPES } from "@xreason/types";
 
 // TODO get this data from the ontology
 async function getProgrammingTrainingData() {
-  const trainingExamples = Objects.search().xReasonTrainingData()
-    .filter(item => Filters.and(
-      item.xReason.exactMatch(SupportedEngines.COMS),
-      item.type.exactMatch(SupportTrainingDataTypes.PROGRAMMER),
-      item.isGood.isTrue(),
-    ))
-    .all()
+  const trainingDataDao = container.get<TrainingDataDao>(TYPES.TrainingDataDao);
+  const searchResults = await trainingDataDao.search(SupportedEngines.COMS, SupportTrainingDataTypes.PROGRAMMER);
+  const trainingExamples = searchResults
     .reduce((acc, cur) => {
       acc = `${acc}
       If the task list is:
@@ -101,8 +98,8 @@ export async function solver(query: string) {
     timeZone: "America/Los_Angeles",
     timeZoneName: "short" // This will produce "PST" or "PDT"
   };
-  //@ts-ignore
-  const formatter = new Intl.DateTimeFormat("en-US", options);
+
+  const formatter = new Intl.DateTimeFormat("en-US", options as Intl.DateTimeFormatOptions);
   const formatted = formatter.format(new Date());
 
   console.log(`formatted int date: ${formatted}`);

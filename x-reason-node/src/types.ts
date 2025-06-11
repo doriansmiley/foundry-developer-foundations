@@ -21,6 +21,7 @@ export const TYPES = {
     OfficeService: Symbol.for("OfficeService"),
     MessageService: Symbol.for("MessageService"),
     EmbeddingsService: Symbol.for("EmbeddingsService"),
+    TrainingDataDao: Symbol.for("TrainingDataDao"),
 };
 
 // Schema Definitions for compute module
@@ -468,6 +469,25 @@ export interface MemoryRecall {
     userId: string | undefined;
 }
 
+/** Holds the training data for all X-Reasons */
+export interface TrainingData {
+    /** Human Review */
+    humanReview: string | undefined;
+    /** Is Good */
+    isGood: boolean | undefined;
+    /** Machine */
+    machine: string | undefined;
+    /** Primary Key */
+    readonly primaryKey_: string;
+    /** Solution */
+    solution: string | undefined;
+    /** type */
+    /** Either programmer or solver type. */
+    type: string | undefined;
+    /** X-Reason */
+    xReason: string | undefined;
+}
+
 export type OfficeService = {
     getAvailableMeetingTimes: (meetingRequest: MeetingRequest) => Promise<FindOptimalMeetingTimeOutput>,
     scheduleMeeting: (meeting: CalendarContext) => Promise<ScheduleMeetingOutput>,
@@ -570,6 +590,21 @@ export type MemoryRecallDao = {
     delete: (id: string) => Promise<void>,
     read: (id: string) => Promise<MemoryRecall>,
     search: (input: string, kValue: number,) => Promise<MemoryRecall[]>,
+};
+
+export type TrainingDataDao = {
+    upsert: (
+        id: string,
+        isGood: boolean,
+        type: string,
+        xReason: string,
+        machine?: string,
+        solution?: string,
+        humanReview?: string,
+    ) => Promise<TrainingData>,
+    delete: (id: string) => Promise<void>,
+    read: (id: string) => Promise<TrainingData>,
+    search: (xReason: string, type: string,) => Promise<TrainingData[]>,
 };
 
 export type ContactsDao = {

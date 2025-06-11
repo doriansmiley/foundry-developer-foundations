@@ -1,28 +1,8 @@
 import { Context, MachineEvent } from "@xreason/reasoning/types";
 import { uuidv4 } from "@xreason//utils";
-import { RangrRequestsDao, RfpRequestsDao, TYPES } from "@xreason/types";
+import { RangrRequestsDao, RfpRequestsDao, TYPES, RfpRequestResponse } from "@xreason/types";
 import { container } from "@xreason/inversify.config";
 
-export type RfpRequestResponse = {
-    status: number;
-    message: string;
-    machineExecutionId: string;
-    vendorName: string;
-    vendorId: string;
-    received: boolean;
-    response?: string;
-    error?: string;
-    receipt?: {
-        id: string,
-        timestamp: Date,
-    };
-}
-
-export type RfpInput = {
-    objectives: string,
-    deliverables: string,
-    timeline: { label: string, date: Date }[],
-}
 
 function extractDomain(input: string) {
     const match = input.match(/<([^>]+)>/);

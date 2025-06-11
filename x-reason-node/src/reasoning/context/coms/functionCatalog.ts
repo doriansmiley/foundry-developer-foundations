@@ -1,5 +1,5 @@
-import { Context, MachineEvent, Task, ActionType } from "../../types";
-import { writeEmail, researchReport, resolveUnavailableAttendees, createTask, getAvailableMeetingTimes, getProjectFiles, getProjectStatusReport, scheduleMeeting, sendEmail, sendSlackMessage, writeSlackMessage } from '../../../functions';
+import { Context, MachineEvent, Task, ActionType } from "@xreason/reasoning/types";
+import { writeEmail, researchReport, resolveUnavailableAttendees, createTask, getAvailableMeetingTimes, getProjectFiles, getProjectStatusReport, scheduleMeeting, sendEmail, sendSlackMessage, writeSlackMessage } from '@xreason/functions';
 
 function getPayload(context: Context, result: Record<string, any>) {
     const stateId = context.stack?.[context.stack?.length - 1]
@@ -77,7 +77,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
             "getAvailableMeetingTimes",
             {
                 description:
-                    "Gets the available times for all required and optional meeting atendees",
+                    "Gets the available times for all required and optional meeting attendees",
                 implementation: async (context: Context, event?: MachineEvent, task?: string) => {
                     console.log('getAvailableMeetingTimes implementation in function catalog called');
                     const result = await getAvailableMeetingTimes(context, event, task);
@@ -130,7 +130,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
             "scheduleMeeting",
             {
                 description:
-                    "Schudules a meeting using the provided time at which all atendees are available.",
+                    "Schudules a meeting using the provided time at which all attendees are available.",
                 implementation: async (context: Context, event?: MachineEvent, task?: string) => {
                     console.log('scheduleMeeting function catalog implementation called');
                     const result = await scheduleMeeting(context, event, task);

@@ -20,6 +20,7 @@ import { makeSlackClient } from "@xreason/services/slack";
 import { embeddingsService } from "@xreason/services/embeddingsService";
 import { makeMemoryRecallDao } from "@xreason/domain/memoryRecallDao";
 import { makeContactsDao } from "./domain/contactsDao";
+import { makeTrainingDataDao } from "./domain/trainingDataDao";
 
 export const container = new Container();
 
@@ -72,6 +73,10 @@ container
 container
     .bind(TYPES.ContactsDao)
     .toConstantValue(makeContactsDao());
+
+container
+    .bind(TYPES.TrainingDataDao)
+    .toConstantValue(makeTrainingDataDao());
 
 container
     .bind(TYPES.WeatherService)
