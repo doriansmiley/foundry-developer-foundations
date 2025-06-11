@@ -1,4 +1,4 @@
-import { UserProfile } from "@xreason/functions/context/userProfile";
+import { UserProfile } from "@xreason/types";
 import { Context, MachineEvent } from "@xreason/reasoning/types";
 
 export type CurrentDateTime = {

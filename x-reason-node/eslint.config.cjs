@@ -70,4 +70,4 @@ module.exports = defineConfig([{
         '@typescript-eslint/no-unsafe-function-type': 'off',
         "@typescript-eslint/no-unused-vars": "off",
     },
-}, globalIgnores(["**/dist", "**/.eslintrc.cjs"])]);
+}, globalIgnores(["**/dist", "**/.eslintrc.cjs", "jest.setup.js"])]);

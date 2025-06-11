@@ -1,6 +1,6 @@
 import { Context, MachineEvent } from '@xreason/reasoning';
 import { extractHtmlFromBackticks } from "@xreason/utils";
-import { TYPES, GeminiService } from "@xreason/types";
+import { TYPES, GeminiService, MessageService, OfficeService } from "@xreason/types";
 import { container } from "@xreason/inversify.config";
 
 // Types for Email functionality
@@ -71,7 +71,7 @@ If no reports are found output N/A
 
     const response = await geminiService(user, system);
 
-    return extractHtmlFromBackticks(response?.completion ?? 'N/A');
+    return extractHtmlFromBackticks(response ?? 'N/A');
 }
 
 const EMAIL_FOOTER = `
@@ -102,7 +102,10 @@ export async function sendEmail(context: Context, event?: MachineEvent, task?: s
         }
     )
 
-    const response = await sendEmailFromComputeModule({
+    const messageService = container.get<OfficeService>(TYPES.OfficeService);
+
+    const response = await messageService.sendEmail({
+        from: process.env.OFFICE_SERVICE_ACCOUNT,
         recipients: emailData.recipients,
         subject: emailData.subject,
         message,

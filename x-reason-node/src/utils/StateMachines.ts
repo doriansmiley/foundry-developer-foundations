@@ -1,4 +1,4 @@
-import { StateConfig } from "../reasoning";
+import { StateConfig } from "@xreason/reasoning";
 import { uuidv4 } from ".";
 
 export function getUniqueStateIds(inputArray: StateConfig[], parent?: StateConfig) {
