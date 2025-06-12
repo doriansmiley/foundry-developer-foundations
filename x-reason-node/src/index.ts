@@ -2,7 +2,7 @@ import { ComputeModule } from "@palantir/compute-module";
 import { Type } from "@sinclair/typebox";
 import { writeGreeting } from "./writeGreeting";
 import dotenv from 'dotenv';
-import { ComputeModuleType, ModuleConfig } from "./types";
+import { ComputeModuleType, ModuleConfig } from "@xreason/types";
 
 dotenv.config();
 

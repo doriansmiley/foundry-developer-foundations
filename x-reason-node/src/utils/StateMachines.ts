@@ -1,4 +1,4 @@
-import { StateConfig } from "../reasoning";
+import { StateConfig } from "@xreason/reasoning";
 import { uuidv4 } from ".";
 
 export function getUniqueStateIds(inputArray: StateConfig[], parent?: StateConfig) {
@@ -18,10 +18,10 @@ export function getUniqueStateIds(inputArray: StateConfig[], parent?: StateConfi
             default:
                 //generate unique ID for each state. Without steps that share the same function will collapse to a single one
                 // if a parent is supplied append the parent ID so the send to evnt worls
-               state.id =  `${state.id}|${uuidv4()}`;
-               if (parent) {
-                   state.parentId = parent.id;
-               }
+                state.id = `${state.id}|${uuidv4()}`;
+                if (parent) {
+                    state.parentId = parent.id;
+                }
                 break;
         }
         return state;
@@ -47,6 +47,14 @@ export function getUniqueStateIds(inputArray: StateConfig[], parent?: StateConfi
                 });
                 // defined for parrelell states
                 if (state.onDone) {
+                    // sometimes the programmer model fucks up and send back an object array instead of a string
+                    if (state.onDone as any instanceof Array) {
+                        state.onDone = (state.onDone as any)[0].target;
+                    }
+                    // sometimes the programmer model fucks up and send back an object instead of a string
+                    if (state.onDone as any instanceof Object) {
+                        state.onDone = (state.onDone as any).target;
+                    }
                     const targetState = futureStates.find(futureState => futureState.id.indexOf(state.onDone!) >= 0)
                     // set the trasition target to the new ID or default back to the original
                     state.onDone = targetState ? targetState.id : state.onDone;
@@ -59,6 +67,6 @@ export function getUniqueStateIds(inputArray: StateConfig[], parent?: StateConfi
         }
         return state;
     });
-    
+
     return statesArray;
 }

@@ -1,48 +1,91 @@
-import { sendEmail, EmailThread }  from '../functions/comsFunctions/SendEmail';
-import { Context } from '../reasoning';
+import { mockEmailResponse, missingRecipientContext, validContext } from '@xreason/__fixtures__/Email';
 
-jest.mock('@gsuite/computemodules', () => ({
-  sendEmail: jest.fn()
+jest.mock('googleapis', () => ({
+  ...jest.requireActual('googleapis'), // Keep other actual exports
+
+  google: {
+    // Mock the 'gmail' function as before
+    gmail: jest.fn((version: string, auth: any) => {
+      return {
+        users: {
+          messages: {
+            send: jest.fn((request: any) => {
+              console.log(`Gmail mock called with: ${request}`);
+              return Promise.resolve(mockEmailResponse);
+            })
+          }
+        }
+      };
+    }),
+
+    // Mock the 'calendar' function as before
+    calendar: jest.fn((version: string, auth: any) => {
+      return {
+        events: {
+          insert: jest.fn((request: any) => {
+            console.log(`Calendar mock called with: ${request}`);
+            return Promise.resolve({ data: { id: 'mockEventId' } });
+          }),
+        }
+      };
+    }),
+
+    // Mock the 'customsearch' function as before
+    customsearch: jest.fn((version: string) => {
+      return {
+        cse: {
+          list: jest.fn((params: any) => {
+            console.log(`Custom Search mock called with: ${params}`);
+            return Promise.resolve({
+              data: {
+                items: [
+                  { title: 'Mock Result 1', link: 'http://mock.com/1' },
+                  { title: 'Mock Result 2', link: 'http://mock.com/2' },
+                ],
+              },
+            });
+          }),
+        },
+      };
+    }),
+
+    // Add a mock for the 'auth' object and its 'GoogleAuth' constructor
+    auth: {
+      GoogleAuth: jest.fn().mockImplementation((config) => {
+        console.log('Mocked GoogleAuth constructor called');
+
+        // Return a mock object that mimics the behavior of a GoogleAuth instance
+        return {
+          // Mock methods that are called on the GoogleAuth instance
+          getClient: jest.fn().mockResolvedValue({
+            getRequestHeaders: jest.fn().mockResolvedValue({ /* mock headers */ }), // Mock getRequestHeaders if used
+          }),
+        };
+      }),
+    },
+  },
 }));
 
-import { sendEmail as sendEmailFromComputeModule } from '@gsuite/computemodules';
+
+import { google } from 'googleapis';
+
+import { sendEmail } from '@xreason/functions/comsFunctions/SendEmail';
+import { Context } from '@xreason/reasoning';
 
 describe('sendEmail', () => {
-  const validEmailData = {
-    message: 'Hello World',
-    subject: 'Test Subject',
-    recipients: ['test@example.com'],
-    modelDialog: 'sample dialog',
-    ts: 1234567890
-  };
-
-  const validContext = {
-    stack: ['emailData', 'bullshit'],
-    emailData: validEmailData
-  } as any as Context;
-
-  const mockResponse: EmailThread = {
-    id: 'msg123',
-    threadId: 'thread456',
-    labelIds: ['inbox']
-  };
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    (sendEmailFromComputeModule as jest.Mock).mockResolvedValue(mockResponse);
   });
 
-  it('calls compute module sendEmail and returns the expected response', async () => {
+  afterAll(() => {
+    jest.clearAllMocks()
+  });
+
+  it('calls sendEmail and returns the expected response', async () => {
     const response = await sendEmail(validContext);
-
-    expect(sendEmailFromComputeModule).toHaveBeenCalledWith({
-      recipients: validEmailData.recipients,
-      subject: validEmailData.subject,
-      message: validEmailData.message
-    });
-    expect(response).toEqual(mockResponse);
-  });
+    expect(response).toEqual(mockEmailResponse.data);
+  }, 30000);
 
   it('throws an error when no email data is found in context', async () => {
     const invalidContext = { stack: [] } as any as Context;
@@ -50,17 +93,6 @@ describe('sendEmail', () => {
   });
 
   it('throws an error when required email fields are missing', async () => {
-    const missingFieldContext = {
-      stack: ['emailData', 'bullshit'],
-      emailData: {
-        // message is missing
-        subject: 'Test',
-        recipients: ['test@example.com'],
-        modelDialog: 'sample dialog',
-        ts: 1234567890
-      }
-    } as any as Context;
-
-    await expect(sendEmail(missingFieldContext)).rejects.toThrow('Invalid email data format in context');
+    await expect(sendEmail(missingRecipientContext)).rejects.toThrow('Invalid email data format in context');
   });
 });

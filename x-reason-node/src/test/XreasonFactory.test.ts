@@ -1,4 +1,4 @@
-import { xReasonFactory as factory, SupportedEngines, XReasonEngine } from "../reasoning/factory";
+import { xReasonFactory as factory, SupportedEngines } from "@xreason/reasoning/factory";
 import {
     comsProgrammer,
     comsAiTrasition,
@@ -53,7 +53,7 @@ describe("Factory Function Tests", () => {
 
     it("should throw an error if an unsupported engine is provided", () => {
         const invalidKey = "invalid_engine" as SupportedEngines;
-        
+
         // Wrap the call in a function to test errors
         expect(() => factory(invalidKey)({})).toThrowError();
     });

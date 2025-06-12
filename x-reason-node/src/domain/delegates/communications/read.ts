@@ -11,14 +11,20 @@ export async function readCommunications(id: string, client: FoundryClient): Pro
         "Content-Type": "application/json",
     };
 
-    const url = `${client.url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/objects/Communications/${id}`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/Communications/${id}`;
     const fetchResults = await fetch(url, {
         method: "GET",
         headers: headers,
     });
 
-    const communication = await fetchResults.json() as Communications;
-    console.log(`the machine execution ontology returned: ${JSON.stringify(communication)}`)
+    const apiResponse = await fetchResults.json() as any;
 
-    return communication;
+    if (apiResponse.errorCode) {
+        console.log(`errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`);
+        throw new Error(`An error occurred while calling read communication errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
+    }
+
+    console.log(`the machine execution ontology returned: ${JSON.stringify(apiResponse)}`)
+
+    return apiResponse as Communications;
 }

@@ -10,10 +10,10 @@ export type ActionType = {
 export type Context = {
   requestId: string;
   status: number;
-  machineExcecutionId?: string;
+  machineExecutionId?: string;
   stack?: string[];
   userId?: string,
-  solution?: string; // holds the ouput from the solver which is the solution plan to execute. This is used by individual state functions to assemble their required input parameters
+  solution?: string; // holds the output from the solver which is the solution plan to execute. This is used by individual state functions to assemble their required input parameters
   // Index signature for additional properties
   [key: string]: any;
 };
@@ -96,7 +96,7 @@ export type Interpreter = {
 
 export type StateConfig = {
   id: string;
-  parentId?:string;
+  parentId?: string;
   transitions?: Array<{
     on: string;
     target: string;

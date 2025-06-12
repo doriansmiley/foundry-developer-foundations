@@ -1,5 +1,4 @@
 import { interpret } from "xstate";
-import { GPT_4o, Gemini_2_0_Flash } from "@foundry/models-api/language-models";
 
 import {
     StateConfig,
@@ -10,37 +9,30 @@ import {
     Prompt,
 } from ".";
 
-import { extractJsonFromBackticks } from "../utils";
-import { getLogger } from "../utils/logCollector";
+import { extractJsonFromBackticks } from "@xreason/utils";
+import { container } from "@xreason/inversify.config";
+import { GeminiService, TYPES } from "@xreason/types";
+import { getLogger } from "@xreason/utils/logCollector";
 
 
 async function solve(query: string, solver: Prompt): Promise<string> {
     // TODO remove the use of the threads API and go with completions
     const { user, system } = await solver(query);
-    const response = await Gemini_2_0_Flash.createGenericChatCompletion(
-        {
-            messages: [
-                { role: "SYSTEM", contents: [{ text: system }] },
-                { role: "USER", contents: [{ text: user }] }
-            ]
-        }
-    );
-    const result = response.completion ?? '';
+
+    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+    const response = await geminiService(user, system);
+
+    const result = response ?? '';
     return result;
 }
 
 async function program(query: string, functionCatalog: string, programmer: Prompt): Promise<StateConfig[]> {
     const { user, system } = await programmer(query, functionCatalog);
 
-    const response = await Gemini_2_0_Flash.createGenericChatCompletion(
-        {
-            messages: [
-                { role: "SYSTEM", contents: [{ text: system }] },
-                { role: "USER", contents: [{ text: user }] }
-            ]
-        }
-    );
-    const value = response.completion ?? '';
+    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+    const response = await geminiService(user, system);
+
+    const value = response ?? '';
     let unwrapped = extractJsonFromBackticks(value) || value;
 
     console.log(`programmer generated the following unchecked solution: ${unwrapped}`);
@@ -49,30 +41,22 @@ async function program(query: string, functionCatalog: string, programmer: Promp
     try {
         JSON.parse(unwrapped)
     } catch (e) {
-        const result = await Gemini_2_0_Flash.createGenericChatCompletion(
-            {
-                messages: [
-                    { role: 'system', contents: [{ text: system }] },
-                    { role: 'user', contents: [{ text: user }] },
-                    {
-                        role: 'user', contents: [{
-                            text: `your generated solution:
-                ${unwrapped}
-                generated the following error:
-                ${(e as Error).message}
-                Ensure the JSON is valid and does not contain any trailing commas, correct quotes, etc
-                Only respond with the updated JSON! Your response will be sent to JSON.parse
-                ` }]
-                    },
-                ]
-            }
-        );
-        const value = response.completion ?? '';
+        const updatedUserMessage = `${user}
+your generated solution:
+${unwrapped}
+generated the following error:
+${(e as Error).message}
+Ensure the JSON is valid and does not contain any trailing commas, correct quotes, etc
+Only respond with the updated JSON! Your response will be sent to JSON.parse
+`
+        const response = await geminiService(updatedUserMessage, system);
+
+        const value = response ?? '';
         unwrapped = extractJsonFromBackticks(value) || value;
     }
-    let states: StateConfig[] = JSON.parse(unwrapped);
+    const states: StateConfig[] = JSON.parse(unwrapped);
 
-    // make sure the state ID's are valid, including trasition targets
+    // make sure the state ID's are valid, including transition targets
     const notFoundTransitions: string[] = [];
     const notFound = states.map((state) => {
         if (state.type !== 'parallel' &&
@@ -97,31 +81,23 @@ async function program(query: string, functionCatalog: string, programmer: Promp
     if (notFound.length > 0) {
         console.log(`Unknown state ID encountered: ${notFound.join(',')}. Calling GPT4o to fix.`);
         //console.log(`functionCatalog:\n${functionCatalog}`);
-        const notFoundTransitionsMessage = (notFoundTransitions.length > 0) ? `The following trasitions triggered an unknown state ID error: ${notFoundTransitions.join(',')}. Please ensure all targets are referencing a valid state node. If these state nodes are invalid replace them with valid ones.` : undefined;
-        console.log(`Unknown trasition target encountered: ${notFoundTransitionsMessage}. Calling GPT4o to fix.`);
+        const notFoundTransitionsMessage = (notFoundTransitions.length > 0) ? `The following transitions triggered an unknown state ID error: ${notFoundTransitions.join(',')}. Please ensure all targets are referencing a valid state node. If these state nodes are invalid replace them with valid ones.` : undefined;
+        console.log(`Unknown transition target encountered: ${notFoundTransitionsMessage}. Calling GPT4o to fix.`);
         // TODO, return a recursive call to program if max count has not been exceeded
-        const result = await Gemini_2_0_Flash.createGenericChatCompletion(
-            {
-                messages: [
-                    { role: 'system', contents: [{ text: system }] },
-                    { role: 'user', contents: [{ text: user }] },
-                    {
-                        role: 'user', contents: [{
-                            text: `your previous answer generated the following errors:
-                Unknown state ID encountered: ${notFound.join(',')}
-                ${notFoundTransitionsMessage}
-                Replace the unknown state IDs with valid IDs found in the function catalog below:
-                ###### start function catalog ######
-                ${functionCatalog}
-                ###### end function catalog ######
-                Do not modify the state machine in any other way!
-                Only respond with the updated JSON and don't be chatty! Your response will be sent to JSON.parse
-                ` }]
-                    },
-                ]
-            }
-        );
-        const value = response.completion ?? '';
+        const updatedUserMessage = `${user}
+your previous answer generated the following errors:
+Unknown state ID encountered: ${notFound.join(',')}
+${notFoundTransitionsMessage}
+Replace the unknown state IDs with valid IDs found in the function catalog below:
+###### start function catalog ######
+${functionCatalog}
+###### end function catalog ######
+Do not modify the state machine in any other way!
+Only respond with the updated JSON and don't be chatty! Your response will be sent to JSON.parse
+`
+        const response = await geminiService(updatedUserMessage, system);
+
+        const value = response ?? '';
         // TODO retest valid states by moving logic to a util function
         unwrapped = extractJsonFromBackticks(value) || value;
         console.log(`model returned the following updated state machine to correct errors:\n${unwrapped}`);
@@ -206,57 +182,36 @@ async function transition(taskList: string, currentState: string, payload: strin
     const { user, system } = await aiTransition(taskList, currentState, payload);
     const { logger } = getLogger();
 
-    const response = await Gemini_2_0_Flash.createGenericChatCompletion(
-        {
-            messages: [
-                { role: "SYSTEM", contents: [{ text: system }] },
-                { role: "USER", contents: [{ text: user }] }
-            ]
-        }
-    );
-    let value = extractJsonFromBackticks(response.completion).trim() ?? '';
+    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+    const response = await geminiService(user, system);
+
+    let value = extractJsonFromBackticks(response).trim() ?? '';
 
     console.log(`engine.v2.ts.transition result is: ${value}`);
     logger(value);
 
     // coerce the reasoning step into a state ID
-    const coercedResponse = await Gemini_2_0_Flash.createGenericChatCompletion(
-        {
-            messages: [
-                { role: 'system', contents: [{ text: system }] },
-                { role: 'user', contents: [{ text: user }] },
-                {
-                    role: 'user', contents: [{
-                        text: `Extract the target state ID and only the target state id from your previous resonse:
-                ${value}
-                Do not be chatty!
-                ` }]
-                },
-            ]
-        }
-    );
-    value = coercedResponse.completion ?? '';
+    const updatedUserMessage = `${user}
+Extract the target state ID and only the target state id from your previous response:
+${value}
+Do not be chatty!
+`
+    const coercedResponse = await geminiService(updatedUserMessage, system);
+
+    value = coercedResponse ?? '';
     value = extractJsonFromBackticks(value).trim();
 
     // TODO improve retry mechanism
     if (currentState.indexOf(value) < 0) {
-        const result = await Gemini_2_0_Flash.createGenericChatCompletion(
-            {
-                messages: [
-                    { role: 'system', contents: [{ text: system }] },
-                    { role: 'user', contents: [{ text: user }] },
-                    {
-                        role: 'user', contents: [{
-                            text: `your generated solution:
-                ${value}
-                does not include a valid transition ID! Make sure your are picking a transition ID from the provided state's transitions array
-                Do not be chatty!
-                ` }]
-                    },
-                ]
-            }
-        );
-        value = result.completion ?? '';
+        const updatedUserMessage = `${user}
+your generated solution:
+${value}
+does not include a valid transition ID! Make sure your are picking a transition ID from the provided state's transitions array
+Do not be chatty!
+`
+        const result = await geminiService(updatedUserMessage, system);
+
+        value = result ?? '';
         value = extractJsonFromBackticks(value);
         if (currentState.indexOf(value) < 0 && value !== 'CONTINUE' && value !== 'success' && value !== 'failure') {
             throw new Error(`Invalid model response: ${value}`);

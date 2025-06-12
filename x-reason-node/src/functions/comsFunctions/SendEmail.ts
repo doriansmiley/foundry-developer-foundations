@@ -1,8 +1,7 @@
-import { Context, MachineEvent } from '../../reasoning';
-import { Gemini_2_0_Flash } from "@foundry/models-api/language-models";
-import { extractHtmlFromBackticks } from "../../utils";
-
-import { sendEmail as sendEmailFromComputeModule } from "@gsuite/computemodules"; 
+import { Context, MachineEvent } from '@xreason/reasoning';
+import { extractHtmlFromBackticks } from "@xreason/utils";
+import { TYPES, GeminiService, MessageService, OfficeService } from "@xreason/types";
+import { container } from "@xreason/inversify.config";
 
 // Types for Email functionality
 export type EmailThread = {
@@ -67,16 +66,12 @@ If no reports are found output N/A
 
     const system = `You are a helpful AI assistant tasked with looking for any relevant research report(s).
     You understand common state machine DSL's like x-state.`;
-    const response = await Gemini_2_0_Flash.createGenericChatCompletion(
-        {
-            messages: [
-                { role: "SYSTEM", contents: [{ text: system }] },
-                { role: "USER", contents: [{ text: user }] }
-            ]
-        }
-    );
 
-    return extractHtmlFromBackticks(response?.completion ?? 'N/A');
+    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+
+    const response = await geminiService(user, system);
+
+    return extractHtmlFromBackticks(response ?? 'N/A');
 }
 
 const EMAIL_FOOTER = `
@@ -100,14 +95,17 @@ export async function sendEmail(context: Context, event?: MachineEvent, task?: s
     const message = (researchReports !== 'N/A') ? `${emailData.message}\n\n${researchReports}` : emailData.message;
 
     console.log('sending email via compute module:',
-       {
-           recipients: emailData.recipients,
-           subject: emailData.subject,
-           message,
-       }
+        {
+            recipients: emailData.recipients,
+            subject: emailData.subject,
+            message,
+        }
     )
 
-    const response = await sendEmailFromComputeModule({
+    const messageService = await container.getAsync<OfficeService>(TYPES.OfficeService);
+
+    const response = await messageService.sendEmail({
+        from: process.env.OFFICE_SERVICE_ACCOUNT,
         recipients: emailData.recipients,
         subject: emailData.subject,
         message,

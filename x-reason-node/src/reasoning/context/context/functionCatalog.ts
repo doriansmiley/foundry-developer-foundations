@@ -1,5 +1,5 @@
-import { Context, MachineEvent, Task, ActionType } from "../../types";
-import { userProfile, recall, dateTime } from '../../../functions';
+import { Context, MachineEvent, Task, ActionType } from "@xreason/reasoning/types";
+import { userProfile, recall, dateTime } from '@xreason/functions';
 
 function getPayload(context: Context, result: Record<string, any>) {
     const stateId = context.stack?.[context.stack?.length - 1]

@@ -1,25 +1,12 @@
 import { State } from "xstate";
 
-import { Objects, MachineExecutions } from "@foundry/ontology-api";
+import { xReasonFactory, SupportedEngines } from '@xreason/reasoning/factory';
+import { headlessInterpreter, engineV1 as engine, StateConfig, Solutions, ActionType, Context, MachineEvent } from ".";
+import { sanitizeJSONString, uuidv4 } from "@xreason/utils";
+import { getLogger } from "@xreason//utils/logCollector";
+import { MachineDao, TYPES } from '@xreason/types';
+import { container } from "@xreason/inversify.config";
 
-import { xReasonFactory, SupportedEngines } from './factory';
-import { headlessInterpreter, engineV1 as engine, StateConfig } from ".";
-import { Solutions } from ".";
-import { ActionType, Context, MachineEvent } from ".";
-import { sanitizeJSONString, uuidv4 } from "../utils";
-import { getLogger } from "../utils/logCollector";
-
-export function getMachineExecution(
-  solution: Solutions
-): MachineExecutions | undefined {
-  // retrieve previous execution if there was one
-  const execution = Objects.search()
-    .machineExecutions()
-    .filter((execution) => execution.id.exactMatch(solution.id!))
-    .all()?.[0];
-
-  return execution;
-}
 
 export async function getState(
   solution: Solutions,
@@ -50,10 +37,8 @@ export async function getState(
   const { getLog, logger } = getLogger();
 
   // retrieve previous execution if there was one
-  const execution = Objects.search()
-    .machineExecutions()
-    .filter((execution) => execution.id.exactMatch(solution.id!))
-    .all()?.[0];
+  const machineDao = container.get<MachineDao>(TYPES.MachineDao);
+  const execution = await machineDao.read(solution.id);
 
   const machine: StateConfig[] =
     execution && execution.machine ? JSON.parse(execution.machine) : undefined;
@@ -62,7 +47,7 @@ export async function getState(
   // setup a default context
   let inputContext: Context = {
     requestId: uuidv4(),
-    machineExcecutionId: solution.id,
+    machineExecutionId: solution.id,
     status: 0,
     solution: sanitizeJSONString(solution.plan),
     stack: [],
@@ -113,19 +98,18 @@ export async function getState(
 
   if (!forward) {
     // stateDefinition must be defined in these cases or you should get an error
-    // TODO: soncider dispatching a custom error
     const targetState: State<Context, MachineEvent> = State.create<Context, MachineEvent>(stateDefinition);
 
     // if we are not moving forward we do not want to rerun the machine or effect its state
-    // we just want to return the previous state and let the comsumer execute by calling next
+    // we just want to return the previous state and let the consumer execute by calling next
     const context = targetState.context;
     const jsonState = JSON.stringify(targetState);
 
-    console.log(`moving backward, retruning previous state of ${targetState.value}`);
+    console.log(`moving backward, returning previous state of ${targetState.value}`);
 
     return {
       stateMachine: machine,
-      // hard code the evaulation result since this is for a previous execution
+      // hard code the evaluation result since this is for a previous execution
       evaluationResult: { rating: 5, correct: true },
       context,
       jsonState,
@@ -143,15 +127,15 @@ export async function getState(
 
     if (programmedState?.includesLogic) {
       // Use an LLM to figure out what the next state should be based on the login in the last list and the current state of the machine
-      // Structered outputs could be very useful here to restrict accetable state output values to a enum based on the functions catalog id values
-      // not sure if Foundry supports structurered outputs yet or not
+      // Structured outputs could be very useful here to restrict acceptable state output values to a enum based on the functions catalog id values
+      // not sure if Foundry supports structured outputs yet or not
       const nextState = await engine.logic.transition(
         solution.plan,
         JSON.stringify(programmedState),
         JSON.stringify(stateDefinition.context),
         aiTransition
       );
-      logger(`The AI trasition returned the target state of: ${nextState}`);
+      logger(`The AI transition returned the target state of: ${nextState}`);
       console.log(`resetting the starting state to: ${nextState}`);
       // Create a new State object with the updated value
       startingState = State.create<Context, MachineEvent>({
@@ -220,7 +204,6 @@ export async function getState(
   // this effectively acts as a timeout. Be sure to adjust if you have long running functions in your states!
   const MAX_ITERATIONS = 60;
   while (!done() && iterations < MAX_ITERATIONS) {
-    //@ts-ignore
     await new Promise((resolve) => setTimeout(resolve, 1000));
     console.log("awaiting results");
     iterations++;

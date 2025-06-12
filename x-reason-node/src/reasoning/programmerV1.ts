@@ -1,10 +1,10 @@
-import { createMachine, sendTo, assign, StateNode, MachineConfig } from "xstate";
-import { getUniqueStateIds, uuidv4 } from "../utils";
+import { createMachine, assign, StateNode, MachineConfig } from "xstate";
+import { getUniqueStateIds, uuidv4 } from "@xreason/utils";
 
-import { Context, MachineEvent, StateConfig, Task, Transition } from "./types"; // Import your types
+import { Context, MachineEvent, StateConfig, Task, Transition } from "@xreason/reasoning/types";
 
 function getTransition(transition: { target: string; cond?: string; actions?: string }, task: Task, transitionEvent: 'CONTINUE' | 'ERROR') {
-    let transitionConfig: any = {
+    const transitionConfig: any = {
         target: transition.target,
         actions: transition.actions || "saveResult",
     };
@@ -36,7 +36,7 @@ function generateStateConfig(state: StateConfig, functionCatalog: Map<string, Ta
         stateConfig.type = "parallel";
         stateConfig.states = {};
         stateConfig.id = state.id;
-        stateConfig.onDone = state.onDone;
+        stateConfig.onDone = state.onDone; // TODO have to find the target
         state.states?.forEach((state) => {
             if (state.id !== 'success' && state.id !== 'failure' && state.id !== 'pause') {
                 stateConfig.states[state.id] = {
@@ -72,7 +72,8 @@ function generateStateConfig(state: StateConfig, functionCatalog: Map<string, Ta
             // for some reason the entry property is not defined when we return here
             // we have to manuall push the final state onto the stack so the next state is correctly returned
             // TODO: fix me
-            //@ts-ignore
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
             entry: (context: Context, event: MachineEvent) => {
                 console.log("Received Event:", event.type);
                 context.stack?.push(state.id);
@@ -86,7 +87,7 @@ function generateStateConfig(state: StateConfig, functionCatalog: Map<string, Ta
         throw new Error(`function implementation for stateId: ${state.id} functionName: ${functionName} not found`);
     }
 
-    let stateConfig: any = (!isNestedState) ? {
+    const stateConfig: any = (!isNestedState) ? {
         entry: (context: Context, event: MachineEvent) => {
             console.log("Received Event:", event.type);
             context.stack?.push(state.id);
@@ -97,36 +98,36 @@ function generateStateConfig(state: StateConfig, functionCatalog: Map<string, Ta
             retrievedFunction.implementation(context, event, state.task);
         },
     } :
-    {
-        invoke: {
-            src: async (context: Context, event: MachineEvent) => {
-                console.log("Received Event:", event.type);
-                context.stack?.push(state.id);
-                // if the function is async, we ignore the promise as this is fire and forget.
-                // it's up to the function to dispatch the CONTINUE event on the machine to capture results
-                // in the vent payload and continue execution
-                console.log("Executing nested state function:", functionName);
-                const result = await retrievedFunction.implementation(context, event, state.task);
-                console.log(`received result from nested state function: ${result}`);
-                const returnValue = {
-                    stateId: state.id,
-                    [state.id]: {
-                        // we destructure to preserve other keys like result which holds values from user interaction
-                        ...context[state.id],
-                        ...result as any
+        {
+            invoke: {
+                src: async (context: Context, event: MachineEvent) => {
+                    console.log("Received Event:", event.type);
+                    context.stack?.push(state.id);
+                    // if the function is async, we ignore the promise as this is fire and forget.
+                    // it's up to the function to dispatch the CONTINUE event on the machine to capture results
+                    // in the vent payload and continue execution
+                    console.log("Executing nested state function:", functionName);
+                    const result = await retrievedFunction.implementation(context, event, state.task);
+                    console.log(`received result from nested state function: ${result}`);
+                    const returnValue = {
+                        stateId: state.id,
+                        [state.id]: {
+                            // we destructure to preserve other keys like result which holds values from user interaction
+                            ...context[state.id],
+                            ...result as any
+                        }
                     }
+                    return returnValue;
+                },
+                onDone: {
+                    target: "success",
+                    actions: "saveResult",
+                },
+                onError: {
+                    "target": "failure"
                 }
-                return returnValue;
             },
-            onDone: {
-                target: "success",
-                actions: "saveResult",
-            },
-            onError: {
-                "target": "failure"
-            }
-        },
-    }
+        }
 
     stateConfig.id = state.id;
     // TODO augment with retrievedFunction.transitions.
@@ -176,17 +177,17 @@ function generateStateConfig(state: StateConfig, functionCatalog: Map<string, Ta
 }
 
 function generateStateMachineConfig(statesArray: StateConfig[], functionCatalog: Map<string, Task>) {
-    let states: { [key: string]: Partial<StateNode<Context, any, MachineEvent>> } = {
+    const states: { [key: string]: Partial<StateNode<Context, any, MachineEvent>> } = {
         // pause is a special state that allows functions to dispatch pause event that will not show up in the stack
         // this allows for the machine to progress through the states and pause when needed
         pause: { type: "final" },
     };
 
     const context = {
-            requestId: uuidv4(), // Replace with actual uniqueId function
-            status: 0,
-            childToParentStateMap: {},
-            // ... other context properties
+        requestId: uuidv4(), // Replace with actual uniqueId function
+        status: 0,
+        childToParentStateMap: {},
+        // ... other context properties
     }
 
     // deduplicate the states and trasitions

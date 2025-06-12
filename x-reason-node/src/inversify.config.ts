@@ -1,20 +1,37 @@
 import "reflect-metadata";
 import { Container } from "inversify";
+
 import { TYPES } from "@xreason/types";
 import { openWeatherService } from "@xreason/services/weatherService";
 import { createFoundryClient } from "@xreason/services/foundryClient";
+import { createRangrClient } from "@xreason/services/rangrClient";
 import { makeWorldDao } from "@xreason/domain/worldDao";
 import { makeUserDao } from "@xreason/domain/userDao";
 import { makeMachineDao } from "@xreason/domain/machineDao";
 import { geminiService } from "@xreason/services/geminiService";
 import { makeCommsDao } from "@xreason/domain/commsDao";
-import { geminiSearch } from "@xreason/services/gemeniSearch";
+import { gemeniStockMarketConditions } from "@xreason/services/gemeniStockMarketConditions";
+import { makeThreadsDao } from "@xreason/domain/threadsDao";
+import { makeRfpRequestsDao } from "@xreason/domain/rfpRequestsDao";
+import { makeRangrRfpRequestsDao } from "@xreason/domain/rangrRfpRequestsDao";
+import { makeTicketsDao } from "@xreason/domain/ticketsDao";
+import { makeGSuiteClient } from "@xreason/services/gsuiteClient";
+import { makeSlackClient } from "@xreason/services/slack";
+import { embeddingsService } from "@xreason/services/embeddingsService";
+import { makeMemoryRecallDao } from "@xreason/domain/memoryRecallDao";
+import { makeContactsDao } from "@xreason/domain/contactsDao";
+import { makeTrainingDataDao } from "@xreason/domain/trainingDataDao";
 
 export const container = new Container();
 
 container
     .bind(TYPES.FoundryClient)
     .toDynamicValue(createFoundryClient)
+    .inSingletonScope();
+
+container
+    .bind(TYPES.RangrClient)
+    .toDynamicValue(createRangrClient)
     .inSingletonScope();
 
 container
@@ -30,8 +47,36 @@ container
     .toConstantValue(makeMachineDao());
 
 container
+    .bind(TYPES.TicketDao)
+    .toConstantValue(makeTicketsDao());
+
+container
     .bind(TYPES.CommsDao)
     .toConstantValue(makeCommsDao());
+
+container
+    .bind(TYPES.ThreadsDao)
+    .toConstantValue(makeThreadsDao());
+
+container
+    .bind(TYPES.RfpRequestsDao)
+    .toConstantValue(makeRfpRequestsDao());
+
+container
+    .bind(TYPES.RangrRfpRequestsDao)
+    .toConstantValue(makeRangrRfpRequestsDao());
+
+container
+    .bind(TYPES.MemoryRecallDao)
+    .toConstantValue(makeMemoryRecallDao());
+
+container
+    .bind(TYPES.ContactsDao)
+    .toConstantValue(makeContactsDao());
+
+container
+    .bind(TYPES.TrainingDataDao)
+    .toConstantValue(makeTrainingDataDao());
 
 container
     .bind(TYPES.WeatherService)
@@ -42,5 +87,18 @@ container
     .toConstantValue(geminiService);
 
 container
-    .bind(TYPES.GeminiSearch)
-    .toConstantValue(geminiSearch);
+    .bind(TYPES.EmbeddingsService)
+    .toConstantValue(embeddingsService);
+
+container
+    .bind(TYPES.GeminiSearchStockMarket)
+    .toConstantValue(gemeniStockMarketConditions);
+
+// IMPORTANT use container.getAsync when retrieving!
+container
+    .bind(TYPES.OfficeService)
+    .toConstantValue(makeGSuiteClient(process.env.OFFICE_SERVICE_ACCOUNT));
+
+container
+    .bind(TYPES.MessageService)
+    .toConstantValue(makeSlackClient(process.env.SLACK_BASE_URL, process.env.SLACK_BOT_TOKEN));

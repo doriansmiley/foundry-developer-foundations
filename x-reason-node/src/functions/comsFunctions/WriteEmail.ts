@@ -1,6 +1,7 @@
-import { Context, MachineEvent } from "../../reasoning/types";
-import { Gemini_2_0_Flash } from "@foundry/models-api/language-models";
-import { extractJsonFromBackticks } from "../../utils";
+import { Context, MachineEvent } from "@xreason/reasoning/types";
+import { extractJsonFromBackticks } from "@xreason/utils";
+import { container } from "@xreason/inversify.config";
+import { GeminiService, TYPES } from "@xreason/types";
 
 export type DraftEmailResponse = {
     message: string,
@@ -49,15 +50,13 @@ export async function writeEmail(context: Context, event?: MachineEvent, task?: 
     You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}. 
     You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
     The current month is ${new Date().toLocaleDateString('en-US', { month: 'long' })}.`;
-    const response = await Gemini_2_0_Flash.createGenericChatCompletion(
-        {
-            messages: [
-                { role: "SYSTEM", contents: [{ text: system }] },
-                { role: "USER", contents: [{ text: user }] }
-            ]
-        }
-    );
-    const result = extractJsonFromBackticks(response.completion?.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
+
+    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+
+    const response = await geminiService(user, system);
+
+    // eslint-disable-next-line no-useless-escape
+    const result = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
     const parsedResult = JSON.parse(result);
     const message = parsedResult.message;
     const subject = parsedResult.subject;

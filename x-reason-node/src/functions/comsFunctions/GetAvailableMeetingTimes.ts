@@ -1,48 +1,21 @@
-import { Gemini_2_0_Flash } from "@foundry/models-api/language-models";
-
-import { Context, MachineEvent } from "../../reasoning/types";
-import { findOptimalMeetingTime } from "@gsuite/computemodules";
-import { extractJsonFromBackticks, uuidv4 } from "../../utils";
-
-export type AvailableTime = {
-    start: string; // Available start time
-    end: string; // IANA time zone (e.g., "America/New_York")
-    availableAttendees: string[]; // Attendees available at this time
-    unavailableAttendees: string[]; // Attendees unavailable at this time
-};
-
-export type ProposedTimes = {
-    times: AvailableTime[]; // Array of available time slots
-    subject: string; // Meeting subject or title
-    agenda?: string; // Optional agenda
-    durationInMinutes: number; // Meeting duration in minutes
-    allAvailable: boolean; // are all required attendees available
-};
-
-export type MeetingRequest = {
-    participants: Array<string>;
-    subject: string;
-    timeframe_context: 'user defined exact date/time' | 'as soon as possible' | 'this week' | 'next week';
-    localDateString?: string,
-    duration_minutes: number;
-    working_hours: {
-        start_hour: number;
-        end_hour: number;
-    }
-}
+import { Context, MachineEvent } from "@xreason/reasoning/types";
+import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
+import { container } from "@xreason/inversify.config";
+import { GeminiService, ProposedTimes, TYPES, MeetingRequest, OfficeService } from "@xreason/types";
 
 
 // This function gets the attendees from the input context and then
-// uses Google Calander APIs to find available meeting times for anyone with a codestrap.me (we should mayne make the home domain configurable) email address
+// uses Google Calendar APIs to find available meeting times for anyone with a codestrap.me (we should make the home domain configurable) email address
 // For external emails it will send an email asking for available time slots if it can not find them on the input context
-// The calling function in the function catalog will then determine whether or not to pause machine exeuction waiting for a response of continue forward
+// The calling function in the function catalog will then determine whether or not to pause machine execution waiting for a response of continue forward
 export async function getAvailableMeetingTimes(context: Context, event?: MachineEvent, task?: string): Promise<ProposedTimes> {
     try {
         const options = {
-        timeZone: "America/Los_Angeles",
-        timeZoneName: "short" // This will produce "PST" or "PDT"
+            timeZone: "America/Los_Angeles",
+            timeZoneName: "short" // This will produce "PST" or "PDT"
         };
-        //@ts-ignore
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        //@ts-expect-error
         const formatter = new Intl.DateTimeFormat("en-US", options);
         const formatted = formatter.format(new Date());
 
@@ -131,34 +104,34 @@ Your response is:
 }
 `;
 
-        const response = await Gemini_2_0_Flash.createGenericChatCompletion(
-            {
-                messages: [
-                    { role: "SYSTEM", contents: [{ text: system }] },
-                    { role: "USER", contents: [{ text: user }] }
-                ]
-            }
-        );
-        const result = extractJsonFromBackticks(response.completion?.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
+        const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+
+        const response = await geminiService(user, system);
+        // eslint-disable-next-line no-useless-escape
+        const result = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
 
         const parsedResult = JSON.parse(result) as MeetingRequest;
         const timeFrame = (parsedResult.timeframe_context === 'user defined exact date/time') ? parsedResult.localDateString! : parsedResult.timeframe_context;
-        // @ts-ignore
-        const participants = Array.from(new Set(parsedResult.participants))
+        const participants = Array.from(new Set(parsedResult.participants));
         //remove external email addresses since we can't check them
-        const codeStrapParticipants = participants.filter(participat => participat.indexOf('codestrap.me') >= 0 || participat.indexOf('codestrap.com') >= 0);
+        const codeStrapParticipants = participants.filter(participant => participant.indexOf('codestrap.me') >= 0 || participant.indexOf('codestrap.com') >= 0);
         const inputs = {
             participants: codeStrapParticipants,
             timeframe_context: timeFrame,
+            subject: parsedResult.subject,
             duration_minutes: parsedResult.duration_minutes,
             working_hours: {
                 start_hour: 8,
                 end_hour: 17,
             },
             timezone: "America/Los_Angeles", // hard code for now, should be the organizer's time zone
-        }
+        } as MeetingRequest;
 
-        let availableTimes = await findOptimalMeetingTime(inputs);
+
+
+        const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
+
+        let availableTimes = await officeService.getAvailableMeetingTimes(inputs);
 
         // no times found
         if (availableTimes.suggested_times.length === 0) {
@@ -170,13 +143,13 @@ Your response is:
                     inputs.timeframe_context = 'next week';
                     break;
             }
-            availableTimes = await findOptimalMeetingTime(inputs);
+            availableTimes = await officeService.getAvailableMeetingTimes(inputs);
         }
 
         // try next week
         if (availableTimes.suggested_times.length === 0 && inputs.timeframe_context !== 'next week') {
             inputs.timeframe_context = 'next week';
-            availableTimes = await findOptimalMeetingTime(inputs);
+            availableTimes = await officeService.getAvailableMeetingTimes(inputs);
         }
 
         // still nothing, return allAvailable false to resolve manually

@@ -11,14 +11,20 @@ export async function readMachineExecution(id: string, client: FoundryClient): P
         "Content-Type": "application/json",
     };
 
-    const url = `${client.url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/objects/MachineExecutions/${id}`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/MachineExecutions/${id}`;
     const machineFetchResults = await fetch(url, {
         method: "GET",
         headers: headers,
     });
 
-    const machine = await machineFetchResults.json() as MachineExecutions;
-    console.log(`the machine execution ontology returned: ${JSON.stringify(machine)}`)
+    const apiResponse = await machineFetchResults.json() as any;
 
-    return machine;
+    if (apiResponse.errorCode) {
+        console.log(`errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`);
+        throw new Error(`An error occurred while calling read machine errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
+    }
+
+    console.log(`the machine execution ontology returned: ${JSON.stringify(apiResponse)}`)
+
+    return apiResponse as MachineExecutions;
 }

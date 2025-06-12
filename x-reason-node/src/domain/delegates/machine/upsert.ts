@@ -6,7 +6,7 @@ export async function upsertMachineExecution(id: string, stateMachine: string, s
     const token = await client.auth.signIn();
     const apiKey = token.access_token;
 
-    const url = `${client.url}/api/v2/ontologies/${process.env.ONTOLOGY_ID}/actions/upsert-machine/apply`;
+    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-machine/apply`;
 
     const headers = {
         Authorization: `Bearer ${apiKey}`,
@@ -41,7 +41,7 @@ export async function upsertMachineExecution(id: string, stateMachine: string, s
 
     const machineId = result.edits.edits[0].primaryKey as string;
 
-    const getUrl = `${client.url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/objects/MachineExecutions/${machineId}`;
+    const getUrl = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/MachineExecutions/${machineId}`;
     const machineFetchResults = await fetch(getUrl, {
         method: "GET",
         headers: headers,

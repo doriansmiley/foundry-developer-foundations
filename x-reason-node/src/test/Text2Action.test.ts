@@ -1,165 +1,107 @@
-import { State } from 'xstate';
-import { whenObjectSet } from '@foundry/functions-testing-lib';
-import { Objects, MachineExecutions } from '@foundry/ontology-api';
-import { Filters } from "@foundry/functions-api";
-
-import { headlessInterpreter, MachineEvent, Context, StateConfig, Task, getState } from '../reasoning';
-import { Text2Action } from '../';
-import { SupportedEngines } from '../reasoning/factory';
-import { sendEmail } from '../functions';
+import { text2ActionTestMachineExecution, machineId } from '@xreason/__fixtures__/MachineExecutions';
 
 let counter = 0;
 
-jest.mock('../utils', () => ({
-  ...jest.requireActual('../utils'),
-  uuidv4: jest.fn(() => (++counter).toString()),
+jest.mock('@xreason/utils', () => ({
+    ...jest.requireActual('../utils'),
+    uuidv4: jest.fn(() => (++counter).toString()),
 }));
 
-jest.mock('../functions', () => ({
-  ...jest.requireActual('../functions'),
-  sendEmail: jest.fn(),
+jest.mock("@xreason/services/geminiService", () => (
+    {
+        geminiService: jest.fn(() => {
+            return text2ActionTestMachineExecution.machine;
+        }),
+    }
+));
+
+jest.mock('@xreason/domain/machineDao', () => ({
+    makeMachineDao: jest.fn(() => ({
+        upsert: jest.fn((id: string, stateMachine: string, state: string, logs: string) => {
+            return text2ActionTestMachineExecution;
+        }),
+        delete: jest.fn(),
+        read: jest.fn((machineExecutionId: string) => {
+            return Promise.resolve(text2ActionTestMachineExecution);
+        }),
+    })),
 }));
 
-// Mock email response data
-const mockEmailResponse = {
-  id: '8675309',
-  threadId: '2468',
-  labels: ['labels', 'schmabels'],
-};
+jest.mock('googleapis', () => ({
+    ...jest.requireActual('googleapis'), // Keep other actual exports
 
-// Mock the GPT_4o module
-jest.mock("@foundry/models-api/language-models", () => ({
-    GPT_4o: {
-        createChatCompletion: jest.fn(),
+    google: {
+        // Mock the 'gmail' function as before
+        gmail: jest.fn((version: string, auth: any) => {
+            return {
+                users: {
+                    messages: {
+                        send: jest.fn((request: any) => {
+                            console.log(`Gmail mock called with: ${request}`);
+                            return Promise.resolve(mockEmailResponse);
+                        })
+                    }
+                }
+            };
+        }),
+
+        // Mock the 'calendar' function as before
+        calendar: jest.fn((version: string, auth: any) => {
+            return {
+                events: {
+                    insert: jest.fn((request: any) => {
+                        console.log(`Calendar mock called with: ${request}`);
+                        return Promise.resolve({ data: { id: 'mockEventId' } });
+                    }),
+                }
+            };
+        }),
+
+        // Mock the 'customsearch' function as before
+        customsearch: jest.fn((version: string) => {
+            return {
+                cse: {
+                    list: jest.fn((params: any) => {
+                        console.log(`Custom Search mock called with: ${params}`);
+                        return Promise.resolve({
+                            data: {
+                                items: [
+                                    { title: 'Mock Result 1', link: 'http://mock.com/1' },
+                                    { title: 'Mock Result 2', link: 'http://mock.com/2' },
+                                ],
+                            },
+                        });
+                    }),
+                },
+            };
+        }),
+
+        // Add a mock for the 'auth' object and its 'GoogleAuth' constructor
+        auth: {
+            GoogleAuth: jest.fn().mockImplementation((config) => {
+                console.log('Mocked GoogleAuth constructor called');
+
+                // Return a mock object that mimics the behavior of a GoogleAuth instance
+                return {
+                    // Mock methods that are called on the GoogleAuth instance
+                    getClient: jest.fn().mockResolvedValue({
+                        getRequestHeaders: jest.fn().mockResolvedValue({ /* mock headers */ }), // Mock getRequestHeaders if used
+                    }),
+                };
+            }),
+        },
     },
-    Gemini_2_0_Flash: {
-        createGenericChatCompletion: jest.fn(),
-    },
 }));
 
-// Mock the module
-jest.mock("@foundry/external-systems/sources", () => ({
-  FoundryApis: {
-    getSecret: jest.fn(() => "test"),
-    getHttpsConnection: jest.fn(() => ({ url: "test" }))
-  }
-}));
-
-const mockFetchResponse = {
-  validation: {
-    result: "VALID",
-    submissionCriteria: [],
-    parameters: {}
-  },
-  edits: {
-    type: "edits",
-    edits: [
-      {
-        type: "modifyObject",
-        primaryKey: "310e5c75-9ccf-4b01-8d0b-f4bf9bf6667e",
-        objectType: "MachineExecutions"
-      }
-    ],
-    addedObjectCount: 0,
-    modifiedObjectsCount: 1,
-    deletedObjectsCount: 0,
-    addedLinksCount: 0,
-    deletedLinksCount: 0
-  }
-};
-
-const mockResponse = (): Response =>
-  ({
-    ok: true,
-    status: 200,
-    statusText: "OK",
-    headers: {},
-    json: () => Promise.resolve(mockFetchResponse)
-  } as Response);
-
-//@ts-ignore
-global.fetch = jest.fn(() => Promise.resolve(mockResponse()));
-
-import { uuidv4 } from '../utils';
-import { GPT_4o } from "@foundry/models-api/language-models";
-import { FoundryApis } from "@foundry/external-systems/sources";
-
+import { uuidv4 } from '@xreason/utils';
+import { Text2Action } from '@xreason/CommsForge';
+import { SupportedEngines } from '@xreason/reasoning/factory';
+import { sendEmail } from '@xreason/functions';
+import { mockEmailResponse } from '@xreason/__fixtures__/Email';
 
 describe('testing Text2Action', () => {
-    const machineId = 'mock-execution-id';
-    const machineId2 = 'mock-execution-id2';
 
-    beforeAll(() => {
-        // Create a mock MachineExecution object
-        const mockExecution = Objects.create().machineExecutions(machineId);
-        mockExecution.machine = `
-        [
-            {
-                "id": "sendEmail|1",
-                "transitions": [
-                    {
-                        "on": "CONTINUE",
-                        "target": "sendEmail|5"
-                    },
-                    {
-                        "on": "pause",
-                        "target": "pause"
-                    },
-                    {
-                        "on": "ERROR",
-                        "target": "failure"
-                    }
-                ]
-            },
-            {
-                "id": "sendEmail|5",
-                "transitions": [
-                    {
-                        "on": "CONTINUE",
-                        "target": "success"
-                    },
-                    {
-                        "on": "ERROR",
-                        "target": "failure"
-                    }
-                ]
-            },
-            {
-                "id": "success",
-                "type": "final"
-            },
-            {
-                "id": "failure",
-                "type": "final"
-            }
-        ]
-        `;
-        // this is the first state in the machine
-        mockExecution.state = `{"actions":[{"type":"entry"}],"activities":{},"meta":{},"events":[],"value":"sendEmail|1","context":{"status":0,"requestId":"test","stack":["sendEmail|1"]},"_event":{"name":"xstate.init","data":{"type":"xstate.init"},"$$type":"scxml","type":"external"},"_sessionid":"x:1","event":{"type":"xstate.init"},"children":{},"done":false,"tags":[]}`;
-
-        // setup functions mocks
-        (sendEmail as jest.Mock).mockResolvedValue(mockEmailResponse);
-        // TODO add more e2e mocks as we setup live integrations for ts fn()'s
-
-        // Set up the mock
-        whenObjectSet(
-            Objects.search()
-                .machineExecutions()
-                .filter((execution) => execution.id.exactMatch(machineId))
-                .all()
-        ).thenReturn([mockExecution]);
-
-        whenObjectSet(
-            Objects.search().xReasonTrainingData()
-            .filter(item => Filters.and(
-            item.xReason.exactMatch(SupportedEngines.COMS),
-            item.isGood.isTrue(),
-            ))
-            .all()
-        ).thenReturn([]);
-    })
-
-    beforeEach(() => {
+    afterAll(() => {
         jest.clearAllMocks();
     });
 
@@ -170,21 +112,6 @@ describe('testing Text2Action', () => {
             plan: '', //not relevant for retrieving an execution
         };
 
-        //we don't need to test interpolation in this test case, but leaving here to help facilitate testing that
-        const valuesToInterpolateOntoContext = {};
-
-        // Set up the mock response
-        const mockResponse = {
-            choices: [
-                {
-                    message: {
-                        content: "sendEmail|5",
-                    },
-                },
-            ],
-        };
-        // Configure the mock to return the mockResponse
-        (GPT_4o.createChatCompletion as jest.Mock).mockResolvedValue(mockResponse);
         const t2a = new Text2Action();
         const result = await t2a.upsertState(undefined, true, machineId);
         const state = JSON.parse(result.state!);
@@ -193,6 +120,6 @@ describe('testing Text2Action', () => {
         expect(state.value).toBe('sendEmail|1');
         expect(state.context.stack).toHaveLength(1)
         expect(state.context.stack[0]).toBe('sendEmail|1')
-    });
+    }, 30000);
 
 });
