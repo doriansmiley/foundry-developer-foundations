@@ -248,3 +248,81 @@ export const mockExecution2 = {
         ]
         `
 };
+
+export const mockModifyFetchResponse = {
+    validation: {
+        result: "VALID",
+        submissionCriteria: [],
+        parameters: {}
+    },
+    edits: {
+        type: "edits",
+        edits: [
+            {
+                type: "modifyObject",
+                primaryKey: "310e5c75-9ccf-4b01-8d0b-f4bf9bf6667e",
+                objectType: "MachineExecutions"
+            }
+        ],
+        addedObjectCount: 0,
+        modifiedObjectsCount: 1,
+        deletedObjectsCount: 0,
+        addedLinksCount: 0,
+        deletedLinksCount: 0
+    }
+};
+
+export const mockModifyApiResponse = (): Response =>
+({
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    headers: {},
+    json: () => Promise.resolve(mockModifyFetchResponse)
+} as Response);
+
+export const text2ActionTestMachineExecution = {
+    machine: `
+        [
+            {
+                "id": "sendEmail|1",
+                "transitions": [
+                    {
+                        "on": "CONTINUE",
+                        "target": "sendEmail|5"
+                    },
+                    {
+                        "on": "pause",
+                        "target": "pause"
+                    },
+                    {
+                        "on": "ERROR",
+                        "target": "failure"
+                    }
+                ]
+            },
+            {
+                "id": "sendEmail|5",
+                "transitions": [
+                    {
+                        "on": "CONTINUE",
+                        "target": "success"
+                    },
+                    {
+                        "on": "ERROR",
+                        "target": "failure"
+                    }
+                ]
+            },
+            {
+                "id": "success",
+                "type": "final"
+            },
+            {
+                "id": "failure",
+                "type": "final"
+            }
+        ]
+        `,
+    state: `{"actions":[{"type":"entry"}],"activities":{},"meta":{},"events":[],"value":"sendEmail|1","context":{"status":0,"requestId":"test","stack":["sendEmail|1"], "sendEmail|1": {"message": "test", "subject": "test subject", "recipients": ["test@example.com"],"modelDialog": "sample dialog", "ts": "1234567890"}},"_event":{"name":"xstate.init","data":{"type":"xstate.init"},"$$type":"scxml","type":"external"},"_sessionid":"x:1","event":{"type":"xstate.init"},"children":{},"done":false,"tags":[]}`,
+};

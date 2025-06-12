@@ -10,6 +10,11 @@ jest.mock('../utils', () => ({
 import { StateConfig, programV1, Context, MachineEvent, Task } from "@xreason/reasoning";
 
 describe('Testing Programmer', () => {
+
+  afterAll(() => {
+    jest.clearAllMocks()
+  });
+
   test("Test the programV1 function passing state nodes array", async () => {
     // TODO refactor this to use the headless interpreter when it's done
     return new Promise((resolve, reject) => {

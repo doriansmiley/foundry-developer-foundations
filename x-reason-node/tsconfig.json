@@ -16,7 +16,8 @@
     "types": ["jest", "node"],
     "baseUrl": ".",
     "paths": {
-        "@xreason/*": ["src/*"]
+        "@xreason/*": ["src/*"],
+        "@tracing/*": ["../foundry-tracing-foundations/src/*"]
     },
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true

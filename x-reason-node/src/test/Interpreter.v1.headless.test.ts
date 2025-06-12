@@ -9,6 +9,11 @@ jest.mock("../utils", () => ({
 }));
 
 describe('headlessInterpreter', () => {
+
+    afterAll(() => {
+        jest.clearAllMocks()
+    });
+
     const mockDispatch = jest.fn();
 
     const mockStates: StateConfig[] = [

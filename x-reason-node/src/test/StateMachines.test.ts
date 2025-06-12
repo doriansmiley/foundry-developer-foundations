@@ -8,6 +8,10 @@ jest.mock("../utils", () => ({
   uuidv4: jest.fn(() => (++counter).toString()),
 }));
 
+afterAll(() => {
+  jest.clearAllMocks()
+});
+
 beforeEach(() => counter = 0);
 
 describe('Testing the getUniqueStateIds function', () => {

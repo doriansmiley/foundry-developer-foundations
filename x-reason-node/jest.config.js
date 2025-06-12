@@ -35,6 +35,8 @@ export default {
         // Strip `.js` from your TS imports so ESM paths resolve
         '^(\\.{1,2}/.*)\\.js$': '$1',
         '^@xreason/(.*)$': '<rootDir>/src/$1',
+        '^@tracing/(.*)$': '<rootDir>/../foundry-tracing-foundations/src/$1',
+        '^@codestrap/developer-foundations\\.foundry-tracing-foundation(.*)$': '<rootDir>/../foundry-tracing-foundations/src/$1',
         '^@osdk/shared\\.client$': '<rootDir>/node_modules/@osdk/shared.client/index.js',
         '^@osdk/shared\\.client2$': '<rootDir>/node_modules/@osdk/shared.client2/index.js',
     },

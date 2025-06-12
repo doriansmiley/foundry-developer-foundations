@@ -32,7 +32,6 @@ jest.mock('@xreason/functions', () => ({
 
 import { mockProgrammerResponse1 } from '@xreason/__fixtures__/Gemini';
 
-// Mock the GPT_4o module
 jest.mock("@xreason/services/geminiService", () => (
     {
         geminiService: jest.fn(() => {
@@ -97,7 +96,7 @@ describe('testing orchestrator', () => {
 
     afterAll(() => {
         jest.clearAllMocks();
-    })
+    });
 
     it('it should rehydrate an existing execution, move forward, and save', async () => {
         const solution = {
