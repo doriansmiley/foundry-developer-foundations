@@ -19,8 +19,8 @@ import { makeGSuiteClient } from "@xreason/services/gsuiteClient";
 import { makeSlackClient } from "@xreason/services/slack";
 import { embeddingsService } from "@xreason/services/embeddingsService";
 import { makeMemoryRecallDao } from "@xreason/domain/memoryRecallDao";
-import { makeContactsDao } from "./domain/contactsDao";
-import { makeTrainingDataDao } from "./domain/trainingDataDao";
+import { makeContactsDao } from "@xreason/domain/contactsDao";
+import { makeTrainingDataDao } from "@xreason/domain/trainingDataDao";
 
 export const container = new Container();
 
@@ -94,6 +94,7 @@ container
     .bind(TYPES.GeminiSearchStockMarket)
     .toConstantValue(gemeniStockMarketConditions);
 
+// IMPORTANT use container.getAsync when retrieving!
 container
     .bind(TYPES.OfficeService)
     .toConstantValue(makeGSuiteClient(process.env.OFFICE_SERVICE_ACCOUNT));

@@ -1,7 +1,7 @@
 import { sendSlackMessage } from "@xreason/services/delegates/slack/sendMessage";
 import { Message, MessageService } from "@xreason/types";
 
-export async function makeSlackClient(baseUrl: string, botToken: string): Promise<MessageService> {
+export function makeSlackClient(baseUrl: string, botToken: string): MessageService {
 
     return {
         sendMessage: async (message: Message) => {
