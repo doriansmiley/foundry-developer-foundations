@@ -87,7 +87,7 @@ export async function resolveUnavailableAttendees(context: Context, event?: Mach
     const message = parsedResult.message;
     const modelDialog = parsedResult.message;
 
-    const officeService = container.get<OfficeService>(TYPES.OfficeService);
+    const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
 
     const emailResponse = await officeService.sendEmail(
         {

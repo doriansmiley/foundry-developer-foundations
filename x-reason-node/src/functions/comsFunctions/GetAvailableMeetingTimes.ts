@@ -129,7 +129,7 @@ Your response is:
 
 
 
-        const officeService = container.get<OfficeService>(TYPES.OfficeService);
+        const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
 
         let availableTimes = await officeService.getAvailableMeetingTimes(inputs);
 

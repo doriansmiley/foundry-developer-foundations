@@ -1,19 +1,26 @@
 import { gmail_v1 } from 'googleapis';
-import { EmailContext, SendEmailOutput } from '@xreason//types';
+import { EmailContext, SendEmailOutput } from '@xreason/types';
 
 const LOG_PREFIX = 'GSUITE - sendEmail - ';
 
 // Helper Functions
 function validateEmailInput(context: EmailContext): void {
-    const { recipients, subject, message } = context;
+    const { recipients, subject, message, from } = context;
 
-    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    if (!from || !recipients || !subject || !message) {
+        throw new Error('No email data found in context. From, recipients, subject and message are required!');
+    }
+
+    if (typeof from !== 'string') {
+        throw new Error('From is required and must be a string');
+    }
+    if (!Array.isArray(recipients) || recipients.length === 0) {
         throw new Error('Recipients array is required and must not be empty');
     }
-    if (!subject || typeof subject !== 'string') {
+    if (typeof subject !== 'string') {
         throw new Error('Subject is required and must be a string');
     }
-    if (!message || typeof message !== 'string') {
+    if (typeof message !== 'string') {
         throw new Error('Message is required and must be a string');
     }
 }

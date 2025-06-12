@@ -23,12 +23,7 @@ jest.mock('@xreason/utils', () => ({
     uuidv4: jest.fn(() => (++counter).toString()),
 }));
 
-// Mock email response data
-const mockEmailResponse = {
-    id: '8675309',
-    threadId: '2468',
-    labels: ['labels', 'schmabels'],
-};
+import { mockEmailResponse } from '@xreason/__fixtures__/Email';
 
 jest.mock('@xreason/functions', () => ({
     ...jest.requireActual('../functions'),
@@ -92,7 +87,6 @@ global.fetch = jest.fn().mockImplementation(() =>
 import { headlessInterpreter, MachineEvent, Context, StateConfig, Task, getState } from '@xreason/reasoning';
 import { SupportedEngines, SupportTrainingDataTypes } from '@xreason/reasoning/factory';
 import { sendEmail } from '@xreason/functions';
-
 import { machineId, machineId2, mockExecution, mockExecution2 } from '@xreason/__fixtures__/MachineExecutions';
 
 describe('testing orchestrator', () => {

@@ -15,7 +15,7 @@ export async function scheduleMeeting(context: Context, event?: MachineEvent, ta
             attendees: availableTimes.times[0].availableAttendees,
         };
 
-        const officeService = container.get<OfficeService>(TYPES.OfficeService);
+        const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
 
         const schedulingResult = await officeService.scheduleMeeting(inputs);
 

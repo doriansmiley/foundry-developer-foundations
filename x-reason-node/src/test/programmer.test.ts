@@ -7,7 +7,7 @@ jest.mock('../utils', () => ({
   uuidv4: jest.fn(() => (++counter).toString()),
 }));
 
-import { StateConfig, programV1, Context, MachineEvent, Task } from "../reasoning";
+import { StateConfig, programV1, Context, MachineEvent, Task } from "@xreason/reasoning";
 
 describe('Testing Programmer', () => {
   test("Test the programV1 function passing state nodes array", async () => {

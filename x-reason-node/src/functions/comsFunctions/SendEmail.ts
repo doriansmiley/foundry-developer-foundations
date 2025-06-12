@@ -102,7 +102,7 @@ export async function sendEmail(context: Context, event?: MachineEvent, task?: s
         }
     )
 
-    const messageService = container.get<OfficeService>(TYPES.OfficeService);
+    const messageService = await container.getAsync<OfficeService>(TYPES.OfficeService);
 
     const response = await messageService.sendEmail({
         from: process.env.OFFICE_SERVICE_ACCOUNT,
