@@ -1,6 +1,6 @@
 export function sanitizeJSONString(input: string): string {
   // Replace double quotes with escaped double quotes
-  let sanitized = input.replace(/\"/g, '\\"');
+  let sanitized = input.replace(/"/g, '\\"');
 
   // Replace line feeds with escaped newline characters
   sanitized = sanitized.replace(/\n/g, '\\n');
