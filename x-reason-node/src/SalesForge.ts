@@ -1,12 +1,11 @@
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
 
 import { SupportedEngines } from "@xreason/reasoning/factory";
-import { Text2Action } from "@xreason/CommsForge";
+import { Text2Action } from "@xreason/Text2Action";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
-import { GeminiService, MachineDao, RfpRequestsDao, Threads, ThreadsDao, TYPES, RfpRequestResponse, RfpResponsesResult } from '@xreason/types';
+import { GeminiService, MachineDao, RfpRequestsDao, Threads, ThreadsDao, TYPES, RfpResponseReceipt, RfpRequestResponse, RfpResponsesResult } from '@xreason/types';
 import { container } from "@xreason/inversify.config";
 import { StateConfig } from '@xreason/reasoning';
-import { dateTime, recall, requestRfp, userProfile } from '@xreason/functions';
 
 interface SalesForgeTaskListResponse {
     status: number;
@@ -14,33 +13,6 @@ interface SalesForgeTaskListResponse {
     executionId: string;
     taskList?: string;
     error?: string;
-}
-
-export type Role = {
-    title: string,
-    rate: number,
-    rateType: 'hourly' | 'daily' | 'monthly' | 'yearly',
-    quantity: number,
-}
-// used when parsing response from LLM
-export type RfpResponse = {
-    rawText: string;
-    machineExecutionId: string;
-    rateCard: Role[],
-    cost: number,
-    startDate: Date,
-    terms: string;
-}
-
-interface RfpResponseReceipt {
-    status: number;
-    message: string;
-    machineExecutionId: string;
-    error?: string;
-    reciept?: {
-        id: string,
-        timestamp: number,
-    };
 }
 
 export class SalesForge {
@@ -68,8 +40,8 @@ export class SalesForge {
     public async askBennie(query: string, userId: string, threadId?: string): Promise<SalesForgeTaskListResponse> {
         // if threadId is defined look it up, else create a new thread in the ontology using fetch
         // create a new threadId in the ontology threads object if one isn't supplied or not found
-        // call createSalesTasksFunction with the full thread history
-        const { status, taskList, executionId } = await this.createSalesTasksFunction(query, userId, threadId);
+        // call createSalesTasksList with the full thread history
+        const { status, taskList, executionId } = await this.createSalesTasksList(query, userId, threadId);
         // if we get a bad response skip calling execute task list
         if (status !== 200 || !taskList) {
             return {
@@ -138,17 +110,17 @@ ${result}`;
             host_hostname: 'codestrap.usw-3.palantirfoundry.com',
             host_architecture: 'prod',
         },
-        operationName: 'createSalesTasksFunction',
+        operationName: 'createSalesTasksList',
         kind: 'Server',
         samplingDecision: 'RECORD_AND_SAMPLE',
         samplingRate: 1.0,
-        attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/createSalesTasksTasksFunction/execute` }
+        attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/createSalesTasksList/execute` }
     })
-    public async createSalesTasksFunction(query: string, userId: string, threadId?: string): Promise<SalesForgeTaskListResponse> {
-        console.log('createSalesTasksTasksFunction called')
+    public async createSalesTasksList(query: string, userId: string, threadId?: string): Promise<SalesForgeTaskListResponse> {
+        console.log('createSalesTasksList called')
         // if no threadId create one
         // call the solver to get back the task list. 
-        const taskList = await this.text2ActionInstance.createCommunicationsTasks(query, userId, SupportedEngines.SALES)
+        const taskList = await this.text2ActionInstance.createTaskList(query, userId, SupportedEngines.SALES)
         // If incomplete information is provided the solver will return Missing Infromation
         // If the request is unsupported the solver will return Usupported Questions
         // If it's a complete supported query the solver will return a well formatted task list that we can use to execute
@@ -329,199 +301,5 @@ ${threadMessage};
                 timestamp: Date.now(),
             },
         }
-    }
-
-    @Trace({
-        resource: {
-            service_name: 'bennie',
-            service_instance_id: 'production',
-            telemetry_sdk_name: 'xreason-functions',
-            telemetry_sdk_version: '7.0.2',
-            host_hostname: 'codestrap.usw-3.palantirfoundry.com',
-            host_architecture: 'prod',
-        },
-        operationName: 'sendThreadMessage',
-        kind: 'Server',
-        samplingDecision: 'RECORD_AND_SAMPLE',
-        samplingRate: 1.0,
-        attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/sendThreadMessage/execute` }
-    })
-    public async sendThreadMessage(message: string, userId: string, machineExecutionId: string): Promise<void> {
-        // I changed the response of this function to void to it can be triggered as an action. Once refactored to compute modules it can return a response
-        // rehydrate the machine
-        const threadDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
-        const retrievedThread = await threadDao.read(machineExecutionId);
-
-        const messageHistory = retrievedThread.messages;
-
-        if (!messageHistory) {
-            throw new Error(`no thread found for: ${machineExecutionId}`);
-        }
-
-        const currentUserProfile = await userProfile({ requestId: '1234', status: 0, userId })
-        const currentDateTime = await dateTime({
-            requestId: '1234',
-            status: 0,
-            stack: ['userProfile'],
-            userProfile: currentUserProfile,
-        });
-        const recalledInformation = await recall({
-            requestId: '1234',
-            status: 0,
-            stack: ['userProfile'],
-            userProfile: currentUserProfile,
-        }, undefined, `${messageHistory}  ${message}`);
-
-        // TODO: remove the bard coded context information once CodeStrap employeed slack channels are added to the contacts dataset
-        const groudingContext = `
-Below is the orgnizationl information you will need to perform your work:
-# Context
-${JSON.stringify(recalledInformation)}
-
-# Current date/Time:
-${JSON.stringify(currentDateTime)}
-
-# Team Information:
-Connor Deeks <connor.deeks@codestrap.me> - Connor Deeks in the CEO and board memeber in charge of platform leads, business strategy, and investor relations.
-Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the software engineers and is responsible for technology strategy, execution, and the lead applied AI engineer.
-
-#Slack Channels
-"C082XAZ9A1E": "Foundry Devs - used by software engineers working on Palantir Foundry related tasks such as data integration, transformations, and applications",
-"C082M750AQ1": "Founding - used for items related to the company founding such as legal briefs, filings, banking etc",
-"C08264VFXNZ": "Comms Engineering - used by the software engineers responsible for engineering related items around slack, gmail, teams, etc",
-"C0828G7BXM0": "General - General",
-"C0821UEPJKG": "Platform Leads - used by our partners responsible for sales motions and client engagements",
-"C0825R4EHMK": "Public relations - used for all items related to PR and marketing"
-"C08LX9DDMRB": "External Partner Datalinks - used for all communications with DataLinks and us (CodeStrap). DataLinks provides data products and data negineering services. Team members at DataLinks are Andrzej Grzesik - CTO, Francisco Ferrera - CEO, Rui Valente - developer, and Timur - developer"
-"C08LMJDQ25C": "Etneral partner 11 Labs" - used for all communications with 11 Labs. 11 Labs makes generative voice models and is used by our customers for call center operations and voice enabled applications. 11 Labs team members are Alox Holt Lead Developer, Jack Piunti Enterprise Sales, and Kabir Gill Enterprise Sales"
-`;
-
-        // determine if this is a response or a request for missing information or something else
-        const system = 'You are a helpful AI sales associate in charge of fielding incoming messages from sales agents in the field. You job is to pick the next best action based on the message history and incoming request.';
-        const user = `
-        # Context
-        Below is infromation retrieved from our grounding context engine that might include relevant names, email addresses, vendor ID, etc
-        This should only be used as a secondary source on information. The message history is the primary source of information.
-        ${groudingContext}
-
-        # Message History
-        Based on the following message history
-        ${messageHistory}
-
-        # User Query
-        And the incoming user query for a sales agent in the field:
-        ${message}
-
-        Determin which of the following actions should be taken based on the the user query:
-        - Resubmit RFP to resolve missing information
-        - Send Email
-        - Send Slack Message
-        - No supported action found
-
-        You can only response in JSON in the following format:
-        {
-            "action": <YOUR_ANSWER> , 
-            "emailAddresses": <ARRAY_OF RELEVANT_EMAILS>, 
-            "slackChannelID": <ARRAY_OF_RELEVANT_SLACK_CHANNEL_ID>,
-            "message": <THE_MESSAGE_TO_SEND>,
-            "vendors": <ANY_RELEVANT_VENDOR_IDs>
-        }
-
-        For example 
-        Id the incoming context includes:
-        # User Query:
-        Create a RFP for Northslope and Rangr to deliver a tariff solution on Foundry. The solution must include support for pricing models, simulations, and A/B testing of the outcomes. We expect this to be an 4 week engagement requiring 3 Python engineer, 1 TypeScript engineer, and 2 SME on developing pricing models. Then email me the responses. The company is John Doe's Doe's and there address is 123 main street dallas tx, 75081 and the main contact is johndoe@johnsdoes.com.
-
-        # Technical details
-        ExecutionID: 12fae652-e90e-4b45-ae07-a9fa67a874e7
-
-        # Summary
-        Happy Saturday! I'm Bennie, Code's AI Sales Associate, here to help summarize those RFP tasks.
-
-        Okay, here's the breakdown:
-
-        RFP to Northslope: Request sent successfully! They acknowledge receipt and will respond shortly. Receipt ID is 466eeb1d-435c-4062-9890-508e957344f5.
-        RFP to Rangr Data: Request sent successfully! They acknowledge receipt and the solution details appear to be valid. Receipt ID is fe655407-8a48-4ef7-808f-f7a341cfdbae.
-        Awaiting Responses: We're still waiting for both Northslope and Rangr Data to submit their complete RFP responses.
-        Let me know if you need me to chase them up or do anything else!
-        
-        # Vendor Response
-        ### Identifiers
-        - Date and time: Sat May 31 2025 15:13:12 GMT+0000 (Coordinated Universal Time)
-        - Machine and ThreadId: 12fae652-e90e-4b45-ae07-a9fa67a874e7
-
-        ### Summary
-        Your RFP for Northslope using ID: northslopetech.com was sent and we received the following response from their agent:
-        ### 📋 We Can not process your request
-        We can not process your request without a valid start and end date
-
-        And the incoming message is:
-        The sart date is June 3rd and the end date is june 25th
-
-        Your response is:
-        {
-            "action": "Resubmit RFP to resolve missing information" , 
-            "emailAddresses": [], 
-            "slackChannelID": [],
-            "message": "Create RFP - Vendor: Northslope <northslopetech.com> - Objectives: Deliver a tariff solution on Foundry that includes support for pricing models, simulations, and A/B testing of the outcomes for John Doe's Manufacturing at 123 main street dallas tx, 75081 with contact johndoe@johnsdoes.com - Deliverables: A fully functional tariff solution on Foundry. - Timeline: 4 week engagement starting Jun 3 2025 and the ending Jun 25 2025 requiring 3 Python engineers, 1 TypeScript engineer, and 2 SMEs on developing pricing models.",
-            "vendors": ["Northslope <northslopetech.com>"]
-        }
-
-        Explination: the vendor array correctly includes Northslope and the correct vendorID <northslopetech.com>. It also reiterates the RFP from the original user query so it can be resubmitted correctly inserting the start and end dates wupplied by the sales agent int he field.
-        `;
-
-        const geminiService = container.get<GeminiService>(TYPES.GeminiService);
-
-        const response = await geminiService(user, system);
-        const result = extractJsonFromBackticks(response);
-
-        const parsedResult = JSON.parse(result) as { action: string, emailAddresses: string[], slackChannelID: string[], message: string, vendors: string[] };
-        const category = parsedResult.action as 'Resubmit RFP to resolve missing information' | 'Send Email' | 'Send Slack Message' | 'No supported action found' | undefined;
-
-        if (!category) {
-            throw new Error(`Could not classify your request: ${category}`);
-        }
-
-        let newThreadMessage = 'No mew message generated'
-
-        if (category === 'Resubmit RFP to resolve missing information') {
-
-            const promises = parsedResult.vendors.map(async vendorId => {
-                console.log(`resubmitting RFP for ${vendorId}`);
-
-                return requestRfp(
-                    {
-                        requestId: uuidv4(),
-                        machineExecutionId,
-                        executionId: machineExecutionId,
-                        status: 200
-                    },
-                    undefined,
-                    parsedResult.message,
-                )
-            });
-
-            const resolvedPromises = await Promise.all(promises);
-            // TODO consider using a reasoning model to check the first models work
-            newThreadMessage = resolvedPromises.reduce((acc, cur) => {
-                acc = `${acc}
-### Vendor Details:
-- Vendor: ${cur.vendorName}
-- Vendor ID: ${cur.vendorId}
-- Status Code: ${cur.status}
-- Vendor Response: ${cur.message}
-`;
-                return acc;
-            }, '# RFPs for the following vendors were resubmitted:');
-
-        }
-        // TODO handle more categories of responses
-
-        const appendedMessage = `${messageHistory}
-${newThreadMessage}`;
-
-        // update the thread with the new message
-        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
-        threadsDao.upsert(appendedMessage, 'bennie', machineExecutionId);
     }
 }

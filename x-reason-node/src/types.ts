@@ -514,8 +514,20 @@ export type RfpRequestResponse = {
     response?: string;
     error?: string;
     receipt?: {
-        id: string,
-        timestamp: Date,
+        id: string;
+        timestamp: Date;
+    };
+}
+
+// Receipt sent back to vendors when their response is recorded
+export type RfpResponseReceipt = {
+    status: number;
+    message: string;
+    machineExecutionId: string;
+    error?: string;
+    reciept?: {
+        id: string;
+        timestamp: number;
     };
 }
 
