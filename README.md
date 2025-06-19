@@ -1,14 +1,17 @@
-# Foundry Developer Foundations
+# WiP: Foundry Developer Foundations
+### IMPORTANT: This project is under active development and refactoring in preparation for v0
+### IMPORTANT: This README is also under active development and not ready for use.
+Do not use this code in your applications. We are looking for contributors. You can participate without a Foundry stack by following the contributor guide. We expect a v0 release in June 2025.
 
 ## Introduction
 
 Foundry Developer Foundations is a reference implementation of the **Foundry‑backed / GitHub‑native** collaboration pattern created by CodeStrap, LLC.
 The goal: let any JavaScript / TypeScript engineer contribute business logic to a Palantir Foundry deployment **without needing direct Foundry expertise or access**.
 
-* **Foundry holds the data model and actions** – a single `HelloWorldFunction` action updates the `World` ontology object.
-* **GitHub holds all application code** – weather lookup, greeting logic, tests, CI/CD, and the containerised Compute Module.
+* **Foundry holds the data model and actions** – i.e. a `HelloWorldFunction` action updates the `World` ontology object.
+* **GitHub holds all application code** – i.e. services, data access objects (DAO), logic, tests, CI/CD, APIs, and containers.
 * **Clean implementation abstraction (DAO + Compute Module)** isolates Foundry specifics behind a function interface, so the rest of the codebase behaves like a normal Node project (using dependency injection via Inversify).
-* **Foundry Mocks** an included mock Foundry instance exposes the API routes required for the application with mock responses so developers don't have to supply a Foundry stack. Simple updated the `FOUNDRY_STACK_URL` to point to your `localhost` where the mocks are running.
+* **Foundry Mocks** an included mock Foundry instance exposes the API routes required for the application with mock responses so developers don't have to supply a Foundry stack. Simple updated the `FOUNDRY_STACK_URL` to point to your `localhost` where the mocks are running. Jest mocks are also used for unit tests.
 
 By following this pattern you can:
 
