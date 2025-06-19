@@ -1,4 +1,7 @@
 import { ComputeModule } from "@palantir/compute-module";
+// Schema Definitions for compute module
+// IMPORTANT:  @sinclair/typebox is required!!!
+// https://github.com/palantir/typescript-compute-module?tab=readme-ov-file#schema-registration
 import { Type } from "@sinclair/typebox";
 import dotenv from 'dotenv';
 
