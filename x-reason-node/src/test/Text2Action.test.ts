@@ -94,7 +94,7 @@ jest.mock('googleapis', () => ({
 }));
 
 import { uuidv4 } from '@xreason/utils';
-import { Text2Action } from '@xreason/CommsForge';
+import { Text2Action } from '@xreason/Text2Action';
 import { SupportedEngines } from '@xreason/reasoning/factory';
 import { sendEmail } from '@xreason/functions';
 import { mockEmailResponse } from '@xreason/__fixtures__/Email';
