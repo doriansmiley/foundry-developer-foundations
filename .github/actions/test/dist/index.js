@@ -25,7 +25,7 @@ async function getChangedPaths(baseRef = 'origin/master') {
 
         compare.files.forEach(file => {
             const dir = file.filename.split('/')[0];
-            if (dir && dir !== '.github' && dir !== '.gitignore') {
+            if (dir && dir !== '.github' && dir !== '.gitignore' && dir !== 'README.md') {
                 directories.add(dir)
             };
         });
