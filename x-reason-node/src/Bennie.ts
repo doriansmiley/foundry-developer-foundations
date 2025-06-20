@@ -38,22 +38,42 @@ export class SalesForge {
         attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/askBennie/execute` }
     })
     public async askBennie(query: string, userId: string, threadId?: string): Promise<SalesForgeTaskListResponse> {
-        // if threadId is defined look it up, else create a new thread in the ontology using fetch
-        // create a new threadId in the ontology threads object if one isn't supplied or not found
-        // call createSalesTasksList with the full thread history
-        const { status, taskList, executionId } = await this.createSalesTasksList(query, userId, threadId);
-        // if we get a bad response skip calling execute task list
-        if (status !== 200 || !taskList) {
-            return {
-                status,
-                executionId,
-                message: `You are missing required infromation: ${taskList}. Please fix your shit and resend.`,
-            };
+        let generatedTaskList: undefined | string = undefined;
+        let newThread = false;
+
+        // we only want to trigger task list generation if this is a new thread
+        if (!threadId) {
+            newThread = true;
+            // create a new solution with our solver
+            const { status, taskList, executionId } = await this.createSalesTasksList(query, userId, threadId);
+            // if we get a bad response skip calling execute task list
+            if (status !== 200 || !taskList) {
+                return {
+                    status,
+                    executionId,
+                    message: `You are missing required infromation: ${taskList}. Please fix your shit and resend.`,
+                };
+            }
+            // threadId and executionId are identical. 
+            // If threadId is defined there must be an associated state machine execution where executionId === threadId
+            // if its not defined we need to create a new task list and generate a new machine execution which will happen automatically
+            // when this.text2ActionInstance.getNextState is called.
+            // The orchestrator will program a new solution if there's no machine matching the executionId
+            threadId = executionId;
+            generatedTaskList = taskList;
         }
-        // execute the task list
-        const results = await this.text2ActionInstance.executeTaskList(taskList, true, executionId, undefined, SupportedEngines.SALES)
+
+        // if task list is defined and there's no machine where machineExecutionId === threadId, a new solution will be generated
+        // else the exiting machine will be rehydrated and the next state sent back
+        // TODO we need to append the user query as input to getNextState so its interpolated onto the context
+        // ideally what would happen is we check if the user query is relevant to an existing state then update it
+        // then when the orchestrator rehydrates the machine is can reason about what state to retry based on the new information
+        // this replaces the need for the text2ActionInstance.sendThreadMessage handler which was a hack to void doing this
+        // you'll likely need to provide training data for transition for each engine to the model can learn what to do
+        // Once done you'll need to copy this pattern to Vickie's askVickie method
+        const results = await this.text2ActionInstance.getNextState(generatedTaskList, true, threadId, undefined, SupportedEngines.SALES)
         // construct the response
-        const system = `You are a helpful AI sales assistant named Bennie tasked with ensuring tasks lists related to sales activities are properly defined with all required identitying information such as vendor names, RFP details, customer contact infromation such as email addresses, slack channel IDs, etc.
+        const system = `You are a helpful AI sales assistant named Bennie.
 You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Bennie, Code's AI Sales Associate" or similar. 
 You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}. 
 You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
@@ -66,10 +86,16 @@ The current day/time in your timezone is: ${new Date().toString()}`;
         Based on the following user query
         ${query}
 
-        And the results of the execution of their request
-        ${results}
+        And the results of the state machine execution that was generated to service their request
+        The value attribute contains the current state
+        The theResultOfEachTask attribute contains the output of state executions
+        The orderTheTasksWereExecutedIn lets you know what order the states were executed in. States can be executed multiple times if they are retied.
+        ${JSON.stringify(results)}
 
-        Summarize the results.
+        Generate a response to the user query based on the results of the state machine execution 
+        Be sure to structure your response so that it's readable by a human.
+        For example if the state4 machine execution includes facts and figures use a table to format them
+        Use lists to structure information hexarchies suck as task list execution and there results
         `;
 
         const geminiService = container.get<GeminiService>(TYPES.GeminiService);
@@ -77,26 +103,34 @@ The current day/time in your timezone is: ${new Date().toString()}`;
         const response = await geminiService(user, system);
 
         let result = extractJsonFromBackticks(response);
-        result = `# Technical details
-ExecutionID: ${executionId}
-
-# Summary
+        if (newThread) {
+            // putting Execution Id in the thread is useful for debugging as users may need to supply it
+            result = `# Execution Id: ${threadId}
+### Response from Bennie
+${result}
+`;
+        } else {
+            result = `### Response from Bennie
 ${result}`;
+        }
 
         // persist the constructed response to the the threads object
         const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
 
-        const messages = `# User Query:
+        const messages = `### User Query:
 ${query}
 
 ${result}`;
-
-        await threadsDao.upsert(messages, 'bennie', executionId)
+        // create or update with a summary of the results
+        // if there is an existing thread messages are appended to the existing history
+        await threadsDao.upsert(messages, 'bennie', threadId)
 
         // return the structured response
         return {
             status: 200,
-            executionId,
+            executionId: threadId,
+            // Send back the incremental response to avoid sending huge threads back
+            // Can also support streaming outputs in the future
             message: result,
         };
     }

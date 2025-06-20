@@ -1,6 +1,7 @@
 import { ComputeModule } from '@palantir/compute-module';
 import type { Client } from "@osdk/client";
 import { Type, Static } from '@sinclair/typebox';
+import { StateValue } from 'xstate';
 
 export const TYPES = {
     FoundryClient: Symbol.for("FoundryClient"),
@@ -649,3 +650,12 @@ export type ContactsDao = {
     read: (id: string) => Promise<Contacts>,
     search: (fullName: string, company: string, pageSize?: number) => Promise<Contacts[]>,
 };
+
+export type GetNextStateResult = {
+    value: StateValue,
+    theResultOfEachTask: {
+        taskName: string;
+        taskOutput: any;
+    }[],
+    orderTheTasksWereExecutedIn: string[],
+}
