@@ -8,7 +8,7 @@ import { container } from "@xreason/inversify.config";
 import { Text2Action } from './Text2Action';
 
 // use classes to take advantage of trace decorator
-export class CommsForge {
+export class Vickie {
     private text2ActionInstance: Text2Action;
 
     constructor() {

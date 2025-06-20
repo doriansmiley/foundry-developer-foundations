@@ -16,7 +16,7 @@ OPEN_WEATHER_API_KEY=<an open wheahter API key https://home.openweathermap.org/>
 LOG_PREFIX=foundry-developer-foundations-hello-world
 ONTOLOGY_RID=<your ontology rid>
 ```
-1. Update the code in `src/domain/worldDao.ts` replacing `ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d` with your ID. You can find the ID in the OSDK documentation.
+1. Update the code in `src/domain/worldDao.ts` replacing `${client.ontologyRid}` with your ID. You can find the ID in the OSDK documentation.
 1. Run `npm run build` to verify you can build
 1. Run `npm run lint` to verify your eslint setup
 1. Run `npm run test` to test the code e2e
@@ -95,7 +95,7 @@ export function makeWorldDao(client: FoundryClient): WorldDao {
         const token = await client.auth.signIn();
         const apiKey = token.access_token;
 
-        const url = `${client.url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/actions/say-hello/apply`;
+        const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/say-hello/apply`;
 
         const headers = {
             Authorization: `Bearer ${apiKey}`,
@@ -127,7 +127,7 @@ export function makeWorldDao(client: FoundryClient): WorldDao {
 
         const worldId = result.edits.edits[0].primaryKey as string;
 
-        const getUrl = `${client.url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/objects/World/${worldId}`;
+        const getUrl = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/World/${worldId}`;
         const worldFetchResults = await fetch(getUrl, {
             method: "GET",
             headers: headers,

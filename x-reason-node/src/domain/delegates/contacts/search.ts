@@ -49,5 +49,5 @@ export async function searchContacts(fullName: string, company: string, client: 
 
     console.log(`the Contacts ontology returned: ${JSON.stringify(apiResponse)}`)
 
-    return apiResponse as Contacts[];
+    return apiResponse.data as Contacts[];
 }

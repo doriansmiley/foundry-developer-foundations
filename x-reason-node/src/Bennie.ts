@@ -15,7 +15,7 @@ interface SalesForgeTaskListResponse {
     error?: string;
 }
 
-export class SalesForge {
+export class Bennie {
     private text2ActionInstance: Text2Action;
 
     constructor() {
@@ -198,16 +198,18 @@ ${result}`;
     public async submitRfpResponse(rfpResponse: string, vendorId: string, machineExecutionId: string): Promise<RfpResponseReceipt> {
         // rehydrate the machine
         const machineDao = container.get<MachineDao>(TYPES.MachineDao);
+        // allow this to throw if no machine execution is found
         const execution = await machineDao.read(machineExecutionId);
 
-        const machine: StateConfig[] =
-            execution && execution.machine ? JSON.parse(execution.machine) : undefined;
+        const machine: StateConfig[] = execution.machine ? JSON.parse(execution.machine) : undefined;
+        const stateDefinition = execution.state ? JSON.parse(execution.state) : undefined;
 
-        const stateDefinition =
-            execution && execution.state ? JSON.parse(execution.state) : undefined;
+        if (!machine) {
+            throw new Error(`no programmed state machine found for: ${machineExecutionId}`);
+        }
 
         if (!stateDefinition) {
-            throw new Error(`no machine execution found for: ${machineExecutionId}`);
+            throw new Error(`no state definition found for: ${machineExecutionId}`);
         }
 
         const context = stateDefinition.context;

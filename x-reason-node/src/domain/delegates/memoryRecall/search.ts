@@ -33,10 +33,10 @@ export async function searchMemoryRecall(input: string, kValue: number, client: 
 
     if (apiResponse.errorCode) {
         console.log(`errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`);
-        throw new Error(`An error occurred while calling read RfpRequest errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
+        throw new Error(`An error occurred while calling memory recall search errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
     }
 
     console.log(`the threads ontology returned: ${JSON.stringify(apiResponse)}`)
 
-    return apiResponse as MemoryRecall[];
+    return apiResponse.value as MemoryRecall[];
 }
