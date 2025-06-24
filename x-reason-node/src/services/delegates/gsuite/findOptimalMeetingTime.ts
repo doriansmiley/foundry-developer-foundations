@@ -42,7 +42,7 @@ function getTimeZoneOffset(timeZone: string, date: Date, fallbackOffset?: number
         // When parsing this string, JavaScript treats it as local time.
         const asLocal = new Date(localString);
         // The difference between the given date (an absolute instant) and asLocal is the offset.
-        return (asLocal.getTime() - date.getTime()) / (60 * 1000);
+        return Math.round((asLocal.getTime() - date.getTime()) / (60 * 1000));
     } catch (e) {
         return fallbackOffset || 0;
     }
@@ -155,6 +155,10 @@ function calculateTimeSlotScore(slot: TimeSlot, allBusyTimes: BusyPeriod[]): num
  * The date should be in GMT (adjusted via calculateMeetingTime).
  */
 function toISOStringWithTimezone(date: Date, timezone: string, fallbackOffset?: number): string {
+    const currentOffset = getTimeZoneOffset(timezone, date);
+    if (currentOffset <= 0) {
+        return date.toISOString()
+    }
     // Compute the target timezone offset (in minutes) for this date.
     const offsetMinutes = getTimeZoneOffset(timezone, date, fallbackOffset);
     // Determine sign: note that if the target zone is behind GMT (like America/Los_Angeles),

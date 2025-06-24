@@ -3,7 +3,7 @@ import { Message, MessageResponse } from "@xreason/types";
 export async function sendSlackMessage(message: Message, baseUrl: string, botToken: string): Promise<MessageResponse> {
     try {
         // Make the API call to Slack
-        const response = await fetch(`${baseUrl}/api/chat.postMessage`, {
+        const response = await fetch(`${baseUrl}/chat.postMessage`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
