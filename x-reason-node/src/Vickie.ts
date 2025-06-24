@@ -1,10 +1,6 @@
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
 
-import { Context, engineV1 as engine, getState, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
-import { dateTime, recall } from "@xreason/functions";
-import { uuidv4 } from "@xreason/utils";
-import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao } from "@xreason/types";
-import { container } from "@xreason/inversify.config";
+import { Context } from "@xreason/reasoning";
 import { Text2Action } from './Text2Action';
 
 // use classes to take advantage of trace decorator
