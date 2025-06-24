@@ -31,7 +31,8 @@
   "type": "module",
   "scripts": {
     "test": "jest --silent",
-    "test:e2e": "E2E=true jest bennie.e2e.test.ts",
+    "test:bennie": "E2E=true jest bennie.e2e.test.ts",
+    "test:vickie": "E2E=true npx jest vickie.e2e.test.ts",
     "test:watch": "jest --watch",
     "lint": "eslint 'src/**/*.{js,ts}'",
     "build": "tsc -p tsconfig.build.json",

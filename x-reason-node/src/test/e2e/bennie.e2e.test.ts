@@ -1,7 +1,6 @@
 import { Bennie } from "@xreason/Bennie";
 import { container } from "@xreason/inversify.config";
 import { Context, MachineEvent, StateConfig } from "@xreason/reasoning";
-import { Text2Action } from "@xreason/Text2Action";
 import { MachineDao, RfpRequestResponse, RfpRequestsDao, TYPES } from "@xreason/types";
 import { State } from "xstate";
 
@@ -10,7 +9,7 @@ if (!process.env.E2E) {
         // won't run
     });
 } else {
-    describe('testing Text2Action', () => {
+    describe('testing Bennie', () => {
 
         beforeAll(() => {
             jest.clearAllMocks();

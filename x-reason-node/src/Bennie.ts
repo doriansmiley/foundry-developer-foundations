@@ -7,7 +7,7 @@ import { GeminiService, MachineDao, RfpRequestsDao, Threads, ThreadsDao, TYPES, 
 import { container } from "@xreason/inversify.config";
 import { StateConfig } from '@xreason/reasoning';
 
-interface SalesForgeTaskListResponse {
+interface BennieResponse {
     status: number;
     message: string;
     executionId: string;
@@ -31,7 +31,7 @@ export class Bennie extends Text2Action {
         samplingRate: 1.0,
         attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/askBennie/execute` }
     })
-    public async askBennie(query: string, userId: string, threadId?: string): Promise<SalesForgeTaskListResponse> {
+    public async askBennie(query: string, userId: string, threadId?: string): Promise<BennieResponse> {
         let generatedTaskList: undefined | string = undefined;
         let newThread = false;
 
@@ -45,7 +45,7 @@ export class Bennie extends Text2Action {
                 return {
                     status,
                     executionId,
-                    message: `You are missing required infromation: ${taskList}. Please fix your shit and resend.`,
+                    message: `You are missing required information: ${taskList}. Please fix your shit and resend.`,
                 };
             }
             // threadId and executionId are identical. 
@@ -72,7 +72,7 @@ You are professional in your tone, personable, and always start your messages wi
 You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}. 
 You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
 You always obey the users instructions and understand the people you work for are busy executives and sometimes need help in their personal lives
-These tasks are not beneith you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
+These tasks are not beneath you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
 It means we all pull together to get things done.
 The current local date/time is ${new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}.
 The current day/time in your timezone is: ${new Date().toString()}`;
@@ -88,8 +88,8 @@ The current day/time in your timezone is: ${new Date().toString()}`;
 
         Generate a response to the user query based on the results of the state machine execution 
         Be sure to structure your response so that it's readable by a human.
-        For example if the state4 machine execution includes facts and figures use a table to format them
-        Use lists to structure information hexarchies suck as task list execution and there results
+        For example if the state machine execution includes facts and figures use a table to format them
+        Use lists to structure information hierarchies suck as task list execution and there results
         `;
 
         const geminiService = container.get<GeminiService>(TYPES.GeminiService);
@@ -144,7 +144,7 @@ ${result}`;
         samplingRate: 1.0,
         attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/createSalesTasksList/execute` }
     })
-    public async createSalesTasksList(query: string, userId: string, threadId?: string): Promise<SalesForgeTaskListResponse> {
+    public async createSalesTasksList(query: string, userId: string, threadId?: string): Promise<BennieResponse> {
         console.log('createSalesTasksList called')
         // if no threadId create one
         // call the solver to get back the task list. 

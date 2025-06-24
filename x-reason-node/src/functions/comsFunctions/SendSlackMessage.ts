@@ -20,5 +20,9 @@ export async function sendSlackMessage(context: Context, event?: MachineEvent, t
 
     const result = await messageService.sendMessage(draftMessage);
 
+    if (!result.ok) {
+        throw new Error(result.error);
+    }
+
     return result;
 }
