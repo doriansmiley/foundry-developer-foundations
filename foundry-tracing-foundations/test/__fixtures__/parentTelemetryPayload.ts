@@ -27,7 +27,7 @@ export const parentTelemetryPayload: TelemetryPayload = {
             sampling_rate: 1.0,
             attributes: JSON.stringify({
                 endpoint:
-                    '/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/queries/vickieForAutomate/execute',
+                    '/api/v2/ontologies/${client.ontologyRid}/queries/vickieForAutomate/execute',
             }),
         },
     ],

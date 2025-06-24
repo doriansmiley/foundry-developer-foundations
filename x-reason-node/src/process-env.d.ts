@@ -4,6 +4,7 @@ declare global {
         interface ProcessEnv {
             FOUNDRY_STACK_URL: string;
             FOUNDRY_TOKEN: string;
+            FOUNDRY_TEST_USER: string;
             OSDK_CLIENT_ID: string;
             OSDK_CLIENT_SECRET: string;
             OPEN_WEATHER_API_KEY: string;

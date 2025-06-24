@@ -4,7 +4,7 @@ import { xReasonFactory, SupportedEngines } from '@xreason/reasoning/factory';
 import { headlessInterpreter, engineV1 as engine, StateConfig, Solutions, ActionType, Context, MachineEvent } from ".";
 import { sanitizeJSONString, uuidv4 } from "@xreason/utils";
 import { getLogger } from "@xreason//utils/logCollector";
-import { MachineDao, TYPES } from '@xreason/types';
+import { MachineDao, MachineExecutions, TYPES } from '@xreason/types';
 import { container } from "@xreason/inversify.config";
 
 
@@ -38,7 +38,13 @@ export async function getState(
 
   // retrieve previous execution if there was one
   const machineDao = container.get<MachineDao>(TYPES.MachineDao);
-  const execution = await machineDao.read(solution.id);
+  let execution: undefined | MachineExecutions = undefined;
+
+  try {
+    execution = await machineDao.read(solution.id);
+  } catch (e) {
+    console.log(e);
+  }
 
   const machine: StateConfig[] =
     execution && execution.machine ? JSON.parse(execution.machine) : undefined;

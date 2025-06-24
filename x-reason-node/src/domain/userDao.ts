@@ -8,9 +8,7 @@ export function makeUserDao(): UserDao {
 
     return async (userId?: string) => {
         if (userId) {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-expect-error
-            const user = await Users.get(client, userId);
+            const user = await Users.get(client.client, userId);
 
             return user;
         }

@@ -25,6 +25,7 @@ import { makeTrainingDataDao } from "@xreason/domain/trainingDataDao";
 // TODO refactor with a service facade, or maybe just a getContainer method to allow for overriding default definitions
 // a service facade could hide the implementation details but it would be a lot of work and the resulting types would not look different the inversify
 // add direct imports of container would need to be refactored to import getContainer or service facade methods
+// API docs https://inversify.io/docs/api/container/#rebind
 export const container = new Container();
 
 container

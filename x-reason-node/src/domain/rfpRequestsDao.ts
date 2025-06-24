@@ -16,8 +16,9 @@ export function makeRfpRequestsDao(): RfpRequestsDao {
             vendorId: string,
             machineExecutionId: string,
             id?: string,
+            rfpResponseStatus?: number,
         ) => {
-            const machine = await upsertRfpRequest(rfp, rfpVendorResponse, vendorId, machineExecutionId, client, id);
+            const machine = await upsertRfpRequest(rfp, rfpVendorResponse, vendorId, machineExecutionId, client, id, rfpResponseStatus);
 
             return machine;
         },

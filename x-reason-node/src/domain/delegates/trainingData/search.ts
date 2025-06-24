@@ -46,5 +46,5 @@ export async function searchTrainingData(xReason: string, type: string, client: 
 
     console.log(`the threads ontology returned: ${JSON.stringify(apiResponse)}`)
 
-    return apiResponse as TrainingData[];
+    return apiResponse.data as TrainingData[];
 }

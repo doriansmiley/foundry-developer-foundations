@@ -22,14 +22,14 @@ export function createFoundryClient(): FoundryClient {
     const ontologyRid: string = process.env.ONTOLOGY_RID;
     const clientSecret: string = process.env.OSDK_CLIENT_SECRET;
     const scopes: string[] = [
-        "api:ontologies-read",
-        "api:ontologies-write",
-        "api:admin-read",
-        "api:connectivity-read",
-        "api:connectivity-write",
-        "api:connectivity-execute",
-        "api:mediasets-read",
-        "api:mediasets-write"
+        "api:use-ontologies-read",
+        "api:use-ontologies-write",
+        "api:use-admin-read",
+        "api:use-connectivity-read",
+        "api:use-connectivity-execute",
+        "api:use-orchestration-read",
+        "api:use-mediasets-read",
+        "api:use-mediasets-write"
     ]
 
     const auth = createConfidentialOauthClient(clientId, clientSecret, url, scopes);

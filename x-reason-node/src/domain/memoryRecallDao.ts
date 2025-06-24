@@ -25,8 +25,8 @@ export function makeMemoryRecallDao(): MemoryRecallDao {
 
             return memoryRecall;
         },
-        search: async (machineExecutionId: string, kValue: number = 1) => {
-            const results = await searchMemoryRecall(machineExecutionId, kValue, client);
+        search: async (task: string, kValue: number = 1) => {
+            const results = await searchMemoryRecall(task, kValue, client);
             // there should be only one results based on the params
             return results;
         }

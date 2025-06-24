@@ -31,6 +31,7 @@
   "type": "module",
   "scripts": {
     "test": "jest --silent",
+    "test:e2e": "E2E=true jest bennie.e2e.test.ts",
     "test:watch": "jest --watch",
     "lint": "eslint 'src/**/*.{js,ts}'",
     "build": "tsc -p tsconfig.build.json",
@@ -41,9 +42,9 @@
   "dependencies": {
     "@codestrap/developer-foundations.foundry-tracing-foundation": "file:../foundry-tracing-foundations",
     "@google/generative-ai": "^0.24.1",
-    "@osdk/client": "^2.1.4",
-    "@osdk/foundry.admin": "^2.20.0",
-    "@osdk/oauth": "^1.1.1",
+    "@osdk/client": "^2.2.1",
+    "@osdk/foundry.admin": "^2.22.0",
+    "@osdk/oauth": "^1.1.2",
     "@palantir/compute-module": "^0.2.7",
     "@playwright/test": "^1.52.0",
     "@sinclair/typebox": "^0.34.33",

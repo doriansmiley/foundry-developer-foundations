@@ -46,5 +46,5 @@ export async function searchRfpRequest(machineExecutionId: string, vendorId: str
 
     console.log(`the threads ontology returned: ${JSON.stringify(apiResponse)}`)
 
-    return apiResponse as RfpRequests[];
+    return apiResponse.data as RfpRequests[];
 }

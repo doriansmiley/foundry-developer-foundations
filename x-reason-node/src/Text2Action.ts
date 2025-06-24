@@ -1,10 +1,11 @@
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
 
-import { Context, engineV1 as engine, getState, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
+import { Context, engineV1 as engine, getState, MachineEvent, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
 import { dateTime, recall, requestRfp, userProfile } from "@xreason/functions";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
-import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao, ThreadsDao, GeminiService } from "@xreason/types";
+import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao, ThreadsDao, GeminiService, GetNextStateResult, Threads } from "@xreason/types";
 import { container } from "@xreason/inversify.config";
+import { State, StateValue } from 'xstate';
 
 // use classes to take advantage of trace decorator
 export class Text2Action {
@@ -25,7 +26,7 @@ export class Text2Action {
     })
     public async createTaskList(query: string, userId?: string, xReasonEngine: string = SupportedEngines.COMS): Promise<string> {
         const { solver } = xReasonFactory(xReasonEngine as SupportedEngines)({});
-        const userProfile = await container.get<UserDao>(TYPES.UserDao)();
+        const userProfile = await container.get<UserDao>(TYPES.UserDao)(userId);
 
         if (!userId) {
             userId = userProfile.id
@@ -93,21 +94,23 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
             host_hostname: 'codestrap.usw-3.palantirfoundry.com',
             host_architecture: 'prod',
         },
-        operationName: 'executeTaskList',
+        operationName: 'getNextState',
         kind: 'Server',
         samplingDecision: 'RECORD_AND_SAMPLE',
         samplingRate: 1.0,
-        attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/executeTaskList/execute` }
+        attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/getNextState/execute` }
     })
-    public async executeTaskList(plan: string,
+    public async getNextState(plan?: string,
         forward: boolean = true,
         executionId?: string,
         inputs: string = '{}',
-        xreason: string = SupportedEngines.COMS): Promise<string> {
+        xreason: string = SupportedEngines.COMS): Promise<GetNextStateResult> {
         const machine = await this.upsertState(plan, forward, executionId, inputs, xreason);
 
         if (machine?.state) {
-            const context = JSON.parse(machine.state).context as Context
+            const state = JSON.parse(machine.state) as State<Context, MachineEvent>;
+            const currentState = state.value;
+            const context = state.context as Context
             const results = Object.keys(context)
                 .filter(key => key.indexOf('|') >= 0)
                 .map(key => {
@@ -119,10 +122,11 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
 
             const stack = context.stack?.map(state => state.split('|')[0]);
 
-            return JSON.stringify({ orderTheTasksWereExecutedIn: stack, theResulsOfEachTask: results }, null, 2);
+            // TODO add the current state
+            return { orderTheTasksWereExecutedIn: stack!, theResultOfEachTask: results, value: currentState }
         }
 
-        return 'I\'m sorry but I failed to get a response back. Can you try again? Soemtimes my AI brain gets a little flakey. But second time is usally the charm.'
+        throw new Error('I\'m sorry but I failed to get a response back. Can you try again? Soemtimes my AI brain gets a little flakey. But second time is usally the charm.');
 
     }
 
@@ -182,7 +186,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
         samplingRate: 1.0,
         attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/sendThreadMessage/execute` }
     })
-    public async sendThreadMessage(message: string, userId: string, machineExecutionId: string): Promise<void> {
+    public async sendThreadMessage(message: string, userId: string, machineExecutionId: string): Promise<Threads> {
         // I changed the response of this function to void to it can be triggered as an action. Once refactored to compute modules it can return a response
         // rehydrate the machine
         const threadDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
@@ -236,7 +240,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
         const system = 'You are a helpful AI sales associate in charge of fielding incoming messages from sales agents in the field. You job is to pick the next best action based on the message history and incoming request.';
         const user = `
             # Context
-            Below is infromation retrieved from our grounding context engine that might include relevant names, email addresses, vendor ID, etc
+            Below is information retrieved from our grounding context engine that might include relevant names, email addresses, vendor ID, etc
             This should only be used as a secondary source on information. The message history is the primary source of information.
             ${groudingContext}
     
@@ -248,7 +252,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
             And the incoming user query for a sales agent in the field:
             ${message}
     
-            Determin which of the following actions should be taken based on the the user query:
+            Determine which of the following actions should be taken based on the the user query:
             - Resubmit RFP to resolve missing information
             - Send Email
             - Send Slack Message
@@ -303,7 +307,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
                 "vendors": ["Northslope <northslopetech.com>"]
             }
     
-            Explination: the vendor array correctly includes Northslope and the correct vendorID <northslopetech.com>. It also reiterates the RFP from the original user query so it can be resubmitted correctly inserting the start and end dates wupplied by the sales agent int he field.
+            Explanation: the vendor array correctly includes Northslope and the correct vendorID <northslopetech.com>. It also reiterates the RFP from the original user query so it can be resubmitted correctly inserting the start and end dates wupplied by the sales agent int he field.
             `;
 
         const geminiService = container.get<GeminiService>(TYPES.GeminiService);
@@ -358,6 +362,8 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
 
         // update the thread with the new message
         const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
-        threadsDao.upsert(appendedMessage, 'bennie', machineExecutionId);
+        const threadResult = await threadsDao.upsert(appendedMessage, 'bennie', machineExecutionId);
+
+        return threadResult;
     }
 }

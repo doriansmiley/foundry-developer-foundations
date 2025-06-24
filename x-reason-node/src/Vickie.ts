@@ -1,20 +1,10 @@
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
 
-import { Context, engineV1 as engine, getState, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
-import { dateTime, recall } from "@xreason/functions";
-import { uuidv4 } from "@xreason/utils";
-import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao } from "@xreason/types";
-import { container } from "@xreason/inversify.config";
+import { Context } from "@xreason/reasoning";
 import { Text2Action } from './Text2Action';
 
 // use classes to take advantage of trace decorator
-export class CommsForge {
-    private text2ActionInstance: Text2Action;
-
-    constructor() {
-        this.text2ActionInstance = new Text2Action();
-    }
-
+export class Vickie extends Text2Action {
     @Trace({
         resource: {
             service_name: 'vickie',
@@ -31,10 +21,10 @@ export class CommsForge {
         attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/vickie/execute` }
     })
     public async askVickie(query: string, userId?: string): Promise<string> {
-        const taskList = await this.text2ActionInstance.createTaskList(query, userId);
+        const taskList = await this.createTaskList(query, userId);
 
         if (taskList) {
-            const machine = await this.text2ActionInstance.upsertState(taskList);
+            const machine = await this.upsertState(taskList);
 
             if (machine?.state) {
                 const context = JSON.parse(machine.state).context as Context

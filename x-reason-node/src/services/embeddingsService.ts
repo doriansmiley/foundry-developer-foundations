@@ -27,7 +27,7 @@ export async function embeddingsService(input: string): Promise<[number[]]> {
         body: body,
     });
 
-    const result = await apiResult.json() as [number[]];
+    const result = await apiResult.json() as any;
 
-    return result;
+    return result.value as [number[]];
 };

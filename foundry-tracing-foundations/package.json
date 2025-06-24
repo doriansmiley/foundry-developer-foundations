@@ -42,9 +42,9 @@
     "prebuild": "npm run clean"
   },
   "dependencies": {
-    "@osdk/client": "^2.1.4",
+    "@osdk/client": "^2.2.1",
     "@osdk/foundry.admin": "^2.19.0",
-    "@osdk/oauth": "^1.1.1",
+    "@osdk/oauth": "^1.1.2",
     "@palantir/compute-module": "^0.2.7",
     "@sinclair/typebox": "^0.34.33",
     "eslint-plugin-import": "^2.31.0",

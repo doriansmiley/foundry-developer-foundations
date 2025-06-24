@@ -7,6 +7,7 @@ export async function upsertRfpRequest(
     machineExecutionId: string,
     client: FoundryClient,
     id?: string,
+    rfpResponseStatus?: number,
 ): Promise<RfpRequests> {
     console.log(`upsertThread threadId: ${id}`);
 
@@ -27,6 +28,7 @@ export async function upsertRfpRequest(
             vendorId,
             machineExecutionId,
             id,
+            rfpResponseStatus,
         },
         options: {
             returnEdits: "ALL"
@@ -56,7 +58,7 @@ export async function upsertRfpRequest(
     });
 
     const rfpRequest = await machineFetchResults.json() as RfpRequests;
-    console.log(`the RfpRequest execution ontology returned: ${JSON.stringify(rfpRequest)}`)
+    console.log(`the read RfpRequest request returned: ${JSON.stringify(rfpRequest)}`)
 
     return rfpRequest;
 }

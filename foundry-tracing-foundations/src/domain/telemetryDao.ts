@@ -21,7 +21,7 @@ export function makeTelemetryDao(client: FoundryClient): TelemtryDao {
             }
         });
 
-        const apiResults = await fetch(`${client.url}/api/v2/ontologies/ontology-c0c8a326-cd0a-4f69-a575-b0399c04b74d/actions/collect-telemetry/apply`, {
+        const apiResults = await fetch(`${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/collect-telemetry/apply`, {
             method: 'POST',
             headers,
             body,
@@ -31,7 +31,7 @@ export function makeTelemetryDao(client: FoundryClient): TelemtryDao {
 
         if (apiResponse.errorCode) {
             console.log(`errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`);
-            throw new Error(`An error occured while calling update machine errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
+            throw new Error(`An error occurred while writing telemetry data errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
         }
 
         return JSON.stringify(apiResponse);

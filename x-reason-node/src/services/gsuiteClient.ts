@@ -13,7 +13,6 @@ export enum GSUITE_SCOPES {
     CALENDAR_ALL = 'https://www.googleapis.com/auth/calendar',
     GMAIL_SEND = 'https://www.googleapis.com/auth/gmail.send',
     GMAIL_READ = 'https://www.googleapis.com/auth/gmail.readonly',
-    GMAIL_ALL = 'https://www.googleapis.com/auth/gmai',
 }
 
 export type ServiceAccountCredentials = {
@@ -49,30 +48,39 @@ export async function makeGSuiteClient(user: string): Promise<OfficeService> {
     // load the service account one time
     const credentials = await loadServiceAccount();
 
-    const scopes: GSUITE_SCOPES[] = [
+    const mailScopes: GSUITE_SCOPES[] = [
+        GSUITE_SCOPES.GMAIL_SEND,
+        GSUITE_SCOPES.CALENDAR_READ,
+    ]
+
+    const calendarScopes: GSUITE_SCOPES[] = [
         GSUITE_SCOPES.CALENDAR_ALL,
         GSUITE_SCOPES.CALENDAR_FREEBUSY,
         GSUITE_SCOPES.CALENDAR_READ,
         GSUITE_SCOPES.CALENDAR_WRITE,
-        GSUITE_SCOPES.GMAIL_ALL,
-        GSUITE_SCOPES.GMAIL_READ,
-        GSUITE_SCOPES.GMAIL_SEND
     ]
 
-    const auth = new google.auth.GoogleAuth({
+    const emailAuth = new google.auth.GoogleAuth({
         credentials,
-        scopes,
+        scopes: mailScopes,
         clientOptions: { subject: user }
     });
 
-    const client = await auth.getClient();
+    const calAuth = new google.auth.GoogleAuth({
+        credentials,
+        scopes: calendarScopes,
+        clientOptions: { subject: user }
+    });
 
-    if (!client.getRequestHeaders) {
+    const mailClient = await emailAuth.getClient();
+    const calClient = await calAuth.getClient();
+
+    if (!mailClient.getRequestHeaders || !calClient.getRequestHeaders) {
         throw new Error('Invalid auth client - missing methods');
     }
 
-    const calendarClient = google.calendar({ version: 'v3', auth });
-    const emailClient = google.gmail({ version: 'v1', auth });
+    const calendarClient = google.calendar({ version: 'v3', auth: calAuth });
+    const emailClient = google.gmail({ version: 'v1', auth: emailAuth });
 
     return {
         getAvailableMeetingTimes: async (meetingRequest: MeetingRequest): Promise<FindOptimalMeetingTimeOutput> => {

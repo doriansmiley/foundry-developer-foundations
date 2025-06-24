@@ -29,7 +29,7 @@ export async function geminiService(user: string, system: string, params?: Gemin
         body: body,
     });
 
-    const result = await apiResult.text();
+    const result = await apiResult.json() as any;
 
-    return result;
+    return result.value as string;
 };

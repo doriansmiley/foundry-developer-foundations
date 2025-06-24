@@ -1,6 +1,7 @@
 import { ComputeModule } from '@palantir/compute-module';
 import type { Client } from "@osdk/client";
 import { Type, Static } from '@sinclair/typebox';
+import { StateValue } from 'xstate';
 
 export const TYPES = {
     FoundryClient: Symbol.for("FoundryClient"),
@@ -368,6 +369,8 @@ export interface RfpRequests {
     rfp: string | undefined;
     /** rfpResponse */
     rfpResponse: string | undefined;
+    /** rfpResponseStatus Contains the response status, ie 200, 400, 401, 404, 500 etc*/
+    rfpResponseStatus: number | undefined;
     /** vendorId */
     vendorId: string | undefined;
 }
@@ -584,6 +587,7 @@ export type RfpRequestsDao = {
         vendorId: string,
         machineExecutionId: string,
         id?: string,
+        rfpResponseStatus?: number,
     ) => Promise<RfpRequests>,
     delete: (id: string) => Promise<void>,
     read: (id: string) => Promise<RfpRequests>,
@@ -649,3 +653,12 @@ export type ContactsDao = {
     read: (id: string) => Promise<Contacts>,
     search: (fullName: string, company: string, pageSize?: number) => Promise<Contacts[]>,
 };
+
+export type GetNextStateResult = {
+    value: StateValue,
+    theResultOfEachTask: {
+        taskName: string;
+        taskOutput: any;
+    }[],
+    orderTheTasksWereExecutedIn: string[],
+}
