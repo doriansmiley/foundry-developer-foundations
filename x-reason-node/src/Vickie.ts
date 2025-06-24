@@ -8,13 +8,7 @@ import { container } from "@xreason/inversify.config";
 import { Text2Action } from './Text2Action';
 
 // use classes to take advantage of trace decorator
-export class Vickie {
-    private text2ActionInstance: Text2Action;
-
-    constructor() {
-        this.text2ActionInstance = new Text2Action();
-    }
-
+export class Vickie extends Text2Action {
     @Trace({
         resource: {
             service_name: 'vickie',
@@ -31,10 +25,10 @@ export class Vickie {
         attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/vickie/execute` }
     })
     public async askVickie(query: string, userId?: string): Promise<string> {
-        const taskList = await this.text2ActionInstance.createTaskList(query, userId);
+        const taskList = await this.createTaskList(query, userId);
 
         if (taskList) {
-            const machine = await this.text2ActionInstance.upsertState(taskList);
+            const machine = await this.upsertState(taskList);
 
             if (machine?.state) {
                 const context = JSON.parse(machine.state).context as Context

@@ -15,13 +15,7 @@ interface SalesForgeTaskListResponse {
     error?: string;
 }
 
-export class Bennie {
-    private text2ActionInstance: Text2Action;
-
-    constructor() {
-        this.text2ActionInstance = new Text2Action();
-    }
-
+export class Bennie extends Text2Action {
     @Trace({
         resource: {
             service_name: 'bennie',
@@ -57,7 +51,7 @@ export class Bennie {
             // threadId and executionId are identical. 
             // If threadId is defined there must be an associated state machine execution where executionId === threadId
             // if its not defined we need to create a new task list and generate a new machine execution which will happen automatically
-            // when this.text2ActionInstance.getNextState is called.
+            // when this.getNextState is called.
             // The orchestrator will program a new solution if there's no machine matching the executionId
             threadId = executionId;
             generatedTaskList = taskList;
@@ -71,7 +65,7 @@ export class Bennie {
         // this replaces the need for the text2ActionInstance.sendThreadMessage handler which was a hack to void doing this
         // you'll likely need to provide training data for transition for each engine to the model can learn what to do
         // Once done you'll need to copy this pattern to Vickie's askVickie method
-        const results = await this.text2ActionInstance.getNextState(generatedTaskList, true, threadId, undefined, SupportedEngines.SALES)
+        const results = await this.getNextState(generatedTaskList, true, threadId, undefined, SupportedEngines.SALES)
         // construct the response
         const system = `You are a helpful AI sales assistant named Bennie.
 You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Bennie, Code's AI Sales Associate" or similar. 
@@ -154,7 +148,7 @@ ${result}`;
         console.log('createSalesTasksList called')
         // if no threadId create one
         // call the solver to get back the task list. 
-        const taskList = await this.text2ActionInstance.createTaskList(query, userId, SupportedEngines.SALES)
+        const taskList = await this.createTaskList(query, userId, SupportedEngines.SALES)
         // If incomplete information is provided the solver will return Missing Infromation
         // If the request is unsupported the solver will return Usupported Questions
         // If it's a complete supported query the solver will return a well formatted task list that we can use to execute
@@ -318,15 +312,15 @@ ${vendorRfpRequest.response}
 ${threadMessage};
 `
         await threadDao.upsert(appendedMessage, 'bennie', machineExecutionId);
-        // We pass machine execution because of this issue:
-        // https://community.palantir.com/t/is-there-an-eventually-consistency-problem-in-the-ontology-when-executing-fetch-vs-edits/4015/2
-        await this.text2ActionInstance.upsertState(undefined, true, machineExecutionId, undefined, SupportedEngines.SALES);
+
+        await this.upsertState(undefined, true, machineExecutionId, undefined, SupportedEngines.SALES);
 
         const rfpDao = container.get<RfpRequestsDao>(TYPES.RfpRequestsDao);
         // find the associated RFP
         const rfpRequest = await rfpDao.search(machineExecutionId, vendorId);
         // there should be only one matching record
-        await rfpDao.upsert(rfpRequest.rfp!, rfpResponse, vendorId, machineExecutionId, rfpRequest.id);
+        // TODO add rfpResponseStatus = vendorRfpRequest.status
+        await rfpDao.upsert(rfpRequest.rfp!, rfpResponse, vendorId, machineExecutionId, rfpRequest.id, vendorRfpRequest.status);
 
         return {
             status: 200,

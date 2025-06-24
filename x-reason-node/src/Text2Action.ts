@@ -3,7 +3,7 @@ import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundati
 import { Context, engineV1 as engine, getState, MachineEvent, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
 import { dateTime, recall, requestRfp, userProfile } from "@xreason/functions";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
-import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao, ThreadsDao, GeminiService, GetNextStateResult } from "@xreason/types";
+import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao, ThreadsDao, GeminiService, GetNextStateResult, Threads } from "@xreason/types";
 import { container } from "@xreason/inversify.config";
 import { State, StateValue } from 'xstate';
 
@@ -26,7 +26,7 @@ export class Text2Action {
     })
     public async createTaskList(query: string, userId?: string, xReasonEngine: string = SupportedEngines.COMS): Promise<string> {
         const { solver } = xReasonFactory(xReasonEngine as SupportedEngines)({});
-        const userProfile = await container.get<UserDao>(TYPES.UserDao)();
+        const userProfile = await container.get<UserDao>(TYPES.UserDao)(userId);
 
         if (!userId) {
             userId = userProfile.id
@@ -186,7 +186,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
         samplingRate: 1.0,
         attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/sendThreadMessage/execute` }
     })
-    public async sendThreadMessage(message: string, userId: string, machineExecutionId: string): Promise<void> {
+    public async sendThreadMessage(message: string, userId: string, machineExecutionId: string): Promise<Threads> {
         // I changed the response of this function to void to it can be triggered as an action. Once refactored to compute modules it can return a response
         // rehydrate the machine
         const threadDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
@@ -362,6 +362,8 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
 
         // update the thread with the new message
         const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
-        threadsDao.upsert(appendedMessage, 'bennie', machineExecutionId);
+        const threadResult = await threadsDao.upsert(appendedMessage, 'bennie', machineExecutionId);
+
+        return threadResult;
     }
 }
