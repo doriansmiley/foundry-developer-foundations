@@ -206,6 +206,12 @@ function createComputeModule(): ComputeModuleType {
           result.value = JSON.stringify(result.value);
         }
 
+        result.theResultOfEachTask.forEach(item => {
+          if (typeof item.taskOutput !== 'string') {
+            item.taskOutput = JSON.stringify(item.taskOutput);
+          }
+        })
+
         console.log(`getNextState returned: ${JSON.stringify(result, null, 2)}`);
 
         return {
