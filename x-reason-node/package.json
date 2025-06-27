@@ -35,8 +35,8 @@
     "test:vickie": "E2E=true npx jest vickie.e2e.test.ts",
     "test:watch": "jest --watch",
     "lint": "eslint 'src/**/*.{js,ts}'",
-    "build": "tsc -p tsconfig.build.json",
-    "build:docker": "npm run build && docker build --build-arg FOUNDRY_TOKEN=${FOUNDRY_TOKEN} -t codestrap/x-reason .",
+    "build": "tsup --no-watch --silent",
+    "build:docker": "npm run build && ./buildAndPublish.sh",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean"
   },
@@ -75,6 +75,7 @@
     "ts-jest": "^29.3.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsup": "^8.5.0",
     "typescript": "^5.8.3"
   },
   "engines": {

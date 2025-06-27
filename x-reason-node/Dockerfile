@@ -2,24 +2,16 @@
 ARG NODE_VERSION=20.10.0
 FROM --platform=amd64 node:${NODE_VERSION}-alpine
 
-ARG FOUNDRY_TOKEN=undefined
-
-ENV FOUNDRY_TOKEN=$FOUNDRY_TOKEN
-
 WORKDIR /app
 
 # Copy package files
 COPY package*.json /app/
 
-# Install all dependencies for building
-RUN npm ci
+# Copy dist files
+COPY dist/ /app/dist
 
-# Copy source files
-COPY tsconfig.build.json /app/
-COPY src/ /app/src/
-
-# Build TypeScript
-RUN npm run build
+COPY service_account.json /app/
+COPY service_account.json /app/dist/
 
 # Remove dev dependencies
 RUN npm ci --only=production
@@ -33,9 +25,5 @@ USER 5001
 # Environment setup
 ENV NODE_ENV=production
 
-# Verify directory structure
-RUN ls -la /app/src/domain && \
-    ls -la /app/src/services
-
 # Specify the entrypoint explicitly as required
-ENTRYPOINT ["node", "dist/src/index.js"] 
+ENTRYPOINT ["node", "dist/index.cjs"] 
