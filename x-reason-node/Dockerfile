@@ -26,4 +26,4 @@ USER 5001
 ENV NODE_ENV=production
 
 # Specify the entrypoint explicitly as required
-ENTRYPOINT ["node", "dist/index.cjs"] 
+ENTRYPOINT ["node", "dist/computeModule.cjs"] 
