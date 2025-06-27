@@ -1,5 +1,8 @@
 # WiP: Foundry Developer Foundations
 ### IMPORTANT: This project is under active development and refactoring in preparation for v0
+
+# If you are a developer and want to learn and contribute to this project email me at dsmiley@codestrap.me and I will train you. This is a limited time offer while we build our core user and contributor base.
+
 ### IMPORTANT: This README is also under active development and not ready for use.
 Do not use this code in your applications. We are looking for contributors. You can participate without a Foundry stack by following the contributor guide. We expect a v0 release in June 2025.
 
