@@ -1,6 +1,10 @@
 # WiP: Foundry Developer Foundations
 ### IMPORTANT: This project is under active development and refactoring in preparation for v0
+
+# If you are a developer and want to learn and contribute to this project email me at dsmiley@codestrap.me and I will train you. This is a limited time offer while we build our core user and contributor base.
+
 ### IMPORTANT: This README is also under active development and not ready for use.
+
 As part of our v0 release, we are implementing the FDF pattern for developers to allow devs without a Foundry stack to participate. The code can also run outside of Foundry using a Docker container once the migration is complete.
 You will need to replace Foundry native implementations for the `domain` and `services` packages. You'll likely also need to define an API with `express` or similar then create a new `Dockerfile` to expose your API. 
 
