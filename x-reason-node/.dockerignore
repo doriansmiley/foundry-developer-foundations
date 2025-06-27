@@ -16,7 +16,6 @@ utils/test-*.js
 
 # Environment and credentials
 .env*
-service_account.json
 **/credentials/
 
 # Documentation
@@ -33,7 +32,6 @@ Thumbs.db
 *.log
 
 # Build artifacts
-dist/
 build/
 
 # Operation files

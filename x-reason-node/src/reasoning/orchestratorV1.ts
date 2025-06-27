@@ -84,7 +84,7 @@ export async function getState(
     stateDefinition?.context?.stack.length - 2
     ];
 
-  if (forward && savePoint && savePoint !== stateDefinition.value) {
+  if (forward && savePoint && stateDefinition && savePoint !== stateDefinition.value) {
     console.log(
       `resetting stateDefinition.value from ${stateDefinition.value} to ${savePoint}`
     );
@@ -92,6 +92,7 @@ export async function getState(
   } else if (
     !forward &&
     previousState &&
+    stateDefinition &&
     previousState !== stateDefinition.value
   ) {
     console.log(
@@ -102,7 +103,7 @@ export async function getState(
     stateDefinition?.context?.stack?.pop();
   }
 
-  if (!forward) {
+  if (!forward && stateDefinition) {
     // stateDefinition must be defined in these cases or you should get an error
     const targetState: State<Context, MachineEvent> = State.create<Context, MachineEvent>(stateDefinition);
 

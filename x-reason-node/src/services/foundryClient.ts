@@ -13,7 +13,7 @@ export function createFoundryClient(): FoundryClient {
     });
 
     if (!process.env.OSDK_CLIENT_ID || !process.env.OSDK_CLIENT_SECRET) {
-        throw new Error('missing required env vars');
+        throw new Error('missing required env vars: OSDK_CLIENT_ID, OSDK_CLIENT_SECRET');
     }
 
     // setup the OSDK
