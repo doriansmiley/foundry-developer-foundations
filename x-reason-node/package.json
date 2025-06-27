@@ -37,6 +37,9 @@
     "lint": "eslint 'src/**/*.{js,ts}'",
     "build": "tsup --no-watch --silent",
     "build:docker": "npm run build && ./buildAndPublish.sh",
+    "prepublishOnly": "npm run lint && npm run test && npm run build",
+    "publishPackage:dry": "npm publish --dry-run --access public",
+    "publishPackage": "npm publish --access public",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean"
   },
