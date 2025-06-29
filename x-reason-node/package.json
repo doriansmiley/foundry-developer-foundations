@@ -1,6 +1,6 @@
 {
   "name": "@codestrap/developer-foundations.x-reason",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "## Introduction",
   "license": "MIT",
   "repository": {
@@ -36,7 +36,7 @@
     "test:watch": "jest --watch",
     "lint": "eslint 'src/**/*.{js,ts}'",
     "build": "tsup --no-watch --silent",
-    "build:npm": "tsc -p tsconfig.build.json",
+    "build:npm": "tsup --config tsup.npm.config.ts --no-watch --silent",
     "build:docker": "npm run build && ./buildAndPublish.sh",
     "prepublishOnly": "npm run lint && npm run build:npm",
     "publishPackage:dry": "npm publish --dry-run --access public",
