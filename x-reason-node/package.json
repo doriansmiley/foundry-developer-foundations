@@ -1,6 +1,6 @@
 {
   "name": "@codestrap/developer-foundations.x-reason",
-  "version": "1.0.2",
+  "version": "1.0.5",
   "description": "## Introduction",
   "license": "MIT",
   "repository": {
@@ -27,8 +27,15 @@
     "LICENSE"
   ],
   "main": "dist/index.js",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "scripts": {
     "test": "jest --silent",
     "test:bennie": "E2E=true jest bennie.e2e.test.ts",

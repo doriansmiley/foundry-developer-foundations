@@ -1,11 +1,11 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-    entry: ['src/**/*.ts', '!../foundry-tracing-foundations/src/computeModule.ts', '!../foundry-tracing-foundations/src/dist/computeModule.js'],
+    entry: ['src/index.ts', '!../foundry-tracing-foundations/src/computeModule.ts', '!../foundry-tracing-foundations/src/dist/computeModule.js'],
     format: ['esm', 'cjs'],
     outDir: 'dist',
     clean: true,
-    dts: false,
+    dts: true,
     tsconfig: 'tsconfig.build.json',
     noExternal: [
         "@codestrap/developer-foundations.foundry-tracing-foundation",
