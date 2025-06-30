@@ -3,7 +3,7 @@ import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundati
 import { SupportedEngines } from "@xreason/reasoning/factory";
 import { Text2Action } from "@xreason/Text2Action";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
-import { GeminiService, MachineDao, RfpRequestsDao, Threads, ThreadsDao, TYPES, RfpResponseReceipt, RfpRequestResponse, RfpResponsesResult } from '@xreason/types';
+import { GeminiService, MachineDao, RfpRequestsDao, Threads, ThreadsDao, TYPES, RfpResponseReceipt, RfpRequestResponse, RfpResponsesResult, Communications } from '@xreason/types';
 import { container } from "@xreason/inversify.config";
 import { StateConfig } from '@xreason/reasoning';
 
@@ -157,7 +157,7 @@ ${result}`;
         console.log('createSalesTasksList called')
         // if no threadId create one
         // call the solver to get back the task list. 
-        const taskList = await this.createTaskList(
+        const communication = await this.createTaskList(
             query,
             userId,
             SupportedEngines.SALES,
@@ -165,6 +165,7 @@ ${result}`;
             undefined,
             threadId,
         );
+
         // If incomplete information is provided the solver will return Missing Infromation
         // If the request is unsupported the solver will return Usupported Questions
         // If it's a complete supported query the solver will return a well formatted task list that we can use to execute
@@ -172,8 +173,8 @@ ${result}`;
             status: 200,
             message: 'Task list created',
             // we match the threadID and threadId and executionId so we can associate conversations between agents and machine executions
-            executionId: threadId || uuidv4(),
-            taskList,
+            executionId: communication.id,
+            taskList: communication.taskList,
         };
     }
 

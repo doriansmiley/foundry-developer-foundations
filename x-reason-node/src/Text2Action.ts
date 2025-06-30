@@ -3,7 +3,7 @@ import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundati
 import { Context, engineV1 as engine, getState, MachineEvent, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
 import { dateTime, recall, requestRfp, userProfile } from "@xreason/functions";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
-import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao, ThreadsDao, GeminiService, GetNextStateResult, Threads } from "@xreason/types";
+import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao, ThreadsDao, GeminiService, GetNextStateResult, Threads, Communications } from "@xreason/types";
 import { container } from "@xreason/inversify.config";
 import { State, StateValue } from 'xstate';
 
@@ -31,7 +31,7 @@ export class Text2Action {
         questionPrompt?: string,
         tokens?: number,
         id?: string,
-    ): Promise<string> {
+    ): Promise<Communications> {
         const { solver } = xReasonFactory(xReasonEngine as SupportedEngines)({});
         const userProfile = await container.get<UserDao>(TYPES.UserDao)(userId);
 
@@ -91,7 +91,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
             id,
         );
 
-        return JSON.stringify(communication);
+        return communication;
 
     }
 
