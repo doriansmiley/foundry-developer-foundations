@@ -35,11 +35,20 @@ export class Vickie extends Text2Action {
     })
     public async askVickie(query: string, userId: string, threadId?: string): Promise<VickieResponse> {
         let generatedTaskList: undefined | string = undefined;
-        let newThread = false;
+        let newThread = (!threadId || threadId.length === 0);
+
+        // we need the ability for clients to pass a known threadId that they originate and still create a new task list
+        try {
+            const threadDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+            await threadDao.read(threadId || '');
+        } catch (e) {
+            console.log(e);
+            // the client has sent a threadId they originated
+            newThread = true;
+        }
 
         // we only want to trigger task list generation if this is a new thread
-        if (!threadId) {
-            newThread = true;
+        if (newThread) {
             // create a new solution with our solver
             const { status, taskList, executionId } = await this.createComsTasksList(query, userId, threadId);
             // if we get a bad response skip calling execute task list
@@ -124,7 +133,7 @@ export class Vickie extends Text2Action {
         // return the structured response
         return {
             status: 200,
-            executionId: threadId,
+            executionId: threadId!,
             // Send back the incremental response to avoid sending huge threads back
             // Can also support streaming outputs in the future
             message: result,
@@ -150,7 +159,14 @@ export class Vickie extends Text2Action {
         console.log('createComsTasksList called')
         // if no threadId create one
         // call the solver to get back the task list. 
-        const taskList = await this.createTaskList(query, userId, SupportedEngines.COMS)
+        const taskList = await this.createTaskList(
+            query,
+            userId,
+            SupportedEngines.SALES,
+            undefined,
+            undefined,
+            threadId,
+        );
         // If incomplete information is provided the solver will return Missing Infromation
         // If the request is unsupported the solver will return Usupported Questions
         // If it's a complete supported query the solver will return a well formatted task list that we can use to execute

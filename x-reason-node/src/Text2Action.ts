@@ -24,7 +24,14 @@ export class Text2Action {
         samplingRate: 1.0,
         attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/createTaskList/execute` }
     })
-    public async createTaskList(query: string, userId?: string, xReasonEngine: string = SupportedEngines.COMS): Promise<string> {
+    public async createTaskList(
+        query: string,
+        userId?: string,
+        xReasonEngine: string = SupportedEngines.COMS,
+        questionPrompt?: string,
+        tokens?: number,
+        id?: string,
+    ): Promise<string> {
         const { solver } = xReasonFactory(xReasonEngine as SupportedEngines)({});
         const userProfile = await container.get<UserDao>(TYPES.UserDao)(userId);
 
@@ -79,6 +86,9 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
             taskList,
             xReasonEngine,
             userId,
+            questionPrompt,
+            tokens,
+            id,
         );
 
         return JSON.stringify(communication);
