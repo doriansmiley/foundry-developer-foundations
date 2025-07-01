@@ -1,4 +1,4 @@
-import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
+import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundations';
 
 import { SupportedEngines } from "@xreason/reasoning/factory";
 import { Text2Action } from "@xreason/Text2Action";
@@ -162,7 +162,7 @@ export class Vickie extends Text2Action {
         const communication = await this.createTaskList(
             query,
             userId,
-            SupportedEngines.SALES,
+            SupportedEngines.COMS,
             undefined,
             undefined,
             threadId,

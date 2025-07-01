@@ -3,7 +3,7 @@ import { text2ActionTestMachineExecution, machineId } from '@xreason/__fixtures_
 let counter = 0;
 
 jest.mock('@xreason/utils', () => ({
-    ...jest.requireActual('../utils'),
+    ...jest.requireActual('@xreason/utils'),
     uuidv4: jest.fn(() => (++counter).toString()),
 }));
 

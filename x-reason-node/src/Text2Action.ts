@@ -1,4 +1,4 @@
-import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
+import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundations';
 
 import { Context, engineV1 as engine, getState, MachineEvent, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
 import { dateTime, recall, requestRfp, userProfile } from "@xreason/functions";

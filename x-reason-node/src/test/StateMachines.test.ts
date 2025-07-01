@@ -3,8 +3,8 @@ import { StateConfig } from "@xreason/reasoning";
 import { getUniqueStateIds } from "@xreason/utils";
 let counter = 0;
 
-jest.mock("../utils", () => ({
-  ...jest.requireActual("../utils"),
+jest.mock("@xreason/utils", () => ({
+  ...jest.requireActual("@xreason/utils"),
   uuidv4: jest.fn(() => (++counter).toString()),
 }));
 

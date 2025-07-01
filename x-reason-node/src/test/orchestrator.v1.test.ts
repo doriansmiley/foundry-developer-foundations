@@ -26,7 +26,7 @@ jest.mock('@xreason/utils', () => ({
 import { mockEmailResponse } from '@xreason/__fixtures__/Email';
 
 jest.mock('@xreason/functions', () => ({
-    ...jest.requireActual('../functions'),
+    ...jest.requireActual('@xreason/functions'),
     sendEmail: jest.fn().mockResolvedValue(mockEmailResponse),
 }));
 

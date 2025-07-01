@@ -3,8 +3,8 @@ import { State } from 'xstate';
 import { headlessInterpreter, MachineEvent, Context, StateConfig, Task } from '@xreason/reasoning';
 let counter = 0;
 
-jest.mock("../utils", () => ({
-    ...jest.requireActual("../utils"),
+jest.mock("@xreason/utils", () => ({
+    ...jest.requireActual("@xreason/utils"),
     uuidv4: jest.fn(() => (++counter).toString()),
 }));
 

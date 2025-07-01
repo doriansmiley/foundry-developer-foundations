@@ -6,7 +6,7 @@ import { mockPayload } from './__fixtures__/telemetryPayload';
 dotenv.config();
 // Mock setup must be before imports
 import { TestModule } from '../src/types';
-import { computeModule } from '../src';
+import { computeModule } from '../src/computeModule';
 
 // Cast computeModule to TestModule since we're in test environment
 const testModule = computeModule as TestModule;

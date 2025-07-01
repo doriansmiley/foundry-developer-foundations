@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { extractJsonFromBackticks } from '@xreason/utils/Extractors';
-import playwright from 'playwright';
+// import playwright from 'playwright';
 
 // Assuming you have API keys loaded from environment variables
 const SEARCH_API_KEY = process.env.GOOGLE_SEARCH_API_KEY;
@@ -31,7 +31,7 @@ async function loadPageContent(results: SearchResultItem[]): Promise<string[]> {
         return [];
     }
     // TODO replace this service with local playwright
-    const browser = await playwright.chromium.launch()
+    /*const browser = await playwright.chromium.launch()
     const pageContents: string[] = [];
 
     for (const result of results) {
@@ -55,7 +55,8 @@ async function loadPageContent(results: SearchResultItem[]): Promise<string[]> {
 
     await browser.close();
 
-    return pageContents;
+    return pageContents;*/
+    return new Promise((resolve) => resolve([]));
 }
 
 

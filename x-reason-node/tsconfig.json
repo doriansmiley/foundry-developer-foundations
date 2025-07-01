@@ -17,7 +17,6 @@
     "baseUrl": ".",
     "paths": {
         "@xreason/*": ["src/*"],
-        "@tracing/*": ["../foundry-tracing-foundations/src/*"]
     },
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true

@@ -13,6 +13,11 @@ export async function upsertCommunications(
     tokens?: number,
     id: string = uuidv4(),
 ): Promise<Communications> {
+
+    if (id.length === 0) {
+        id = uuidv4();
+    }
+
     console.log(`upsertCommunications id: ${id}`);
 
     const token = await client.auth.signIn();
@@ -44,8 +49,8 @@ export async function upsertCommunications(
 
     const apiResult = await fetch(url, {
         method: "POST",
-        headers: headers,
-        body: body,
+        headers,
+        body,
     });
 
     const result = await apiResult.json() as any;

@@ -1,4 +1,4 @@
-import { Context, MachineEvent } from "../../reasoning/types";
+import { Context, MachineEvent } from "@xreason/reasoning/types";
 
 // TODO finish this type
 export type ProjectStatusReport = {

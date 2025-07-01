@@ -16,7 +16,7 @@ import {
     salesEvaluate,
     salesFunctionCatalog,
     salesSolver,
-} from "../context";
+} from "@xreason/reasoning/context";
 
 // Define the shape of the clients map
 export type XReasonEngine = (config: Record<string, any>) => {

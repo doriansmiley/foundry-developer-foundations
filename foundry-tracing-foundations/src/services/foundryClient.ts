@@ -26,8 +26,8 @@ export function createFoundryClient(): FoundryClient {
         "api:use-ontologies-write",
         "api:use-admin-read",
         "api:use-connectivity-read",
+        "api:use-connectivity-write",
         "api:use-connectivity-execute",
-        "api:use-orchestration-read",
         "api:use-mediasets-read",
         "api:use-mediasets-write"
     ]

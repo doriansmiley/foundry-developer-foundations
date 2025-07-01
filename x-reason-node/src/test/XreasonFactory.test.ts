@@ -15,7 +15,7 @@ import {
     salesEvaluate,
     salesFunctionCatalog,
     salesSolver,
-} from "../reasoning/context";
+} from "@xreason/reasoning/context";
 
 describe("Factory Function Tests", () => {
     it("should return the correct engine implementation for 'coms'", () => {

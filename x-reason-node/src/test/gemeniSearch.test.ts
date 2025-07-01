@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import { gemeniStockMarketConditions } from '../services/gemeniStockMarketConditions'; // Adjust the path
+import { gemeniStockMarketConditions } from '@xreason/services/gemeniStockMarketConditions'; // Adjust the path
 
 describe('gemeniStockMarketConditions', () => {
 

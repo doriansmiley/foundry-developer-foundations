@@ -1,4 +1,4 @@
-import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundation';
+import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundations';
 
 import { SupportedEngines } from "@xreason/reasoning/factory";
 import { Text2Action } from "@xreason/Text2Action";
