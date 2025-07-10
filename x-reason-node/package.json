@@ -52,7 +52,7 @@
     "prebuild": "npm run clean"
   },
   "dependencies": {
-    "@codestrap/developer-foundations.foundry-tracing-foundations": "^1.0.6",
+    "@codestrap/developer-foundations.foundry-tracing-foundations": "^1.0.7",
     "@google/generative-ai": "^0.24.1",
     "@osdk/client": "^2.2.1",
     "@osdk/foundry.admin": "^2.22.0",
