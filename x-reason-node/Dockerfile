@@ -10,9 +10,6 @@ COPY package*.json /app/
 # Copy dist files
 COPY dist/ /app/dist
 
-COPY service_account.json /app/
-COPY service_account.json /app/dist/
-
 # Remove dev dependencies
 RUN npm ci --only=production
 
