@@ -1,6 +1,5 @@
 import { google } from 'googleapis';
-import path from 'path';
-import fs from 'fs';
+import { Buffer } from 'buffer';
 import { CalendarContext, EmailContext, FindOptimalMeetingTimeOutput, Meeting, MeetingRequest, OfficeService, ScheduleMeetingOutput, SendEmailOutput } from '@xreason/types';
 import { findOptimalMeetingTime } from '@xreason/services/delegates/gsuite/findOptimalMeetingTime';
 import { scheduleMeeting } from '@xreason/services/delegates/gsuite/scheduleMeeting';
@@ -30,14 +29,13 @@ export type ServiceAccountCredentials = {
 }
 
 async function loadServiceAccount() {
-    const credentialsPath = process.env.GSUITE_SERVICE_ACCOUNT;
-    if (!credentialsPath) {
+    if (!process.env.GSUITE_SERVICE_ACCOUNT) {
         throw new Error('GSUITE_SERVICE_ACCOUNT environment variable not set');
     }
 
-    const absolutePath = path.resolve(process.cwd(), credentialsPath);
-    const fileContents = fs.readFileSync(absolutePath, 'utf-8');
-    const credentials = JSON.parse(fileContents) as ServiceAccountCredentials;
+    const jsonString = Buffer.from(process.env.GSUITE_SERVICE_ACCOUNT, 'base64').toString('utf8');
+    const credentials = JSON.parse(jsonString) as ServiceAccountCredentials;
+
     console.log('✅ Service account file loaded successfully');
     return credentials;
 }
