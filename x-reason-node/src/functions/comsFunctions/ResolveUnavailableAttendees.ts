@@ -21,13 +21,18 @@ export async function resolveUnavailableAttendees(context: Context, event?: Mach
     // we calculate the index this way because at this point in excution the entry function has already pushed this state
     // into the the stack, ie context.stack?.push(state.id); See the programmerV1.ts for the exact line, but should be line 47
     const index = (context.stack?.length ?? 0) - 2;
+
     if (index < 0) {
         throw new Error(`Invalid index found ${index}`);
     }
-    const stateId = context.stack?.[context.stack?.length - 2]
+    const stateId = context.stack?.[context.stack?.length - 2];
+
+    console.log(`resolveUnavailableAttendees found stateId: ${stateId}`);
+
     if (!stateId) {
         throw new Error('Unable to find associated getAvailableMeetingTimes state in the machine stack.')
     }
+
     let emails: string[] = [];
     const resultOfMeetingSchedulingAttempt = context[stateId] as ProposedTimes;
     const dayTimes = resultOfMeetingSchedulingAttempt.times.reduce((acc, cur) => {
@@ -41,6 +46,14 @@ export async function resolveUnavailableAttendees(context: Context, event?: Mach
         `;
         return acc;
     }, '');
+
+    console.log(`resolveUnavailableAttendees found the resultOfMeetingSchedulingAttempt: ${JSON.stringify(resultOfMeetingSchedulingAttempt || {})}`);
+    console.log(`resolveUnavailableAttendees emails is: ${JSON.stringify(emails || [])}`);
+
+    if (emails.length === 0) {
+        throw new Error('resolveUnavailableAttendees did not find any email addresses to send and email to!')
+    }
+
     const user = `
     Draft an email message asking all attendees asking if anyone can move blockers to make any of the day/time work:
     Required attendees: 
