@@ -29,6 +29,13 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
