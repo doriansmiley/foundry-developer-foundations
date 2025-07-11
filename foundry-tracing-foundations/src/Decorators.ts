@@ -83,8 +83,11 @@ export function Trace(opts: TraceOptions) {
                     links: []
                 };
                 try {
-                    const result = await collectTelemetryFetchWrapper(JSON.stringify(payload));
-                    console.log(`traced output: ${result}`);
+                    const telemtryPayload = JSON.stringify(payload);
+                    // fire and forget, we do not want to hold up execution for this!
+                    // One day we should support background processing and batching
+                    collectTelemetryFetchWrapper(telemtryPayload);
+                    console.log(`collectTelemetryFetchWrapper called with: ${telemtryPayload}`);
                 } catch (e) {
                     console.log(e);
                 };

@@ -7,4 +7,9 @@ export default defineConfig({
     clean: true,
     dts: true,
     tsconfig: 'tsconfig.build.json',
+    noExternal: [
+        "@osdk/foundry.admin",
+        "@osdk/client",
+        "@osdk/oauth",
+    ]
 });
