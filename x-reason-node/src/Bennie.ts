@@ -135,6 +135,10 @@ ${result}`;
             // Send back the incremental response to avoid sending huge threads back
             // Can also support streaming outputs in the future
             message: result,
+            // AIP Logic can not handle nullable fields, so we have to include these as empty string to support use cases where logic is used such as our daily reports with automate
+            // https://community.palantir.com/t/aip-logic-cant-recognize-optional-output-struct-fileds/4440/3
+            error: '',
+            taskList: '',
         };
     }
 

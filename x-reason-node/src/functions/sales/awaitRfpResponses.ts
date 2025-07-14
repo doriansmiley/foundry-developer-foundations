@@ -10,7 +10,8 @@ export async function awaitRfpResponses(context: Context, event?: MachineEvent, 
         .filter(key => key.indexOf('requestRfp') >= 0)
         .map(key => context[key]);
 
-    const allResponsesReceived = allResponses.every(item => item.received);
+    // all received if there had been a response and the status is 200
+    const allResponsesReceived = allResponses.every(item => item.received && item.status === 200);
     const vendors = allResponses.map(item => item.vendorId);
 
     return {
