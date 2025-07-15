@@ -18,7 +18,7 @@ export type DraftAtendeeEmailResponse = {
 export async function resolveUnavailableAttendees(context: Context, event?: MachineEvent, task?: string): Promise<DraftAtendeeEmailResponse> {
     // TODO see if there is a better way to do this. I think we can assume though that the only time this is invoked
     // is if we failed to find available times in the getAvailableMeetingTimes execution
-    // we calculate the index this way because at this point in excution the entry function has already pushed this state
+    // we calculate the index this way because at this point in execution the entry function has already pushed this state
     // into the the stack, ie context.stack?.push(state.id); See the programmerV1.ts for the exact line, but should be line 47
     const index = (context.stack?.length ?? 0) - 2;
 
@@ -39,8 +39,8 @@ export async function resolveUnavailableAttendees(context: Context, event?: Mach
         emails = [...emails, ...cur.unavailableAttendees, ...cur.availableAttendees]
         acc = `${acc}
         
-        start: ${new Date(cur.start).toString()},
-        end: ${new Date(cur.end).toString()},
+        start: ${cur.start},
+        end: ${cur.start},
         available: ${cur.availableAttendees.join(', ')},
         unavailable: ${cur.unavailableAttendees.join(', ')}
         `;
@@ -61,6 +61,9 @@ export async function resolveUnavailableAttendees(context: Context, event?: Mach
 
     Available Day/Time:
     ${dayTimes}
+
+    the task list used to generate the meeting request. This can provide context for the meeting such as attendee names and what will be discussed.
+    ${context.solution}
 
     You can only respond in JSON in the following format:
     {
@@ -86,7 +89,7 @@ export async function resolveUnavailableAttendees(context: Context, event?: Mach
     `;
 
     const system = `You are a helpful AI assistant tasked with authoring Slack messages. 
-    You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Viki, Code's AI EA" or similar. 
+    You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Vickie, Code's AI EA" or similar. 
     You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}. 
     You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
     The current month is ${new Date().toLocaleDateString('en-US', { month: 'long' })}.`;
@@ -106,14 +109,14 @@ export async function resolveUnavailableAttendees(context: Context, event?: Mach
         {
             from: process.env.OFFICE_SERVICE_ACCOUNT,
             recipients: parsedResult.recipients,
-            subject: resultOfMeetingSchedulingAttempt.subject,
+            subject: `Resolve Meeting Conflicts - ID ${context.machineExecutionId}`,
             message,
         }
     );
 
     // TODO: implement email threading with event listeners
-    // This will involve saving this intital email to a "threads" ontology object
-    // then having the event listern monitor the Gmail inbox, then when it fins an email from Vicki
+    // This will involve saving this initial email to a "threads" ontology object
+    // then having the event listener monitor the Gmail inbox, then when it fins an email from Vicki
     // lookup the corresponding email thread on the ontology based on the emailResponse.id (should math the PK field of the ontology object)
     return {
         emailId: emailResponse.id,

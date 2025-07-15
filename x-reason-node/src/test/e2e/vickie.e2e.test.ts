@@ -11,13 +11,49 @@ if (!process.env.E2E) {
             jest.clearAllMocks();
         });
 
+        it("It should schedule a meeting for today with me", async () => {
+            const vickie = new Vickie();
+
+            const result = await vickie.askVickie(`
+Schedule a meeting with me for today to discuss Vickie
+                `, process.env.FOUNDRY_TEST_USER);
+            expect(result.executionId).toBeDefined();
+            expect(result.message).toBeDefined();
+            expect(result.status).toBe(200);
+
+        }, 60000);
+
+        it("It should schedule a meeting for today at 12 PM for me", async () => {
+            const vickie = new Vickie();
+
+            const result = await vickie.askVickie(`
+Schedule a meeting with me for today at 12 PM to discuss Vickie
+                `, process.env.FOUNDRY_TEST_USER);
+            expect(result.executionId).toBeDefined();
+            expect(result.message).toBeDefined();
+            expect(result.status).toBe(200);
+
+        }, 60000);
+
+        it("It should schedule a meeting for today at 3 PM with me and Connor. This time is not available so it should book for a later time.", async () => {
+            const vickie = new Vickie();
+
+            const result = await vickie.askVickie(`
+Schedule a meeting with me and Connor Deeks for today at 3 PM to discuss Vickie
+                `, process.env.FOUNDRY_TEST_USER);
+            expect(result.executionId).toBeDefined();
+            expect(result.message).toBeDefined();
+            expect(result.status).toBe(200);
+
+        }, 60000);
+
         it("It should schedule a meeting, send an email, send a slack message, and create a task.", async () => {
             const vickie = new Vickie();
 
             const result = await vickie.askVickie(`
 In parallel do all of the following:
 Create a critical priority task for me to follow up with our rebranding and find a partner to handle our identity package.
-Then schedule a meeting with me at 12:30 PM with the subject "Reminder - Prep for calls today" for 15 minutes
+Then schedule a meeting with me for tomorrow 1:30 PM with the subject "Reminder - Prep for calls today" for 15 minutes
 After that send a slack message to the Foundry Devs channel with a joke and include the current day time. Also let them know this is part of a a unit test and to ignore.
 Finally,send an email to me with the subject test and for the message tell me a joke and include the current day time.
                 `, process.env.FOUNDRY_TEST_USER);

@@ -24,7 +24,7 @@ export async function getAvailableMeetingTimes(context: Context, event?: Machine
 
         // we are all on the west coast so we hard code our time zone for now
         const system = `You are a helpful virtual assistant tasked with meeting scheduling.
-    You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Viki, Code's AI EA" or similar. 
+    You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Vickie, Code's AI EA" or similar. 
     You can get creative on your greeting, taking into account the day of the week. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}. 
     You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
     The current local date/time is ${new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}. 
@@ -42,20 +42,21 @@ Using the meeting request from the end user extract the key details. You must ex
 # The meeting request from the end user:
 ${task}
 
-The complete task list which may contain additional infomration about the meeting such as the subject or agenda:
+The complete task list which may contain additional information about the meeting such as the subject or agenda:
 ${context.solution}
 
 Let's take this step by step.
-1. First determin if any people mentioned in the input task most likely match the people below. If so return the matching participan(s) in the participant array
-Connor Deeks <connor.deeks@codestrap.me> - Connor Deeks in the CEO and board memeber in charge of platform leads, business strategy, and investor relations.
+1. First determine if any people mentioned in the input task most likely match the people below. If so return the matching participant(s) in the participant array
+Connor Deeks <connor.deeks@codestrap.me> - Connor Deeks in the CEO and board member in charge of platform leads, business strategy, and investor relations.
 Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the software engineers and is responsible for technology strategy, execution, and the lead applied AI engineer.
 2. Insert any explicit email addresses into the participants array
-3. Extract the meting subject based on the meeting request from the end user. Most meeting requests from the ens user incude Subject: THE_MEETING_SUBJECT
+3. Extract the meting subject based on the meeting request from the end user. Most meeting requests from the ens user include Subject: THE_MEETING_SUBJECT
 4. If the meeting request from the end user does not contain a subject, use the provided complete task list to extract it. 
 If not subject can be extracted for this meeting request use "Circle Up"
-5. Extract the meeting duration in minutes. If the duration can not be infered return 30.
-6. Determine the time frame as one of the following: "user defined exact date/time", "as soon as possible", "this week", or "next week". If the user did not specify a timeframe you must use "as soon as possible".
-7. If the time frame is "user defined exact date/time" outputput the local date string in the proposed timezone. 
+5. Extract the meeting duration in minutes. If the duration can not be inferred return 30.
+6. Determine the time frame as one of the following: "user defined exact date/time", "as soon as possible", "this week", or "next week". If the user specifies "today" without an exact time use "as soon as possible". If the user did not specify a timeframe you must use "as soon as possible".
+        6.5 If the user specifies a date 2025-04-11 without a time use 9 AM Pacific Time "Fri Apr 11 2025 09:00:00 GMT-0700 (Pacific Daylight Time)"
+7. If the time frame is "user defined exact date/time" output the local date string in the proposed timezone. 
 The current day/time in your timezone is: ${new Date().toString()}
 PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}
 
@@ -81,7 +82,7 @@ Your response is:
 }
 
 If the ask from the user is:
-"Schedule a meeting with Connor, Dorian, and keith@eriestreet.com to discuss investement ask"
+"Schedule a meeting with Connor, Dorian, and keith@eriestreet.com to discuss investment ask"
 
 Your response is:
 {
@@ -90,6 +91,18 @@ Your response is:
     "timeframe_context": "as soon as possible",
     "duration_minutes": 30;
 }
+
+"Schedule a meeting for today with Connor, Dorian, and keith@eriestreet.com to discuss investment ask"
+
+Your response is:
+{
+    "participants": ["connor.deeks@codestrap.me", "dsmiley@codestrap.me", "keith@eriestreet.com"],
+    "subject": "Investment Ask",
+    "timeframe_context": "as soon as possible",
+    "duration_minutes": 30;
+}
+
+Note a request for a meeting today translates to "as soon as possible" not an exact day time! This will automatically include time slots for today.
 
 If the ask from the user is (assuming the current local day/time in your time zone is 'Tue Apr 08 2025 08:26:19 GMT-0700 (Pacific Daylight Time))':
 "Schedule a meeting with Connor and Dorian to discuss to internal projects this Friday at 9 AM MT for 1 hour"
@@ -111,6 +124,7 @@ Your response is:
         const result = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
 
         const parsedResult = JSON.parse(result) as MeetingRequest;
+        console.log(`the model returned the following meeting time proposal:\n${result}`);
         const timeFrame = (parsedResult.timeframe_context === 'user defined exact date/time') ? parsedResult.localDateString! : parsedResult.timeframe_context;
         const participants = Array.from(new Set(parsedResult.participants));
         //remove external email addresses since we can't check them
@@ -142,6 +156,21 @@ Your response is:
                 case 'this week':
                     inputs.timeframe_context = 'next week';
                     break;
+                default:
+                    inputs.timeframe_context = 'as soon as possible';
+            }
+            availableTimes = await officeService.getAvailableMeetingTimes(inputs);
+        }
+
+        // try again
+        if (availableTimes.suggested_times.length === 0 && inputs.timeframe_context !== 'next week') {
+            switch (inputs.timeframe_context) {
+                case 'as soon as possible':
+                    inputs.timeframe_context = 'this week';
+                    break;
+                case 'this week':
+                    inputs.timeframe_context = 'next week';
+                    break;
             }
             availableTimes = await officeService.getAvailableMeetingTimes(inputs);
         }
@@ -155,10 +184,17 @@ Your response is:
         // still nothing, return allAvailable false to resolve manually
         if (availableTimes.suggested_times.length === 0) {
             return {
-                times: [], // Array of available time slots
-                subject: parsedResult.subject, // Meeting subject or title
-                durationInMinutes: inputs.duration_minutes, // Meeting duration in minutes
-                allAvailable: false, // findOptimalMeetingTime will always find a timeslot currently since it does not allow you to specify an exact day/time yet
+                times: [
+                    {
+                        start: timeFrame,
+                        end: timeFrame,
+                        availableAttendees: [],
+                        unavailableAttendees: participants,
+                    }
+                ],
+                subject: parsedResult.subject,
+                durationInMinutes: inputs.duration_minutes,
+                allAvailable: false,
             }
         }
         // the array is presorted based on score, so we take the first one:

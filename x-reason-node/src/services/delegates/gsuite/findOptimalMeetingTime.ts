@@ -81,16 +81,19 @@ function calculateMeetingTime(
     // but its internal value is parsed as if it were local (or GMT if TZ=UTC).
     const localNow = new Date(nowLocalString);
 
+    if (localNow.getHours() > workingHours.end_hour - 1) {
+        // Outside business hours: move to the next day start of working hours.
+        localNow.setDate(localNow.getDate() + 1);
+        localNow.setHours(workingHours.start_hour, 0, 0, 0);
+    }
+
     // Create startTime and endTime as copies of the "local" now.
-    const startTime = new Date(localNow);
-    const endTime = new Date(localNow);
+    let startTime = new Date(localNow);
+    let endTime = new Date(localNow);
 
     // Adjust the "local" now for business hours.
     let daysOffset = 0;
-    if (localNow.getHours() > workingHours.end_hour - 1) {
-        // Outside business hours: move to the next day.
-        localNow.setDate(localNow.getDate() + 1);
-    }
+
     const currentDay = localNow.getDay();
     switch (currentDay) {
         case 5:
@@ -118,8 +121,8 @@ function calculateMeetingTime(
     startTime.setDate(localNow.getDate() + daysOffset);
     endTime.setDate(localNow.getDate() + daysOffset);
 
-    startTime.setHours(workingHours.start_hour, 0, 0, 0);
-    endTime.setHours(workingHours.end_hour, 0, 0, 0);
+    startTime = roundUpToNextSlot(startTime);
+    endTime = new Date(startTime.getTime() + meetingDuration * 60000);
 
     // Now, adjust these "local" times to GMT by adding the target timezone’s offset.
     const offsetMinutes = getTimeZoneOffset(timezone, startTime, fallbackOffset);
@@ -214,7 +217,7 @@ function roundUpToNextSlot(date: Date, slotMinutes: number = 30): Date {
 }
 
 export async function findOptimalMeetingTime(calendar: calendar_v3.Calendar, context: OptimalTimeContext): Promise<FindOptimalMeetingTimeOutput> {
-    console.log(`${LOG_PREFIX} Finding optimal meeting time for:\n  participants: ${JSON.stringify(context.participants, null, 2)}\n  timeframe: ${context.timeframe_context}`);
+    console.log(`${LOG_PREFIX} Finding optimal meeting time for:\n : ${JSON.stringify(context, null, 2)}`);
 
     try {
         const duration = context.duration_minutes || 30;
@@ -255,10 +258,31 @@ export async function findOptimalMeetingTime(calendar: calendar_v3.Calendar, con
             });
         }
 
-        // *** STEP 2: Query freebusy for busy periods ***
+        // let's init current time with now in case we are withing working hours already, this avoids meetings times that take place in the past
+        let currentTime = roundUpToNextSlot(new Date()); // startTime is in GMT
+        // if it's too early in the morning push up to start time
+        // we don't check end time because the loop below with not execute if greater than start time
+        // and end time is already to the following day as well
+        if (currentTime < startTime) {
+            currentTime = new Date(startTime);
+        }
+
+        // Convert currentTime (GMT) to local time for the user.
+        const userOffset = getTimeZoneOffset(context.timezone!, currentTime, -420);
+        // When the target zone is behind GMT, userOffset is negative.
+        const localCurrentTime = new Date(currentTime.getTime() + userOffset * 60 * 1000);
+        const localHour = localCurrentTime.getHours();
+
+        const lastTime = new Date(localCurrentTime);
+        lastTime.setHours(workingHours.end_hour, 0, 0, 0);
+
+        const startFreeBusyTime = new Date(localCurrentTime);
+        startFreeBusyTime.setHours(workingHours.start_hour, 0, 0, 0)
+
+        // *** STEP 2: Query freebusy for busy periods for the entire current day during business hours ***
         const freeBusyRequest = {
-            timeMin: toISOStringWithTimezone(startTime, context.timezone!, -420),
-            timeMax: toISOStringWithTimezone(endTime, context.timezone!, -420),
+            timeMin: toISOStringWithTimezone(startFreeBusyTime, context.timezone!, -420),
+            timeMax: toISOStringWithTimezone(lastTime, context.timezone!, -420),
             items: participants.map(email => ({ id: email })),
             timeZone: 'UTC'
         };
@@ -311,23 +335,10 @@ export async function findOptimalMeetingTime(calendar: calendar_v3.Calendar, con
         // All dates here are in GMT. workingHours are given in local time (context.timezone)
         // so we convert currentTime from GMT into local time before applying the working-hour check.
         const availableSlots: TimeSlot[] = [];
-        // let's init current time with now in case we are withing working hours already, this avoids meetings times that take place in the past
-        let currentTime = roundUpToNextSlot(new Date()); // startTime is in GMT
-        // if it's too early in the morning push up to start time
-        // we don't check end time because the loop below with not execute if greater than start time
-        // and end time is already to the following day as well
-        if (currentTime < startTime) {
-            currentTime = new Date(startTime);
-        }
 
-        while (currentTime < endTime) {
-            // Convert currentTime (GMT) to local time for the user.
-            const userOffset = getTimeZoneOffset(context.timezone!, currentTime, -420);
-            // When the target zone is behind GMT, userOffset is negative.
-            const localCurrentTime = new Date(currentTime.getTime() + userOffset * 60 * 1000);
-            const localHour = localCurrentTime.getHours();
-
+        while (currentTime < lastTime) {
             if (localHour >= workingHours.start_hour && localHour < workingHours.end_hour) {
+                const slotStart = new Date(currentTime);
                 const slotEnd = new Date(currentTime.getTime() + duration * 60000);
 
                 let isAvailable = true;
@@ -335,10 +346,10 @@ export async function findOptimalMeetingTime(calendar: calendar_v3.Calendar, con
                     // busy.start and busy.end are assumed to be in ISO format with proper offsets.
                     const busyStart = new Date(busy.start); // GMT instant
                     const busyEnd = new Date(busy.end);
-                    if (currentTime < busyEnd && slotEnd > busyStart) {
+                    if (slotStart < busyEnd && slotEnd > busyStart) {
                         isAvailable = false;
                         // Jump currentTime to busyEnd (still in GMT)
-                        currentTime = new Date(busyEnd.getTime());
+                        currentTime = roundUpToNextSlot(busyEnd);
                         break;
                     }
                 }

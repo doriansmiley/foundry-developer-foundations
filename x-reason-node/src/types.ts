@@ -18,6 +18,7 @@ export const TYPES = {
     MemoryRecallDao: Symbol.for("MemoryRecallDao"),
     ContactsDao: Symbol.for("ContactsDao"),
     GeminiService: Symbol.for("GeminiService"),
+    Gpt4oService: Symbol.for("Gpt4oService"),
     GeminiSearchStockMarket: Symbol.for("GeminiSearchStockMarket"),
     OfficeService: Symbol.for("OfficeService"),
     MessageService: Symbol.for("MessageService"),
@@ -216,6 +217,50 @@ export interface GeminiParameters {
 
 export interface GeminiService {
     (user: string, system: string, params?: GeminiParameters): Promise<string>;
+}
+
+type GptSpecificToolChoice = {
+    "function"?: { "name": string; } | undefined;
+};
+
+type GptTool = {
+    "function"?: {
+        "name": string;
+        "description"?: string | undefined;
+        "strict"?: boolean | undefined;
+        "parameters": Map<string, string>;
+    } | undefined;
+};
+
+type GptToolChoice = {
+    "auto"?: unknown | undefined;
+    "none"?: unknown | undefined;
+    "specific"?: GptSpecificToolChoice | undefined;
+    "required"?: unknown | undefined;
+};
+
+type GptResponseFormat = {
+    "jsonSchema"?: Map<string, string> | undefined;
+    "type": string;
+};
+
+export interface Gpt40Parameters {
+    "toolChoice"?: GptToolChoice | undefined;
+    "presencePenalty"?: number | undefined;
+    "stop"?: Array<string> | undefined;
+    "seed"?: number | undefined;
+    "temperature"?: number | undefined;
+    "maxTokens"?: number | undefined;
+    "logitBias"?: Map<number, number> | undefined;
+    "responseFormat"?: GptResponseFormat | undefined;
+    "topP"?: number | undefined;
+    "frequencyPenalty"?: number | undefined;
+    "tools"?: Array<GptTool> | undefined;
+    "n"?: number | undefined;
+};
+
+export interface Gpt4oService {
+    (user: string, system: string, params?: Gpt40Parameters): Promise<string>;
 }
 
 export interface EmbeddingsService {
