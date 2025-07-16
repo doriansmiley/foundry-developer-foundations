@@ -12,7 +12,7 @@ describe('Gmail Watch E2E', () => {
         jest.clearAllMocks();
     });
 
-    xit("should register Gmail watch notifications for each user", async () => {
+    it("should register Gmail watch notifications for each user", async () => {
 
         const topicName = 'projects/foundry-coms-foundations/topics/codestrap-emails';
         const users = [
