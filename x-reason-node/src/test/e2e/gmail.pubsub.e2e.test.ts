@@ -57,8 +57,6 @@ describe('Gmail Watch E2E', () => {
 
         const result = await officeService.readEmailHistory({
             email: emailAddress,
-            historyId: historyId.toString(),
-            historyTypes: ['messageAdded'],
             publishTime,
         });
 

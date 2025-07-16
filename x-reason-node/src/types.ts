@@ -182,8 +182,6 @@ export interface EmailContext {
 }
 
 export interface ReadEmailHistoryContext {
-    historyTypes: string[],
-    historyId: string,
     email: string,
     publishTime: string,
 }
