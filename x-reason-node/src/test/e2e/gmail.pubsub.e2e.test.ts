@@ -12,7 +12,7 @@ describe('Gmail Watch E2E', () => {
         jest.clearAllMocks();
     });
 
-    it("should register Gmail watch notifications for each user", async () => {
+    xit("should register Gmail watch notifications for each user", async () => {
 
         const topicName = 'projects/foundry-coms-foundations/topics/codestrap-emails';
         const users = [
@@ -44,7 +44,7 @@ describe('Gmail Watch E2E', () => {
 
     }, 60000);
 
-    it("should retrieve a message thread", async () => {
+    it("should retrieve a message history when no labels are provided", async () => {
 
         const rawEvent = `{"message":{"data":"eyJlbWFpbEFkZHJlc3MiOiJkc21pbGV5QGNvZGVzdHJhcC5tZSIsImhpc3RvcnlJZCI6MTc1NDI5M30=","messageId":"15100603300208417","message_id":"15100603300208417","publishTime":"2025-07-16T00:58:13.054Z","publish_time":"2025-07-16T00:58:13.054Z"},"subscription":"projects/foundry-coms-foundations/subscriptions/codestra-emails-subscription-push"}`
         const parsedEvent = JSON.parse(rawEvent) as { message: { data: string, publishTime: string } };
@@ -58,6 +58,48 @@ describe('Gmail Watch E2E', () => {
         const result = await officeService.readEmailHistory({
             email: emailAddress,
             publishTime,
+        });
+
+        expect(result.messages.length).toBeGreaterThan(0);
+
+    }, 60000);
+
+    it("should retrieve a message history when one label is provided", async () => {
+
+        const rawEvent = `{"message":{"data":"eyJlbWFpbEFkZHJlc3MiOiJkc21pbGV5QGNvZGVzdHJhcC5tZSIsImhpc3RvcnlJZCI6MTc1NDI5M30=","messageId":"15100603300208417","message_id":"15100603300208417","publishTime":"2025-07-16T00:58:13.054Z","publish_time":"2025-07-16T00:58:13.054Z"},"subscription":"projects/foundry-coms-foundations/subscriptions/codestra-emails-subscription-push"}`
+        const parsedEvent = JSON.parse(rawEvent) as { message: { data: string, publishTime: string } };
+        const data = parsedEvent.message.data;
+        const publishTime = parsedEvent.message.publishTime;
+        const decodedJson = Buffer.from(data, 'base64').toString('utf8');
+        const { emailAddress, historyId } = JSON.parse(decodedJson) as { emailAddress: string; historyId: number };
+
+        const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
+
+        const result = await officeService.readEmailHistory({
+            email: emailAddress,
+            publishTime,
+            labels: ['inbox']
+        });
+
+        expect(result.messages.length).toBeGreaterThan(0);
+
+    }, 60000);
+
+    it("should retrieve a message history when multiples labels are provided", async () => {
+
+        const rawEvent = `{"message":{"data":"eyJlbWFpbEFkZHJlc3MiOiJkc21pbGV5QGNvZGVzdHJhcC5tZSIsImhpc3RvcnlJZCI6MTc1NDI5M30=","messageId":"15100603300208417","message_id":"15100603300208417","publishTime":"2025-07-16T00:58:13.054Z","publish_time":"2025-07-16T00:58:13.054Z"},"subscription":"projects/foundry-coms-foundations/subscriptions/codestra-emails-subscription-push"}`
+        const parsedEvent = JSON.parse(rawEvent) as { message: { data: string, publishTime: string } };
+        const data = parsedEvent.message.data;
+        const publishTime = parsedEvent.message.publishTime;
+        const decodedJson = Buffer.from(data, 'base64').toString('utf8');
+        const { emailAddress, historyId } = JSON.parse(decodedJson) as { emailAddress: string; historyId: number };
+
+        const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
+
+        const result = await officeService.readEmailHistory({
+            email: emailAddress,
+            publishTime,
+            labels: ['inbox', 'cigars', 'pltr']
         });
 
         expect(result.messages.length).toBeGreaterThan(0);

@@ -184,6 +184,7 @@ export interface EmailContext {
 export interface ReadEmailHistoryContext {
     email: string,
     publishTime: string,
+    labels?: string[],
 }
 
 

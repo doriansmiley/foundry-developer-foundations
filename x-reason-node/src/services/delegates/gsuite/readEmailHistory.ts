@@ -36,9 +36,19 @@ export async function readEmailHistory(gmail: gmail_v1.Gmail, context: ReadEmail
     // yes this is the best way to do this, don't ask unless you want to understand how historyId works
     const afterEpoch = Math.floor((new Date(context.publishTime).getTime() - 15 * 60 * 1000) / 1000);
 
+    const baseQuery = [`is:unread`, `after:${afterEpoch}`];
+
+    if (context.labels && context.labels.length > 0) {
+        const quotedLabels = context.labels.map(label => `label:"${label}"`);
+        const labelQuery = quotedLabels.length > 1
+            ? `(${quotedLabels.join(' OR ')})`
+            : quotedLabels[0];
+        baseQuery.push(labelQuery);
+    }
+
     const messageListRes = await gmail.users.messages.list({
         userId: context.email,
-        q: `is:unread after:${afterEpoch}`,
+        q: baseQuery.join(' '),
     });
 
     // now we can get the message IDs
