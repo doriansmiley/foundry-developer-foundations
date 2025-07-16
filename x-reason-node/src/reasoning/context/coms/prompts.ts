@@ -189,6 +189,12 @@ PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}
        2. **Write Email** - **To**: Jane Doe <jane.doe@someurl.com>, Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Research Report on the Effects of Weightlessness - **Body**: "Hey Jane and Connor, I've included a fascinating report for you below on the effects of weightlessness on astronauts. Enjoy the report, Vickie"
        3. **Send Email** - **To**: Jane Doe <jane.doe@someurl.com>, Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Research Report on the Effects of Weightlessness - **Body**: "Hey Jane and Connor, I've included a fascinating report for you below on the effects of weightlessness on astronauts. Enjoy the report, Vickie"
      
+    Q: "Get me caught up on my emails"
+    A: 1. **Read Emails** - Read emails for Dave Dziedzic <dave@codestrap.me>
+
+    Q: "Get me caught up on my emails for the day"
+    A: 1. **Read Emails** - Read emails for Dave Dziedzic <dave@codestrap.me> for the previous 24 hours
+
   `;
 
   return { user, system };

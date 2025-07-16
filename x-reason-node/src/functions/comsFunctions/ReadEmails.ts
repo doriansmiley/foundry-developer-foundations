@@ -1,21 +1,13 @@
 import { Context, MachineEvent } from "@xreason/reasoning/types";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
 import { container } from "@xreason/inversify.config";
-import { FoundryClient, GeminiService, OfficeService, ReadEmailOutput, TYPES, User } from "@xreason/types";
+import { GeminiService, OfficeService, ReadEmailOutput, TYPES } from "@xreason/types";
 
 
 
 export async function readEmails(context: Context, event?: MachineEvent, task?: string): Promise<ReadEmailOutput> {
-    const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
-    const { getUser } = container.get<FoundryClient>(TYPES.FoundryClient);
-
-    const user: User = await getUser();
-
     const system = `You are a helpful virtual ai assistant tasked with extracting the time frame in minutes for an email query.`;
-    // possible options: 
-    // past 15 minutes (default)
-    // past hour
-    // past day
+
     const userPrompt = `
     Using the task from the end user below classify the time frame for the email query into one of the following:
     1. past 15 minutes (also the default if no time from is specified)
@@ -28,22 +20,26 @@ export async function readEmails(context: Context, event?: MachineEvent, task?: 
     You can only respond in JSON in the following format:
     {
         timeframe: string,
+        email: string
     }
 
     For example if the ask from the user is:
-    Q: "Get me caught up on my emails"
+    Q: "1. **Read Emails** - Read emails for Bob Jones <bob@codestrap.me>"
     A: {
-        "timeframe": "past 15 minutes"
+        "timeframe": "past 15 minutes",
+        "email": "bob@codestrap.me"
     }
 
-    Q: "Read me emails from the previous half hour"
+    Q: "1. **Read Emails** - Read emails for Bob Jones <bob@codestrap.me> for the previous hour"
     A: {
-        "timeframe": "past hour"
+        "timeframe": "past hour",
+        "email": "bob@codestrap.me"
     }
 
-    Q: "What emails came in today"
+    Q: "1. **Read Emails** - Read emails for Bob Jones <bob@codestrap.me> for today"
     A: {
-        "timeframe": "past day"
+        "timeframe": "past day",
+        "email": "bob@codestrap.me"
     }
     `;
 
@@ -52,7 +48,7 @@ export async function readEmails(context: Context, event?: MachineEvent, task?: 
     const response = await geminiService(userPrompt, system);
     // eslint-disable-next-line no-useless-escape
     const extractedResponse = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
-    const { timeframe } = JSON.parse(extractedResponse) as { timeframe: string };
+    const { timeframe, email } = JSON.parse(extractedResponse) as { timeframe: string, email: string };
 
     let parsedTime = 15;
 
@@ -65,10 +61,12 @@ export async function readEmails(context: Context, event?: MachineEvent, task?: 
 
     }
 
+    const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
+
     const publishTime = new Date((new Date().getTime() - parsedTime * 60 * 1000)).toISOString();
 
     const result = await officeService.readEmailHistory({
-        email: user.email!,
+        email,
         publishTime, // TODO construct the published time from the extracted timeframe parameter
     });
 
