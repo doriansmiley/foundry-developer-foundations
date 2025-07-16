@@ -42,6 +42,35 @@ export const Schemas = {
             labelIds: Type.Array(Type.String())
         })
     },
+    ReadEmailHistory: {
+        input: Type.String(),
+        output: Type.Object({
+            messages: Type.Array(
+                Type.Object({
+                    subject: Type.Optional(Type.String()),
+                    from: Type.Optional(Type.String()),
+                    body: Type.Optional(Type.String()),
+                })
+            ),
+        })
+    },
+    WatchEmails: {
+        input: Type.Object({
+            config: Type.Array(
+                Type.Object({
+                    topicName: Type.String(),
+                    users: Type.Array(Type.String()),
+                    labelIds: Type.Array(Type.String()),
+                    labelFilterBehavior: Type.String(),
+                })
+            ),
+        }),
+        output: Type.Object({
+            status: Type.Integer(),
+            errors: Type.Optional(Type.Array(Type.String())),
+            responses: Type.Optional(Type.Array(Type.String())),
+        })
+    },
     ScheduleMeeting: {
         input: Type.Object({
             summary: Type.String(),
@@ -83,6 +112,10 @@ export type ScheduleMeetingInput = Static<typeof Schemas.ScheduleMeeting.input>;
 export type ScheduleMeetingOutput = Static<typeof Schemas.ScheduleMeeting.output>;
 export type SendEmailOutput = Static<typeof Schemas.SendEmail.output>;
 export type SendEmailInput = Static<typeof Schemas.SendEmail.input>;
+export type ReadEmailOutput = Static<typeof Schemas.ReadEmailHistory.output>;
+export type ReadEmailInput = Static<typeof Schemas.ReadEmailHistory.input>;
+export type WatchEmailsOutput = Static<typeof Schemas.WatchEmails.output>;
+export type WatchEmailsInput = Static<typeof Schemas.WatchEmails.input>;
 export type FindOptimalMeetingTimeInput = Static<typeof Schemas.FindOptimalMeetingTime.input>;
 export type FindOptimalMeetingTimeOutput = Static<typeof Schemas.FindOptimalMeetingTime.output>;
 
@@ -147,6 +180,14 @@ export interface EmailContext {
     subject: string;
     message: string;
 }
+
+export interface ReadEmailHistoryContext {
+    historyTypes: string[],
+    historyId: string,
+    email: string,
+    publishTime: string,
+}
+
 
 export interface CalendarContext {
     summary: string;
@@ -540,6 +581,8 @@ export type OfficeService = {
     getAvailableMeetingTimes: (meetingRequest: MeetingRequest) => Promise<FindOptimalMeetingTimeOutput>,
     scheduleMeeting: (meeting: CalendarContext) => Promise<ScheduleMeetingOutput>,
     sendEmail: (email: EmailContext) => Promise<SendEmailOutput>,
+    readEmailHistory: (context: ReadEmailHistoryContext) => Promise<ReadEmailOutput>,
+    watchEmails: (context: WatchEmailsInput) => Promise<WatchEmailsOutput>,
 }
 
 export type MessageService = {

@@ -1,6 +1,6 @@
 {
   "name": "@codestrap/developer-foundations.x-reason",
-  "version": "1.3.11",
+  "version": "1.3.12",
   "description": "## Introduction",
   "license": "MIT",
   "repository": {
@@ -40,6 +40,7 @@
     "test": "jest --silent",
     "test:bennie": "E2E=true jest bennie.e2e.test.ts",
     "test:vickie": "E2E=true npx jest vickie.e2e.test.ts",
+    "test:gmailPubSub": "E2E=true npx jest gmail.pubsub.e2e.test.ts",
     "test:watch": "jest --watch",
     "lint": "eslint 'src/**/*.{js,ts}'",
     "build": "tsup --no-watch --silent",
