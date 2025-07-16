@@ -1,5 +1,5 @@
 import { Context, MachineEvent, Task, ActionType } from "@xreason/reasoning/types";
-import { writeEmail, researchReport, resolveUnavailableAttendees, createTask, getAvailableMeetingTimes, getProjectFiles, getProjectStatusReport, scheduleMeeting, sendEmail, sendSlackMessage, writeSlackMessage } from '@xreason/functions';
+import { readEmails, writeEmail, researchReport, resolveUnavailableAttendees, createTask, getAvailableMeetingTimes, getProjectFiles, getProjectStatusReport, scheduleMeeting, sendEmail, sendSlackMessage, writeSlackMessage } from '@xreason/functions';
 
 function getPayload(context: Context, result: Record<string, any>) {
     const stateId = context.stack?.[context.stack?.length - 1]
@@ -20,6 +20,25 @@ function getPayload(context: Context, result: Record<string, any>) {
 export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
     return new Map<string, Task>([
         [
+            "readEmails",
+            {
+                description:
+                    "Retrieves the users email messages for a given time period.",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    console.log('readEmails implementation in function catalog called');
+                    const result = await readEmails(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`readEmails returned: ${JSON.stringify(result)}`);
+                    console.log('dispatching CONTINUE from readEmails');
+
+                    dispatch({
+                        type: 'CONTINUE',
+                        payload,
+                    });
+                },
+            },
+        ],
+        [
             "researchReport",
             {
                 description:
@@ -30,7 +49,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const payload = getPayload(context, result);
                     console.log(`researchReport returned: ${JSON.stringify(result)}`);
                     console.log('dispatching CONTINUE from researchReport');
-                    // this will pause the state machine execution
+
                     dispatch({
                         type: 'CONTINUE',
                         payload,
