@@ -114,6 +114,18 @@ const Schemas = {
       userId: Type.Optional(Type.String()),
     })
   },
+  processEmailEvent: {
+    input: Type.Object({
+      payload: Type.String(),
+    }),
+    output: Type.Object({
+      status: Type.Integer(),
+      message: Type.String(),
+      executionId: Type.String(),
+      taskList: Type.Optional(Type.String()),
+      error: Type.Optional(Type.String()),
+    })
+  },
 };
 
 // Unified configuration for all environments
@@ -164,8 +176,25 @@ function createComputeModule(): ComputeModuleType {
       getNextState: Schemas.getNextState,
       submitRfpResponse: Schemas.submitRfpResponse,
       sendThreadMessage: Schemas.sendThreadMessage,
+      processEmailEvent: Schemas.processEmailEvent,
     },
   })
+    .register("processEmailEvent", async ({ payload }) => {
+      try {
+        const { data, publishTime, subscription } = JSON.parse(payload) as { data: string, publishTime: string, subscription: string };
+        const result = await vickie.processEmailEvent(data, publishTime);
+        return result;
+      } catch (e) {
+        console.log((e as Error).stack);
+        return {
+          status: 500,
+          message: `Error: ${(e as Error).message}`,
+          executionId: 'error',
+          taskList: 'error',
+          error: `Error: ${(e as Error).message}`,
+        };
+      }
+    })
     .register("sendThreadMessage", async ({ message, userId, machineExecutionId }) => {
       try {
         const result = await bennie.sendThreadMessage(message, userId, machineExecutionId);

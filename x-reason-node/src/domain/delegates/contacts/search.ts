@@ -26,7 +26,7 @@ export async function searchContacts(fullName: string, company: string, client: 
                 },
                 {
                     type: "containsAnyTerm",
-                    field: "company",
+                    field: "enterpriseName",
                     value: company,
                     "fuzzy": true,
                 }

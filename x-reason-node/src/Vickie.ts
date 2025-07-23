@@ -3,10 +3,9 @@ import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundati
 import { SupportedEngines } from "@xreason/reasoning/factory";
 import { Text2Action } from "@xreason/Text2Action";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
-import { GeminiService, MachineDao, RfpRequestsDao, Threads, ThreadsDao, TYPES, RfpResponseReceipt, RfpRequestResponse, RfpResponsesResult, Communications } from '@xreason/types';
+import { GeminiService, ThreadsDao, TYPES, OfficeService, EmailMessage, MachineDao } from '@xreason/types';
 import { container } from "@xreason/inversify.config";
-import { StateConfig } from '@xreason/reasoning';
-
+import { Context } from './reasoning';
 
 interface VickieResponse {
     status: number;
@@ -18,6 +17,197 @@ interface VickieResponse {
 
 // use classes to take advantage of trace decorator
 export class Vickie extends Text2Action {
+    @Trace({
+        resource: {
+            service_name: 'vickie',
+            service_instance_id: 'production',
+            telemetry_sdk_name: 'xreason-functions',
+            telemetry_sdk_version: '7.0.2',
+            host_hostname: 'codestrap.usw-3.palantirfoundry.com',
+            host_architecture: 'prod',
+        },
+        operationName: 'proposeNewMeetingTime',
+        kind: 'Server',
+        samplingDecision: 'RECORD_AND_SAMPLE',
+        samplingRate: 1.0,
+        attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/proposeNewMeetingTime/execute` }
+    })
+    public async processEmailEvent(data: string, publishTime: string): Promise<VickieResponse> {
+        // get emails since the publish time
+        const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
+        const decodedJson = Buffer.from(data, 'base64').toString('utf8');
+        const { emailAddress } = JSON.parse(decodedJson) as { emailAddress: string; historyId: number };
+
+        const result = await officeService.readEmailHistory({
+            email: emailAddress,
+            publishTime,
+        });
+        // filter by subject to find threads Vickie generated
+        const resolveMeetingConflicts = result.messages.filter(message => {
+            if (message.subject) {
+                return message.subject.indexOf('Resolve Meeting Conflicts - ID') >= 0;
+            }
+
+            return false;
+        }).reduce((acc, cur) => {
+            if (cur.threadId && !acc.get(cur.threadId)) {
+                acc.set(cur.threadId, []);
+            }
+
+            if (cur.threadId) {
+                acc.get(cur.threadId)?.push(cur);
+            }
+
+            return acc;
+        }, new Map<string, EmailMessage[]>);
+
+        const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+
+        // for each thread in the map call an llm to determine of a resolution has been found, and if so rehydrate the machine
+        // passing the updated information and calling getNextState
+        const threadPromises = Array.from(resolveMeetingConflicts.entries())
+            .map(async ([threadId, messages]) => {
+                const errorResponse = {
+                    status: 400,
+                    executionId: uuidv4(),
+                    message: 'ERROR',
+                    // AIP Logic can not handle nullable fields, so we have to include these as empty string to support use cases where logic is used such as our daily reports with automate
+                    // https://community.palantir.com/t/aip-logic-cant-recognize-optional-output-struct-fileds/4440/3
+                    error: '',
+                    taskList: 'ERROR',
+                };
+                const system = `You are a helpful virtual ai assistant tasked with extracting meeting conflict resolutions form message histories.`;
+                const userPrompt = `
+Using the message history below output whether or not the conflict has been resolved and the new proposed day/time.
+
+Message history:
+${JSON.stringify(messages)}
+
+You can only respond in JSON:
+{
+  "resolutionFound": boolean,
+  "resolution": string
+}
+
+For example if the message history is:
+[
+  {
+    "subject": "Resolve Meeting Conflicts - ID ad179ef1-063f-4335-8541-cfdb65f824923",
+    "from": "vici@codestrap.me",
+    "body": "Hey Dorian and Connor  nHappy Thursday! I'm Vickie, Code's AI EA. I'm having trouble scheduling a meeting for you both on July 18, 2025, between 2:00 PM and 3:00 PM. It looks like neither of you are available at that time. Could you please let me know if there's any chance you could move things around to make that time work? Knowing whether that slot is flexible would really help in finding a suitable time. Thanks! Best Vickie",
+    "id": "1234",
+    "threadId": "234dsfd"
+  },
+  {
+    "subject": "Resolve Meeting Conflicts - ID ad179ef1-063f-4335-8541-cfdb65f82492",
+    "from": "dsmiley@codestrap.me",
+    "body": "Hey Connor what about Tue at 9 AM?",
+    "id": "5678",
+    "threadId": "234dsfd"
+  },
+  {
+    "subject": "Resolve Meeting Conflicts - ID ad179ef1-063f-4335-8541-cfdb65f82492",
+    "from": "connor.deeks@codestrap.me",
+    "body": "That works.",
+    "id": "9101112",
+    "threadId": "234dsfd"
+  }
+]
+Your answer is:
+{
+  "resolutionFound": true,
+  "resolution": "Tue at 9 AM"
+}
+
+If the user specifies a resolution that can not be resolved to a specific dat/time output
+{
+  "resolutionFound": false,
+  "resolution": ""
+}
+`;
+
+                // Ask the model
+                const response = await geminiService(userPrompt, system);
+                const extracted = extractJsonFromBackticks(response);
+
+                // Expect the shape we asked for
+                const { resolutionFound, resolution } = JSON.parse(extracted) as {
+                    resolutionFound: boolean;
+                    resolution: string;
+                };
+
+                if (!resolutionFound) {
+                    errorResponse.error = 'No resolution found';
+                    return errorResponse;
+                } // Nothing to do for this thread
+
+                // Grab machine ID from subject
+                const id = messages[0]?.subject?.split('Resolve Meeting Conflicts - ID')[1];
+                if (!id) {
+                    errorResponse.error = 'No id found';
+                    return errorResponse;
+                };
+
+                const machineDao = container.get<MachineDao>(TYPES.MachineDao);
+                const { state } = await machineDao.read(id);
+
+                const { context } = JSON.parse(state!) as { context: Context };
+                const currentStateId = context.stack?.pop();
+                if (!currentStateId) {
+                    errorResponse.error = 'No currentStateId found';
+                    return errorResponse;
+                };
+
+                const contextUpdate = { [currentStateId]: { resolution } };
+                await this.getNextState(
+                    undefined,
+                    true,
+                    id,
+                    JSON.stringify(contextUpdate),
+                    SupportedEngines.COMS
+                );
+            });
+
+        // 3. Fire all requests in parallel and wait for them all to settle
+        const results = await Promise.allSettled(threadPromises);
+
+        // 1. Extract failed results with shape you defined
+        const failed = results
+            .map((res) => {
+                if (res.status === 'fulfilled' && res.value?.status === 400) {
+                    return res.value;
+                }
+                return undefined;
+            })
+            .filter(item => item !== undefined);
+
+        // 2. If there are any failures, build an aggregated error response
+        if (failed.length > 0) {
+            const aggregatedMessage = failed.reduce((msg, curr) => {
+                return msg + `\n executionId: ${curr.executionId} message: ${curr.message}`;
+            }, 'Some threads failed to resolve:');
+
+            return {
+                status: 400,
+                executionId: uuidv4(),
+                message: aggregatedMessage,
+                error: 'At least one thread failed',
+                taskList: 'ERROR',
+            };
+        }
+
+        // return the structured response
+        return {
+            status: 200,
+            executionId: uuidv4(),
+            message: `All emails were processed and next state processed for the following machines:\n${JSON.stringify(results, null, 2)}`,
+            // AIP Logic can not handle nullable fields, so we have to include these as empty string to support use cases where logic is used such as our daily reports with automate
+            // https://community.palantir.com/t/aip-logic-cant-recognize-optional-output-struct-fileds/4440/3
+            error: '',
+            taskList: '',
+        };
+    }
+
     @Trace({
         resource: {
             service_name: 'vickie',
