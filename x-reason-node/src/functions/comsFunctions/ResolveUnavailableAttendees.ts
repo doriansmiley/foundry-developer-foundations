@@ -11,6 +11,7 @@ export type DraftAtendeeEmailResponse = {
     meetingSubject: string;
     meetingDuration: number;
     meetingAgenda?: string;
+    resolution?: string;
     ts: number,
 }
 
