@@ -61,7 +61,7 @@ export const mockEmailHistoryNoResolution = {
                     'Resolve Meeting Conflicts - ID f41b004c-c032-4f3a-b7b8-be831804cb03',
                 threadId: THREAD_ID,
                 from: 'vici@codestrap.me',
-                body: `Hey Dorian and Connor Happy Thursday! …`,
+                body: `Hey Dorian and Connor  nHappy Thursday! I'm Vickie, Code's AI EA. I'm having trouble scheduling a meeting for you both on July 18, 2025, between 2:00 PM and 3:00 PM. It looks like neither of you are available at that time. Could you please let me know if there's any chance you could move things around to make that time work? Knowing whether that slot is flexible would really help in finding a suitable time.  Thanks!  Best Vickie`,
                 id: 'mock-email-id',
             },
         ],
@@ -77,7 +77,7 @@ export const mockEmailHistoryWithResolution = {
                     'Resolve Meeting Conflicts - ID f41b004c-c032-4f3a-b7b8-be831804cb03',
                 threadId: THREAD_ID,
                 from: 'vici@codestrap.me',
-                body: `Hey Dorian and Connor Happy Thursday! …`,
+                body: `Hey Dorian and Connor  nHappy Thursday! I'm Vickie, Code's AI EA. I'm having trouble scheduling a meeting for you both on July 18, 2025, between 2:00 PM and 3:00 PM. It looks like neither of you are available at that time. Could you please let me know if there's any chance you could move things around to make that time work? Knowing whether that slot is flexible would really help in finding a suitable time.  Thanks!  Best Vickie`,
                 id: 'mock-email-id-1',
             },
             {
@@ -162,6 +162,35 @@ export const mockMessageGetThreadsResponse = {
                     body: {
                         data: Buffer.from(
                             mockEmailHistoryWithResolution.data.messages[2].body,
+                            'utf8'
+                        ).toString('base64'),
+                    },
+                },
+                snippet: 'Mock thread snippet',
+            },
+        ],
+    },
+};
+
+export const mockMessageGetThreadsResponseNoResolution = {
+    data: {
+        id: THREAD_ID,
+        messages: [
+            {
+                id: mockEmailHistoryNoResolution.data.messages[0].id,
+                threadId: THREAD_ID,
+                payload: {
+                    headers: [
+                        {
+                            name: 'Subject',
+                            value:
+                                'Resolve Meeting Conflicts - ID f41b004c-c032-4f3a-b7b8-be831804cb03',
+                        },
+                        { name: 'From', value: 'vici@codestrap.me' },
+                    ],
+                    body: {
+                        data: Buffer.from(
+                            mockEmailHistoryNoResolution.data.messages[0].body,
                             'utf8'
                         ).toString('base64'),
                     },

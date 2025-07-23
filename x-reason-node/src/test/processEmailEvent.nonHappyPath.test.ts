@@ -1,5 +1,5 @@
 import { mockProcessEmailEventExecution } from '@xreason/__fixtures__/MachineExecutions';
-import { mockCalendarInsert, mockCalendarList, mockEmailHistoryWithResolution, mockEmailResponse, mockMessageGetResponse, mockMessageGetThreadsResponse } from '@xreason/__fixtures__/Email';
+import { mockCalendarInsert, mockCalendarList, mockEmailHistoryNoResolution, mockEmailResponse, mockMessageGetResponse, mockMessageGetThreadsResponseNoResolution } from '@xreason/__fixtures__/Email';
 
 
 let counter = 0;
@@ -45,7 +45,7 @@ jest.mock('googleapis', () => ({
                         }),
                         list: jest.fn((request: any) => {
                             console.log(`Gmail mock messages.list called with: ${request}`);
-                            return Promise.resolve(mockEmailHistoryWithResolution);
+                            return Promise.resolve(mockEmailHistoryNoResolution);
                         }),
                         get: jest.fn((request: any) => {
                             console.log(`Gmail mock messages.get called with: ${request}`);
@@ -55,7 +55,7 @@ jest.mock('googleapis', () => ({
                     threads: {
                         get: jest.fn((request: any) => {
                             console.log(`Gmail mock threads.get called with: ${request}`);
-                            return Promise.resolve(mockMessageGetThreadsResponse);
+                            return Promise.resolve(mockMessageGetThreadsResponseNoResolution);
                         }),
                     }
                 }
@@ -150,12 +150,12 @@ describe('testing Vickie', () => {
         jest.clearAllMocks();
     });
 
-    it('it handle a mock event using processEmailEvent', async () => {
+    it('it handle a mock event using processEmailEvent when no resolution is found', async () => {
         const vickie = new Vickie();
         const result = await vickie.processEmailEvent('eyJlbWFpbEFkZHJlc3MiOiJkc21pbGV5QGNvZGVzdHJhcC5tZSIsImhpc3RvcnlJZCI6MTc5MDUxMn0=', '2025-07-22T20:43:55.184Z');
         expect(result).toBeDefined();
-        expect(result.message).toBeDefined();
-        expect(result.status).toBe(200);
+        expect(result.message).toBe('Some threads failed to resolve:\n executionId: 1 message: ERROR');
+        expect(result.status).toBe(400);
     }, 120000);
 
 });

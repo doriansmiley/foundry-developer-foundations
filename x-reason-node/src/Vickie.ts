@@ -76,9 +76,9 @@ export class Vickie extends Text2Action {
                     error: '',
                     taskList: 'ERROR',
                 };
-                const system = `You are a helpful virtual ai assistant tasked with classifying ...`;
+                const system = `You are a helpful virtual ai assistant tasked with extracting meeting conflict resolutions form message histories.`;
                 const userPrompt = `
-Using the message history from the email chain below output whether or not the conflict has been resolved ...
+Using the message history below output whether or not the conflict has been resolved and the new proposed day/time.
 
 Message history:
 ${JSON.stringify(messages)}
@@ -87,6 +87,42 @@ You can only respond in JSON:
 {
   "resolutionFound": boolean,
   "resolution": string
+}
+
+For example if the message history is:
+[
+  {
+    "subject": "Resolve Meeting Conflicts - ID ad179ef1-063f-4335-8541-cfdb65f824923",
+    "from": "vici@codestrap.me",
+    "body": "Hey Dorian and Connor  nHappy Thursday! I'm Vickie, Code's AI EA. I'm having trouble scheduling a meeting for you both on July 18, 2025, between 2:00 PM and 3:00 PM. It looks like neither of you are available at that time. Could you please let me know if there's any chance you could move things around to make that time work? Knowing whether that slot is flexible would really help in finding a suitable time. Thanks! Best Vickie",
+    "id": "1234",
+    "threadId": "234dsfd"
+  },
+  {
+    "subject": "Resolve Meeting Conflicts - ID ad179ef1-063f-4335-8541-cfdb65f82492",
+    "from": "dsmiley@codestrap.me",
+    "body": "Hey Connor what about Tue at 9 AM?",
+    "id": "5678",
+    "threadId": "234dsfd"
+  },
+  {
+    "subject": "Resolve Meeting Conflicts - ID ad179ef1-063f-4335-8541-cfdb65f82492",
+    "from": "connor.deeks@codestrap.me",
+    "body": "That works.",
+    "id": "9101112",
+    "threadId": "234dsfd"
+  }
+]
+Your answer is:
+{
+  "resolutionFound": true,
+  "resolution": "Tue at 9 AM"
+}
+
+If the user specifies a resolution that can not be resolved to a specific dat/time output
+{
+  "resolutionFound": false,
+  "resolution": ""
 }
 `;
 
@@ -134,6 +170,31 @@ You can only respond in JSON:
 
         // 3. Fire all requests in parallel and wait for them all to settle
         const results = await Promise.allSettled(threadPromises);
+
+        // 1. Extract failed results with shape you defined
+        const failed = results
+            .map((res) => {
+                if (res.status === 'fulfilled' && res.value?.status === 400) {
+                    return res.value;
+                }
+                return undefined;
+            })
+            .filter(item => item !== undefined);
+
+        // 2. If there are any failures, build an aggregated error response
+        if (failed.length > 0) {
+            const aggregatedMessage = failed.reduce((msg, curr) => {
+                return msg + `\n executionId: ${curr.executionId} message: ${curr.message}`;
+            }, 'Some threads failed to resolve:');
+
+            return {
+                status: 400,
+                executionId: uuidv4(),
+                message: aggregatedMessage,
+                error: 'At least one thread failed',
+                taskList: 'ERROR',
+            };
+        }
 
         // return the structured response
         return {

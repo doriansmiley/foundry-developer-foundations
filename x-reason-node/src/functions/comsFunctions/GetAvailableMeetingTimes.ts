@@ -2,6 +2,7 @@ import { Context, MachineEvent } from "@xreason/reasoning/types";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
 import { container } from "@xreason/inversify.config";
 import { GeminiService, ProposedTimes, TYPES, MeetingRequest, OfficeService } from "@xreason/types";
+import { DraftAtendeeEmailResponse } from "./ResolveUnavailableAttendees";
 
 
 // This function gets the attendees from the input context and then
@@ -22,6 +23,19 @@ export async function getAvailableMeetingTimes(context: Context, event?: Machine
         console.log(`formatted int date: ${formatted}`);
         const isPDT = formatted.includes("PDT");
 
+        const stateId = context.stack?.[context.stack?.length - 1];
+        const resolveStateId = context.stack?.[context.stack?.length - 2];
+        const { resolution } = resolveStateId && context[resolveStateId] ? context[resolveStateId] as DraftAtendeeEmailResponse : { resolution: undefined };
+        const { allAvailable } = stateId && context[stateId] ? context[stateId] as ProposedTimes : { allAvailable: false };
+        let resolutionClause = '';
+        if (!allAvailable && resolution) {
+            resolutionClause = `# Conflict Resolution
+All the attendees were previously not available at the proposed time.
+The resolution for the conflict that has been agreed upon by al parties is: ${resolution}. 
+Update the meeting time to use this resolution. Output local date string in Pacific Time. 
+The current day/time in Pacific Time is: ${new Date().toString()}
+PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}`;
+        }
         // we are all on the west coast so we hard code our time zone for now
         const system = `You are a helpful virtual assistant tasked with meeting scheduling.
     You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Vickie, Code's AI EA" or similar. 
@@ -39,8 +53,10 @@ Using the meeting request from the end user extract the key details. You must ex
 4. The time frame
 5. The local date string for the proposed day/time if any
 
-# The meeting request from the end user:
+# The meeting request from the end user is:
 ${task}
+
+${resolutionClause}
 
 The complete task list which may contain additional information about the meeting such as the subject or agenda:
 ${context.solution}
@@ -56,8 +72,8 @@ If not subject can be extracted for this meeting request use "Circle Up"
 5. Extract the meeting duration in minutes. If the duration can not be inferred return 30.
 6. Determine the time frame as one of the following: "user defined exact date/time", "as soon as possible", "this week", or "next week". If the user specifies "today" without an exact time use "as soon as possible". If the user did not specify a timeframe you must use "as soon as possible".
         6.5 If the user specifies a date 2025-04-11 without a time use 9 AM Pacific Time "Fri Apr 11 2025 09:00:00 GMT-0700 (Pacific Daylight Time)"
-7. If the time frame is "user defined exact date/time" output the local date string in the proposed timezone. 
-The current day/time in your timezone is: ${new Date().toString()}
+7. If the time frame is "user defined exact date/time" output local date string in Pacific Time.
+The current day/time in Pacific Time is: ${new Date().toString()}
 PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}
 
 You can only respond in JSON in the following format:
