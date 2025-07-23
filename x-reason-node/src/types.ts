@@ -50,6 +50,8 @@ export const Schemas = {
                     subject: Type.Optional(Type.String()),
                     from: Type.Optional(Type.String()),
                     body: Type.Optional(Type.String()),
+                    id: Type.Optional(Type.String()),
+                    threadId: Type.Optional(Type.String()),
                 })
             ),
         })
@@ -212,6 +214,14 @@ export interface TimeRange {
 export interface BusyPeriod {
     start: string;
     end: string;
+}
+
+export type EmailMessage = {
+    subject?: string;
+    from?: string;
+    body?: string;
+    id?: string;
+    threadId?: string;
 }
 
 export type AvailableTime = {

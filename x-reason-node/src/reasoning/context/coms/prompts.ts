@@ -409,6 +409,7 @@ export async function aiTransition(
   Return the target for the next state. Let's take this step by step:
   1. Determine which step in the task list the user in on based on the current state and context.
   2. Determine which transition logic from the task to apply based on the results of each state contained in the context.
+    2.1 When resolving meeting conflicts, if a resolution has been found, you must reenter the find available times state!
   3. Determine the target to return. Show your work as an enumerated markdown list.
   `;
 

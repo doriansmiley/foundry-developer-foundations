@@ -1,5 +1,5 @@
 import { gmail_v1 } from 'googleapis';
-import { ReadEmailHistoryContext } from '@xreason/types';
+import { EmailMessage, ReadEmailHistoryContext } from '@xreason/types';
 
 /**
  * Extract a header value from the message
@@ -31,7 +31,7 @@ function getPlainTextBody(message: gmail_v1.Schema$Message): string | undefined 
     }
 }
 
-export async function readEmailHistory(gmail: gmail_v1.Gmail, context: ReadEmailHistoryContext): Promise<{ subject: string | undefined, from: string | undefined, body: string | undefined }[]> {
+export async function readEmailHistory(gmail: gmail_v1.Gmail, context: ReadEmailHistoryContext): Promise<EmailMessage[]> {
     // get all unread emails for the since since 15 minutes before the notification
     // yes this is the best way to do this, don't ask unless you want to understand how historyId works
     const afterEpoch = Math.floor((new Date(context.publishTime).getTime() - 15 * 60 * 1000) / 1000);
@@ -89,10 +89,12 @@ export async function readEmailHistory(gmail: gmail_v1.Gmail, context: ReadEmail
     const results = threadResponses
         .flatMap(res => res.data.messages || [])
         .map(msg => {
+            const id = msg.id || undefined;
+            const threadId = msg.threadId || undefined;
             const subject = getHeader(msg, 'Subject');
             const from = getHeader(msg, 'From');
             const body = getPlainTextBody(msg);
-            return { subject, from, body };
+            return { subject, from, body, id, threadId };
         });
 
     return results;
