@@ -181,7 +181,8 @@ function createComputeModule(): ComputeModuleType {
   })
     .register("processEmailEvent", async ({ payload }) => {
       try {
-        const { data, publishTime, subscription } = JSON.parse(payload) as { data: string, publishTime: string, subscription: string };
+        const { message } = JSON.parse(payload) as { message: { data: string, publishTime: string, messageId: string }, subscription: string };
+        const { data, publishTime } = message;
         const result = await vickie.processEmailEvent(data, publishTime);
         return result;
       } catch (e) {

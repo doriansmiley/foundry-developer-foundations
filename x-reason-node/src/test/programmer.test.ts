@@ -8,6 +8,7 @@ jest.mock('@xreason/utils', () => ({
 }));
 
 import { StateConfig, programV1, Context, MachineEvent, Task } from "@xreason/reasoning";
+import { getFunctionCatalog, stateConfigArray, stateConfigResolvePastStates } from "@xreason/__fixtures__/Programmer";
 
 describe('Testing Programmer', () => {
 
@@ -18,65 +19,6 @@ describe('Testing Programmer', () => {
   test("Test the programV1 function passing state nodes array", async () => {
     // TODO refactor this to use the headless interpreter when it's done
     return new Promise((resolve, reject) => {
-      const stateConfigArray: StateConfig[] = [
-        {
-          id: "RecallSolutions",
-          transitions: [
-            { on: "CONTINUE", target: "GenerateIngredientsList" },
-            { on: "ERROR", target: "failure" },
-          ],
-        },
-        {
-          id: "GenerateIngredientsList",
-          transitions: [
-            { on: "CONTINUE", target: "IngredientDatabase" },
-            { on: "ERROR", target: "failure" },
-          ],
-        },
-        {
-          id: "IngredientDatabase",
-          transitions: [
-            { on: "CONTINUE", target: "parallelChecks" },
-            { on: "ERROR", target: "failure" },
-          ],
-        },
-        {
-          id: "parallelChecks",
-          type: "parallel",
-          states: [
-            {
-              id: "RegulatoryCheck",
-              transitions: [
-                { on: "CONTINUE", target: "success" },
-                { on: "ERROR", target: "failure" },
-              ],
-            },
-            {
-              id: "ConcentrationEstimation",
-              transitions: [
-                { on: "CONTINUE", target: "success" },
-                { on: "ERROR", target: "failure" },
-              ],
-            },
-          ],
-          onDone: "FormulationSimulation",
-        },
-        {
-          id: "FormulationSimulation",
-          transitions: [
-            { on: "CONTINUE", target: "success" },
-            { on: "ERROR", target: "failure" },
-          ],
-        },
-        {
-          id: "success",
-          type: "final",
-        },
-        {
-          id: "failure",
-          type: "final",
-        },
-      ];
       const sampleCatalog = new Map<string, Task>([
         [
           "RecallSolutions",
@@ -332,6 +274,59 @@ describe('Testing Programmer', () => {
               }),
             );
             expect(machineExecution.machine.context.stack?.length).toBe(7);
+            resolve("success");
+            break;
+          case "failure":
+            // TODO error reporting
+            reject(state.context);
+            break;
+        }
+      });
+
+      machineExecution.start();
+    });
+  });
+
+  test("Test the programV1 function passing state nodes array that requires resolving a transition target that occurred in the past, in this case getAvailableMeetingTimes", async () => {
+    return new Promise((resolve, reject) => {
+
+      const dispatch = (action: any) => {
+        console.log(`dispatch called with: ${action}`);
+        machineExecution.send({
+          type: "CONTINUE",
+          payload: {},
+        });
+
+      }
+
+      const functionCatalog = getFunctionCatalog(dispatch);
+
+      const result = programV1(stateConfigResolvePastStates, functionCatalog);
+
+      const withContext = result.withContext({
+        status: 0,
+        requestId: "test",
+        stack: [],
+      });
+
+      const machineExecution = interpret(withContext).onTransition((state) => {
+        const type = machineExecution.machine.states[state.value as string]?.meta?.type;
+
+        switch (state.value) {
+          case "success":
+            // note our stub functions do not do anything for this test but call continue, hence the much simpler results
+            expect(JSON.stringify(state.context)).toBe(
+              JSON.stringify({
+                status: 0,
+                requestId: "test",
+                stack: [
+                  "getAvailableMeetingTimes|11",
+                  "scheduleMeeting|13",
+                  "success"
+                ]
+              }),
+            );
+            expect(machineExecution.machine.context.stack?.length).toBe(3);
             resolve("success");
             break;
           case "failure":
