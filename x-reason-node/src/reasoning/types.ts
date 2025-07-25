@@ -68,7 +68,7 @@ export type AiTransition = {
   // takes the task list returned by the solver, the id of the current state, 
   // and the value returned by the state's implementation function
   // returns true or false
-  transition(taskList: string, currentState: string, stateValue: string, aiTransition: Prompt): Promise<string>;
+  transition(taskList: string, currentState: string, stateValue: string, aiTransition: Prompt, executionId: string): Promise<string>;
 };
 
 export type Prompt = (...args: any[]) => Promise<{ user: string; system: string; }>

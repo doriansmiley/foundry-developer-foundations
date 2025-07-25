@@ -11,8 +11,7 @@ import {
 
 import { extractJsonFromBackticks } from "@xreason/utils";
 import { container } from "@xreason/inversify.config";
-import { GeminiService, TYPES } from "@xreason/types";
-import { getLogger } from "@xreason/utils/logCollector";
+import { GeminiService, LoggingService, TYPES } from "@xreason/types";
 
 
 async function solve(query: string, solver: Prompt): Promise<string> {
@@ -178,9 +177,9 @@ async function evaluate(input: EvaluationInput, evaluate: Prompt): Promise<Evalu
     return evaluation;
 }
 
-async function transition(taskList: string, currentState: string, payload: string, aiTransition: Prompt): Promise<string> {
+async function transition(taskList: string, currentState: string, payload: string, aiTransition: Prompt, executionId: string): Promise<string> {
     const { user, system } = await aiTransition(taskList, currentState, payload);
-    const { logger } = getLogger();
+    const { log } = container.get<LoggingService>(TYPES.LoggingService);
 
     const geminiService = container.get<GeminiService>(TYPES.GeminiService);
     const response = await geminiService(user, system);
@@ -188,7 +187,7 @@ async function transition(taskList: string, currentState: string, payload: strin
     let value = extractJsonFromBackticks(response).trim() ?? '';
 
     console.log(`engine.v2.ts.transition result is: ${value}`);
-    logger(value);
+    log(executionId, value);
 
     // coerce the reasoning step into a state ID
     const updatedUserMessage = `${user}

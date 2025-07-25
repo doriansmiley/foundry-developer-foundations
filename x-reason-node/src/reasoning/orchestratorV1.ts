@@ -3,8 +3,7 @@ import { State } from "xstate";
 import { xReasonFactory, SupportedEngines } from '@xreason/reasoning/factory';
 import { headlessInterpreter, engineV1 as engine, StateConfig, Solutions, ActionType, Context, MachineEvent } from ".";
 import { sanitizeJSONString, uuidv4 } from "@xreason/utils";
-import { getLogger } from "@xreason//utils/logCollector";
-import { MachineDao, MachineExecutions, TYPES } from '@xreason/types';
+import { LoggingService, MachineDao, MachineExecutions, TYPES } from '@xreason/types';
 import { container } from "@xreason/inversify.config";
 
 
@@ -16,6 +15,7 @@ export async function getState(
 ) {
   const { programmer, aiTransition, evaluate, functionCatalog } = xReasonFactory(xreason)({});
   let currentState: State<Context, MachineEvent> | undefined;
+
   const dispatch = (action: ActionType) => {
     console.log(`route dispatch callback called`);
     switch (action.type) {
@@ -27,14 +27,18 @@ export async function getState(
         break;
     }
   };
+
   const sendProxy = (action: ActionType) => {
     send(action, action.payload?.stateId as string);
   };
+
   const functions = functionCatalog(sendProxy);
+
   const toolsCatalog = Array.from(functions.entries()).map((item) => {
     return [item[0], { description: item[1].description }];
   });
-  const { getLog, logger } = getLogger();
+
+  const { getLog, log } = container.get<LoggingService>(TYPES.LoggingService);
 
   // retrieve previous execution if there was one
   const machineDao = container.get<MachineDao>(TYPES.MachineDao);
@@ -140,9 +144,11 @@ export async function getState(
         solution.plan,
         JSON.stringify(programmedState),
         JSON.stringify(stateDefinition.context),
-        aiTransition
+        aiTransition,
+        solution.id
       );
-      logger(`The AI transition returned the target state of: ${nextState}`);
+
+      log(solution.id, `The AI transition returned the target state of: ${nextState}`);
       console.log(`resetting the starting state to: ${nextState}`);
       // Create a new State object with the updated value
       startingState = State.create<Context, MachineEvent>({
@@ -228,6 +234,6 @@ export async function getState(
     evaluationResult,
     context,
     jsonState,
-    logs: getLog(),
+    logs: getLog(solution.id),
   };
 }

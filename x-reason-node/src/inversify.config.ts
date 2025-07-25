@@ -22,6 +22,8 @@ import { makeMemoryRecallDao } from "@xreason/domain/memoryRecallDao";
 import { makeContactsDao } from "@xreason/domain/contactsDao";
 import { makeTrainingDataDao } from "@xreason/domain/trainingDataDao";
 import { gpt4oService } from "@xreason/services/gpt4oService";
+import { getLogger } from "./utils";
+import { createLoggingService } from "./services/loggingService";
 
 // TODO refactor with a service facade, or maybe just a getContainer method to allow for overriding default definitions
 // a service facade could hide the implementation details but it would be a lot of work and the resulting types would not look different the inversify
@@ -98,6 +100,12 @@ container
 container
     .bind(TYPES.EmbeddingsService)
     .toConstantValue(embeddingsService);
+
+container
+    .bind(TYPES.LoggingService)
+    // perExecBytes 1 MB max size
+    // globalBytes 64 MB max size
+    .toConstantValue(createLoggingService(1 * 1024 * 1024, 64 * 1024 * 1024));
 
 container
     .bind(TYPES.GeminiSearchStockMarket)

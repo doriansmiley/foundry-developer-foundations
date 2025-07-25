@@ -3,7 +3,7 @@ import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundati
 import { SupportedEngines } from "@xreason/reasoning/factory";
 import { Text2Action } from "@xreason/Text2Action";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
-import { GeminiService, ThreadsDao, TYPES, OfficeService, EmailMessage, MachineDao } from '@xreason/types';
+import { GeminiService, ThreadsDao, TYPES, OfficeService, EmailMessage, MachineDao, LoggingService } from '@xreason/types';
 import { container } from "@xreason/inversify.config";
 import { Context } from './reasoning';
 
@@ -37,6 +37,7 @@ export class Vickie extends Text2Action {
         const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
         const decodedJson = Buffer.from(data, 'base64').toString('utf8');
         const { emailAddress } = JSON.parse(decodedJson) as { emailAddress: string; historyId: number };
+        const { log } = container.get<LoggingService>(TYPES.LoggingService);
 
         const result = await officeService.readEmailHistory({
             email: emailAddress,
@@ -136,17 +137,29 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                     resolution: string;
                 };
 
-                if (!resolutionFound) {
-                    errorResponse.error = 'No resolution found';
-                    return errorResponse;
-                } // Nothing to do for this thread
-
                 // Grab machine ID from subject
                 const id = messages[0]?.subject?.split('Resolve Meeting Conflicts - ID')[1];
                 if (!id) {
                     errorResponse.error = 'No id found';
                     return errorResponse;
                 };
+
+                log(id, `The model returned the following email thread ${messages[0]?.subject}
+                    ${resolutionFound}
+                    ${resolution}
+
+                    `);
+
+                if (!resolutionFound) {
+                    errorResponse.error = 'No resolution found';
+
+                    log(id, `The model returned "No resolution found" for following email thread ${messages[0]?.subject}
+                    ${resolutionFound}
+                    ${resolution}
+                    `);
+
+                    return errorResponse;
+                } // Nothing to do for this thread
 
                 const machineDao = container.get<MachineDao>(TYPES.MachineDao);
                 const { state } = await machineDao.read(id);
@@ -155,10 +168,25 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                 const currentStateId = context.stack?.pop();
                 if (!currentStateId) {
                     errorResponse.error = 'No currentStateId found';
+
+                    log(id, `No currentStateId found email thread ${messages[0]?.subject}
+                    The context is
+                    ${JSON.stringify(context)}
+                    currentStateId is:
+                    ${currentStateId}
+                    `);
+
                     return errorResponse;
                 };
 
                 const contextUpdate = { [currentStateId]: { resolution } };
+
+                log(id, `Sending updated context for the following email thread ${messages[0]?.subject}
+                    contextUpdate:
+                    ${JSON.stringify(contextUpdate)}
+                    `);
+
+                // logs will be persisted in the call to getNextState
                 await this.getNextState(
                     undefined,
                     true,
@@ -224,6 +252,7 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
         attributes: { endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/vickie/execute` }
     })
     public async askVickie(query: string, userId: string, threadId?: string): Promise<VickieResponse> {
+        const { log } = container.get<LoggingService>(TYPES.LoggingService);
         let generatedTaskList: undefined | string = undefined;
         let newThread = (!threadId || threadId.length === 0);
 
@@ -241,14 +270,22 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
         if (newThread) {
             // create a new solution with our solver
             const { status, taskList, executionId } = await this.createComsTasksList(query, userId, threadId);
+
             // if we get a bad response skip calling execute task list
             if (status !== 200 || !taskList) {
+                log(executionId, `askVickie failed to create new coms task list. 
+                    You are missing required information: 
+                    ${taskList}. 
+                    Please fix your shit and resend.`);
                 return {
                     status,
                     executionId,
                     message: `You are missing required information: ${taskList}. Please fix your shit and resend.`,
                 };
             }
+
+            log(executionId, `askVickie created new coms task list.\n${taskList}.`);
+
             // threadId and executionId are identical. 
             // If threadId is defined there must be an associated state machine execution where executionId === threadId
             // if its not defined we need to create a new task list and generate a new machine execution which will happen automatically

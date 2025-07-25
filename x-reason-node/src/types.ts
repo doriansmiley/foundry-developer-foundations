@@ -24,6 +24,7 @@ export const TYPES = {
     MessageService: Symbol.for("MessageService"),
     EmbeddingsService: Symbol.for("EmbeddingsService"),
     TrainingDataDao: Symbol.for("TrainingDataDao"),
+    LoggingService: Symbol.for("LoggingService"),
 };
 
 // Schema Definitions for compute module
@@ -596,6 +597,11 @@ export type OfficeService = {
 
 export type MessageService = {
     sendMessage: (message: Message) => Promise<MessageResponse>,
+}
+
+export type LoggingService = {
+    getLog: (executionId: string) => string,
+    log: (executionId: string, message: string) => void,
 }
 
 export type RfpResponsesResult = {
