@@ -308,6 +308,8 @@ ${result}`;
             JSON.stringify(machine),
             JSON.stringify(stateDefinition),
             execution.logs!,
+            '', // we have to send default values for lockOwner and lockUntil or the OSDK will shit a brick. It still can't handle optional params
+            1,
         );
 
         const threadDao = container.get<ThreadsDao>(TYPES.ThreadsDao);

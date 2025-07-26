@@ -411,6 +411,10 @@ export interface MachineExecutions {
     /** State */
     /** The current state of the state machine execution */
     state: string | undefined;
+    /** The mutex used for distributed locks. This prevents things like infinite loops when resolving meeting conflicts */
+    lockOwner?: string;
+    /** The time expire of the lock */
+    lockUntil?: number;
 }
 
 export interface Communications {
@@ -657,7 +661,14 @@ export type WorldDao = (input: GreetingInput) => Promise<GreetingResult>;
 export type UserDao = (userId?: string) => Promise<User>;
 
 export type MachineDao = {
-    upsert: (id: string, stateMachine: string, state: string, logs: string) => Promise<MachineExecutions>,
+    upsert: (
+        id: string,
+        stateMachine: string,
+        state: string,
+        logs: string,
+        lockOwner?: string,
+        lockUntil?: number,
+    ) => Promise<MachineExecutions>,
     delete: (machineExecutionId: string) => Promise<void>,
     read: (machineExecutionId: string) => Promise<MachineExecutions>,
 };

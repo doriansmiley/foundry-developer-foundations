@@ -37,7 +37,7 @@ export class Vickie extends Text2Action {
         const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
         const decodedJson = Buffer.from(data, 'base64').toString('utf8');
         const { emailAddress } = JSON.parse(decodedJson) as { emailAddress: string; historyId: number };
-        const { log } = container.get<LoggingService>(TYPES.LoggingService);
+        const { log, getLog } = container.get<LoggingService>(TYPES.LoggingService);
 
         const result = await officeService.readEmailHistory({
             email: emailAddress,
@@ -46,6 +46,7 @@ export class Vickie extends Text2Action {
         // filter by subject to find threads Vickie generated
         const resolveMeetingConflicts = result.messages.filter(message => {
             if (message.subject) {
+                console.log(`processEmailEvent checking subject: ${message.subject}`);
                 return message.subject.indexOf('Resolve Meeting Conflicts - ID') >= 0;
             }
 
@@ -63,6 +64,9 @@ export class Vickie extends Text2Action {
         }, new Map<string, EmailMessage[]>);
 
         const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+
+        console.log(`processEmailsEvent found the following meeting conflict emails:
+            ${JSON.stringify(Array.from(resolveMeetingConflicts.keys()))}`);
 
         // for each thread in the map call an llm to determine of a resolution has been found, and if so rehydrate the machine
         // passing the updated information and calling getNextState
@@ -127,6 +131,30 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
 }
 `;
 
+                // Grab machine ID from subject
+                const id = messages[0]?.subject?.split('Resolve Meeting Conflicts - ID')[1]?.trim();
+                if (!id) {
+                    errorResponse.error = 'No id found';
+                    return errorResponse;
+                };
+
+                const machineDao = container.get<MachineDao>(TYPES.MachineDao);
+                const { state, lockOwner, lockUntil, currentState, logs, machine } = await machineDao.read(id);
+
+                // If another owner holds a live lease, skip
+                if (
+                    lockOwner &&
+                    lockOwner !== threadId &&
+                    // lockUntil must be defined if lockOwner is set, enforced in our upsert function
+                    lockUntil! > Date.now()
+                ) {
+                    errorResponse.error = `Locked by ${lockOwner} until ${lockUntil}`;
+                    return errorResponse;
+                }
+
+                // update the machine before proceeding with a lock to ensure we don't get redundant executions (mutex)!
+                await machineDao.upsert(id, machine!, currentState!, logs!, threadId, Date.now() + (30 * 60 * 1000));
+
                 // Ask the model
                 const response = await geminiService(userPrompt, system);
                 const extracted = extractJsonFromBackticks(response);
@@ -137,23 +165,18 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                     resolution: string;
                 };
 
-                // Grab machine ID from subject
-                const id = messages[0]?.subject?.split('Resolve Meeting Conflicts - ID')[1];
-                if (!id) {
-                    errorResponse.error = 'No id found';
-                    return errorResponse;
-                };
-
-                log(id, `The model returned the following email thread ${messages[0]?.subject}
-                    ${resolutionFound}
-                    ${resolution}
+                log(id, `The model returned the following email thread 
+                    subject: ${messages[0]?.subject}
+                    resolutionFound: ${resolutionFound}
+                    resolution: ${resolution}
 
                     `);
 
                 if (!resolutionFound) {
                     errorResponse.error = 'No resolution found';
 
-                    log(id, `The model returned "No resolution found" for following email thread ${messages[0]?.subject}
+                    log(id, `The model returned "No resolution found" for following email thread 
+                    ${messages[0]?.subject}
                     ${resolutionFound}
                     ${resolution}
                     `);
@@ -161,11 +184,9 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                     return errorResponse;
                 } // Nothing to do for this thread
 
-                const machineDao = container.get<MachineDao>(TYPES.MachineDao);
-                const { state } = await machineDao.read(id);
-
                 const { context } = JSON.parse(state!) as { context: Context };
                 const currentStateId = context.stack?.pop();
+
                 if (!currentStateId) {
                     errorResponse.error = 'No currentStateId found';
 
@@ -179,7 +200,7 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                     return errorResponse;
                 };
 
-                const contextUpdate = { [currentStateId]: { resolution } };
+                const contextUpdate = { [currentStateId]: { resolution, processEmail: true } };
 
                 log(id, `Sending updated context for the following email thread ${messages[0]?.subject}
                     contextUpdate:
@@ -194,10 +215,15 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                     JSON.stringify(contextUpdate),
                     SupportedEngines.COMS
                 );
+
+                console.log(getLog(id));
             });
 
         // 3. Fire all requests in parallel and wait for them all to settle
         const results = await Promise.allSettled(threadPromises);
+
+        console.log(`processEmailEvent settled the following promises:
+            ${JSON.stringify(results)}`);
 
         // 1. Extract failed results with shape you defined
         const failed = results

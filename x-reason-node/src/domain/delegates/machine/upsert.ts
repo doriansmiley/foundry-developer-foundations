@@ -1,6 +1,14 @@
 import { FoundryClient, MachineExecutions } from "@xreason/types";
 
-export async function upsertMachineExecution(id: string, stateMachine: string, state: string, logs: string, client: FoundryClient): Promise<MachineExecutions> {
+export async function upsertMachineExecution(
+    id: string,
+    stateMachine: string,
+    state: string,
+    logs: string,
+    client: FoundryClient,
+    lockOwner?: string,
+    lockUntil?: number,
+): Promise<MachineExecutions> {
     console.log(`upsertMachineExecution machineId: ${id}`);
 
     const token = await client.auth.signIn();
@@ -19,6 +27,8 @@ export async function upsertMachineExecution(id: string, stateMachine: string, s
             stateMachine,
             state,
             logs,
+            lockOwner,
+            lockUntil,
         },
         options: {
             returnEdits: "ALL"

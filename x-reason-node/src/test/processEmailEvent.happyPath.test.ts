@@ -20,7 +20,7 @@ jest.mock("@xreason/services/geminiService", () => (
 
 jest.mock('@xreason/domain/machineDao', () => ({
     makeMachineDao: jest.fn(() => ({
-        upsert: jest.fn((id: string, stateMachine: string, state: string, logs: string) => {
+        upsert: jest.fn((id: string, stateMachine: string, state: string, logs: string, lockOwner?: string, lockUntil?: number) => {
             return mockProcessEmailEventExecution;
         }),
         delete: jest.fn(),

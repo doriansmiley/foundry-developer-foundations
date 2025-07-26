@@ -175,7 +175,9 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
             solution.id,
             JSON.stringify(result.stateMachine),
             result.jsonState,
-            result.logs ?? ''
+            result.logs ?? '',
+            '', // we have to send default values for lockOwner and lockUntil or the OSDK will shit a brick. It still can't handle optional params
+            1,
         );
 
         return machine;

@@ -11,8 +11,15 @@ export function makeMachineDao(): MachineDao {
 
     return {
         // TODO code out all methods using OSDK API calls
-        upsert: async (id: string, stateMachine: string, state: string, logs: string) => {
-            const machine = await upsertMachineExecution(id, stateMachine, state, logs, client);
+        upsert: async (
+            id: string,
+            stateMachine: string,
+            state: string,
+            logs: string,
+            lockOwner?: string,
+            lockUntil?: number,
+        ) => {
+            const machine = await upsertMachineExecution(id, stateMachine, state, logs, client, lockOwner, lockUntil);
 
             return machine;
         },
