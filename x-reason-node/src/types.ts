@@ -7,6 +7,7 @@ export const TYPES = {
     FoundryClient: Symbol.for("FoundryClient"),
     RangrClient: Symbol.for("RangrClient"),
     WeatherService: Symbol.for("WeatherService"),
+    EnergyService: Symbol.for("EnergyService"),
     WorldDao: Symbol.for("WorldDao"),
     UserDao: Symbol.for("UserDao"),
     MachineDao: Symbol.for("MachineDao"),
@@ -348,7 +349,71 @@ export interface RangrClient {
     getUser: () => Promise<User>;
 }
 
+export interface GasScenarioResult {
+    date: string;
+    baselinePrice: number;
+    scenarioPrice: number;
+    deltaVsBaseline: number;
+    annualIncrementalCostBn: number;
+    pctOfCaGdp: number;
+    impliedUsGdpDrag: number;
+}
+
+export interface EIAResponse {
+    response?: {
+        data?: Array<{
+            period: string;
+            value: string;
+        }>;
+    };
+}
+
+export interface VegaGasTrackerData {
+    $schema: string;
+    description: string;
+    data: {
+        name: string;
+        values: Array<{
+            date: string;
+            scenario: number;
+            delta: number;
+            annualCost: number;
+            pctOfCaGdp: number;
+            usGdpDrag: number;
+        }>;
+    };
+    mark: string;
+    encoding: {
+        x: {
+            field: string;
+            type: string;
+            title: string;
+        };
+        y: {
+            field: string;
+            type: string;
+            title: string;
+        };
+        tooltip: Array<{
+            field: string;
+            type: string;
+            title: string;
+        }>;
+    };
+}
+
+
 // Basic example of calling other services besides Foundry.
+export type EnergyService = {
+    read: (
+        scenarioPrices?: number[],
+        caGallonsYearn?: number,
+        caGdp?: number,
+        caShareUsGdp?: number
+    ) => Promise<GasScenarioResult[]>,
+    getVegaChartData: (results: GasScenarioResult[]) => VegaGasTrackerData
+}
+
 export interface WeatherService {
     (city: string): Promise<string>;
 }

@@ -29,6 +29,9 @@ declare global {
             SLACK_BOT_TOKEN: string;
             SLACK_APP_TOKEN: string;
             SLACK_BASE_URL: string;
+            EIA_BASE_URL: string;
+            EIA_API_KEY: string;
+            CA_SERIES_ID: string;
         }
     }
 }
