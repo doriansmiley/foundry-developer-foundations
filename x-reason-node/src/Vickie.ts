@@ -140,11 +140,17 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
 
                 const machineDao = container.get<MachineDao>(TYPES.MachineDao);
                 const { state, lockOwner, lockUntil, logs, machine } = await machineDao.read(id);
+                // first in wins for lock ID. The assumption is we have single event concurrency configured
+                // as Foundry doesn't provide a distributed locks solution. Then the first email address processed in the thread
+                // will be assigned the owner
+                // TODO add the eventID from pub/sub to the input params so we can handle the same event being processed twice
+                // remember Google Pub/Sub it garenteed at least once delivery, meaning you can get the same event twice!
+                const lockOwnerId = `${emailAddress}-${threadId}`;
 
                 // If another owner holds a live lease, skip
                 if (
                     lockOwner &&
-                    lockOwner !== threadId &&
+                    lockOwner !== lockOwnerId &&
                     // lockUntil must be defined if lockOwner is set, enforced in our upsert function
                     lockUntil! > Date.now()
                 ) {
@@ -155,10 +161,14 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                 // update the machine before proceeding with a lock to ensure we don't get redundant executions (mutex)!
                 // this can occur within the same thread if the proposed time to resolve the conflict isn't actually available
                 // this will result in a new conflict email being generated with a different thread ID adn can generate an infinite loop!
-                // by using a lock we can prevent his from happening. I use 5 minutes out of an abundance of caution. This could likely be much lower
+                // While in theory this same mechanism could handle multiple concurrent events it would likely result in a large number of erros
+                // being thrown as Foundry should reject updates for stale records (have been modified since read). But I don't know id
+                // the OSDK API enforces this policy or not. Functions did, but I think that was only in the context of a single function execution as it maintained a cache
+                // IMPORTANT: figure out if upsert methods are responsible for enforcing rejections of writes on stale data
+                // by using a lock we can prevent his from happening. I use 15 minutes out of an abundance of caution. This could likely be much lower
                 // like 1 - 2 minutes
                 try {
-                    await machineDao.upsert(id, machine!, state!, logs!, threadId, Date.now() + (5 * 60 * 1000));
+                    await machineDao.upsert(id, machine!, state!, logs!, lockOwnerId, Date.now() + (15 * 60 * 1000));
                 } catch (e) {
                     console.log(`failed to upsert the machine in order to set lock:
                         message: ${(e as Error).message}

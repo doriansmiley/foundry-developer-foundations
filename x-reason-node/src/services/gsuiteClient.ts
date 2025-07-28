@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 import { Buffer } from 'buffer';
-import { CalendarContext, EmailContext, FindOptimalMeetingTimeOutput, MeetingRequest, OfficeService, ReadEmailHistoryContext, ScheduleMeetingOutput, SendEmailOutput, WatchEmailsInput } from '@xreason/types';
+import { CalendarContext, EmailContext, FindOptimalMeetingTimeOutput, GSuiteCalendarService, MeetingRequest, OfficeService, ReadEmailHistoryContext, ScheduleMeetingOutput, SendEmailOutput, WatchEmailsInput } from '@xreason/types';
 import { findOptimalMeetingTime } from '@xreason/services/delegates/gsuite/findOptimalMeetingTime';
 import { scheduleMeeting } from '@xreason/services/delegates/gsuite/scheduleMeeting';
 import { sendEmail } from '@xreason/services/delegates/gsuite/sendEmail';
@@ -87,7 +87,7 @@ async function makeClient(user: string) {
     return { emailClient, calendarClient }
 }
 
-export async function makeGSuiteClient(user: string): Promise<OfficeService> {
+export async function makeGSuiteClient(user: string): Promise<GSuiteCalendarService> {
     const { emailClient, calendarClient } = await makeClient(user);
 
     return {
@@ -121,5 +121,7 @@ export async function makeGSuiteClient(user: string): Promise<OfficeService> {
 
             return result;
         },
+        getCalendarClient: () => calendarClient,
+        getEmailClient: () => emailClient,
     }
 }

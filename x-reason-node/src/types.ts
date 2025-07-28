@@ -2,6 +2,7 @@ import { ComputeModule } from '@palantir/compute-module';
 import type { Client } from "@osdk/client";
 import { Type, Static } from '@sinclair/typebox';
 import { StateValue } from 'xstate';
+import { calendar_v3, gmail_v1 } from 'googleapis';
 
 export const TYPES = {
     FoundryClient: Symbol.for("FoundryClient"),
@@ -252,6 +253,12 @@ export type MeetingRequest = {
         end_hour: number;
     }
 }
+
+export type DerivedWindow = {
+    windowStartLocal: Date;
+    windowEndLocal: Date;
+    slotStepMinutes: number;
+};
 
 export type Meeting = {
     "id": string;
@@ -663,6 +670,11 @@ export type OfficeService = {
     readEmailHistory: (context: ReadEmailHistoryContext) => Promise<ReadEmailOutput>,
     watchEmails: (context: WatchEmailsInput) => Promise<WatchEmailsOutput>,
 }
+
+export type GSuiteCalendarService = {
+    getCalendarClient: () => calendar_v3.Calendar;
+    getEmailClient: () => gmail_v1.Gmail;
+} & OfficeService;
 
 export type MessageService = {
     sendMessage: (message: Message) => Promise<MessageResponse>,
