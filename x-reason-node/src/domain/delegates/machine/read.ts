@@ -24,7 +24,8 @@ export async function readMachineExecution(id: string, client: FoundryClient): P
         throw new Error(`An error occurred while calling read machine errorInstanceId: ${apiResponse.errorInstanceId} errorCode: ${apiResponse.errorCode}`);
     }
 
-    console.log(`the machine execution ontology returned: ${JSON.stringify(apiResponse)}`)
+    // trimming this out because the logs make these object massive
+    // console.log(`the machine execution ontology returned: ${JSON.stringify(apiResponse)}`)
 
     return apiResponse as MachineExecutions;
 }

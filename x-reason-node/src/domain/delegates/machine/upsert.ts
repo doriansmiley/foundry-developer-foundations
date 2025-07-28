@@ -44,7 +44,9 @@ export async function upsertMachineExecution(
     const result = await apiResult.json() as any;
 
     if (!result.edits || result.edits.edits.length === 0) {
-        throw new Error('Failed to upsert machine message to the ontolgoy.');
+        throw new Error(`Failed to upsert machine message to the ontology with:
+            ${JSON.stringify(result)}
+            `);
     }
 
     console.log(`upsert machine action returned: ${result?.edits?.edits?.[0]}`);
@@ -58,7 +60,8 @@ export async function upsertMachineExecution(
     });
 
     const machine = await machineFetchResults.json() as MachineExecutions;
-    console.log(`the machine execution ontology returned: ${JSON.stringify(machine)}`)
+    // trimming this out because the logs make these object massive
+    //console.log(`the machine execution ontology returned: ${JSON.stringify(machine)}`)
 
     return machine;
 }

@@ -139,7 +139,7 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                 };
 
                 const machineDao = container.get<MachineDao>(TYPES.MachineDao);
-                const { state, lockOwner, lockUntil, currentState, logs, machine } = await machineDao.read(id);
+                const { state, lockOwner, lockUntil, logs, machine } = await machineDao.read(id);
 
                 // If another owner holds a live lease, skip
                 if (
@@ -153,7 +153,19 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                 }
 
                 // update the machine before proceeding with a lock to ensure we don't get redundant executions (mutex)!
-                await machineDao.upsert(id, machine!, currentState!, logs!, threadId, Date.now() + (30 * 60 * 1000));
+                // this can occur within the same thread if the proposed time to resolve the conflict isn't actually available
+                // this will result in a new conflict email being generated with a different thread ID adn can generate an infinite loop!
+                // by using a lock we can prevent his from happening. I use 5 minutes out of an abundance of caution. This could likely be much lower
+                // like 1 - 2 minutes
+                try {
+                    await machineDao.upsert(id, machine!, state!, logs!, threadId, Date.now() + (5 * 60 * 1000));
+                } catch (e) {
+                    console.log(`failed to upsert the machine in order to set lock:
+                        message: ${(e as Error).message}
+                        stack: ${(e as Error).stack}
+                    `);
+                    throw (e);
+                }
 
                 // Ask the model
                 const response = await geminiService(userPrompt, system);
