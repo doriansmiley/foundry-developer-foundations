@@ -41,6 +41,7 @@
     "test:bennie": "E2E=true jest bennie.e2e.test.ts",
     "test:vickie": "E2E=true npx jest vickie.e2e.test.ts",
     "test:gmailPubSub": "E2E=true npx jest gmail.pubsub.e2e.test.ts",
+    "test:eiaService": "E2E=true npx jest eiaService.e2e.test.ts",
     "test:watch": "jest --watch",
     "lint": "eslint 'src/**/*.{js,ts}'",
     "build": "tsup --no-watch --silent",

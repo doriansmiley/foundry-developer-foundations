@@ -25,6 +25,7 @@ import { gpt4oService } from "@xreason/services/gpt4oService";
 import { getLogger } from "./utils";
 import { createLoggingService } from "./services/loggingService";
 import { eiaService } from "./services/eiaService";
+import { makeGSuiteClientV2 } from "./services/gsuiteClient.v2";
 
 // TODO refactor with a service facade, or maybe just a getContainer method to allow for overriding default definitions
 // a service facade could hide the implementation details but it would be a lot of work and the resulting types would not look different the inversify
@@ -119,7 +120,7 @@ container
 // IMPORTANT use container.getAsync when retrieving!
 container
     .bind(TYPES.OfficeService)
-    .toConstantValue(makeGSuiteClient(process.env.OFFICE_SERVICE_ACCOUNT));
+    .toConstantValue(makeGSuiteClientV2(process.env.OFFICE_SERVICE_ACCOUNT));
 
 container
     .bind(TYPES.MessageService)
