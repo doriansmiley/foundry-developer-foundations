@@ -3,7 +3,7 @@ import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundati
 import { Context, engineV1 as engine, getState, MachineEvent, SupportedEngines, xReasonFactory } from "@xreason/reasoning";
 import { dateTime, recall, requestRfp, userProfile } from "@xreason/functions";
 import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
-import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao, ThreadsDao, GeminiService, GetNextStateResult, Threads, Communications } from "@xreason/types";
+import { CommsDao, MachineDao, MachineExecutions, TYPES, UserDao, ThreadsDao, GeminiService, GetNextStateResult, Threads, Communications, LoggingService } from "@xreason/types";
 import { container } from "@xreason/inversify.config";
 import { State, StateValue } from 'xstate';
 
@@ -170,12 +170,14 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
 
         const result = await getState(solution, forward, JSON.parse(inputs), xreason as SupportedEngines);
 
+        const { getLog } = container.get<LoggingService>(TYPES.LoggingService);
+
         const machineDao = container.get<MachineDao>(TYPES.MachineDao);
         const machine = await machineDao.upsert(
             solution.id,
             JSON.stringify(result.stateMachine),
             result.jsonState,
-            result.logs ?? '',
+            getLog(solution.id) ?? '',
             '', // we have to send default values for lockOwner and lockUntil or the OSDK will shit a brick. It still can't handle optional params
             1,
         );

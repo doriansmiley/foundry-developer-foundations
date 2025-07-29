@@ -222,7 +222,8 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                 } // Nothing to do for this thread
 
                 const { context } = JSON.parse(state!) as { context: Context };
-                const currentStateId = context.stack?.pop();
+                // find the last instance of a resolveUnavailableAttendees state in the stack
+                const currentStateId = context.stack?.find((item) => item.indexOf('resolveUnavailableAttendees') >= 0);
 
                 if (!currentStateId) {
                     errorResponse.error = 'No currentStateId found';
