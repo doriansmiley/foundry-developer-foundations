@@ -155,6 +155,11 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                     lockUntil! > Date.now()
                 ) {
                     errorResponse.error = `Locked by ${lockOwner} until ${lockUntil}`;
+
+                    log(id, `ExecutionId: ${id} is locked by ${lockOwner} until ${lockUntil}`);
+
+                    await machineDao.upsert(id, machine!, state!, getLog(id));
+
                     return errorResponse;
                 }
 
@@ -174,6 +179,14 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                         message: ${(e as Error).message}
                         stack: ${(e as Error).stack}
                     `);
+
+                    log(id, `failed to upsert the machine in order to set lock:
+                        message: ${(e as Error).message}
+                        stack: ${(e as Error).stack}
+                    `);
+
+                    await machineDao.upsert(id, machine!, state!, getLog(id));
+
                     throw (e);
                 }
 
@@ -203,6 +216,8 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                     ${resolution}
                     `);
 
+                    await machineDao.upsert(id, machine!, state!, getLog(id));
+
                     return errorResponse;
                 } // Nothing to do for this thread
 
@@ -218,6 +233,8 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                     currentStateId is:
                     ${currentStateId}
                     `);
+
+                    await machineDao.upsert(id, machine!, state!, getLog(id));
 
                     return errorResponse;
                 };
