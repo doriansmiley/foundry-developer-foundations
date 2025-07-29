@@ -46,7 +46,6 @@ export class Vickie extends Text2Action {
         // filter by subject to find threads Vickie generated
         const resolveMeetingConflicts = result.messages.filter(message => {
             if (message.subject) {
-                console.log(`processEmailEvent checking subject: ${message.subject}`);
                 return message.subject.indexOf('Resolve Meeting Conflicts - ID') >= 0;
             }
 
@@ -248,15 +247,29 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
                     `);
 
                 // logs will be persisted in the call to getNextState
-                await this.getNextState(
-                    undefined,
-                    true,
-                    id,
-                    JSON.stringify(contextUpdate),
-                    SupportedEngines.COMS
-                );
+                try {
+                    const result = await this.getNextState(
+                        undefined,
+                        true,
+                        id,
+                        JSON.stringify(contextUpdate),
+                        SupportedEngines.COMS
+                    );
 
-                console.log(getLog(id));
+                    console.log(getLog(id));
+
+                    console.log(`getNextStateReturned: ${JSON.stringify(result)}`);
+                } catch (e) {
+                    log(id, `getNextState failed with the following error:
+                        ${(e as Error).message}
+                        ${(e as Error).stack}
+                    `);
+
+                    errorResponse.error = (e as Error).stack || 'ERROR';
+                    errorResponse.message = (e as Error).message || 'ERROR';
+
+                    return errorResponse;
+                }
             });
 
         // 3. Fire all requests in parallel and wait for them all to settle
@@ -268,8 +281,8 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
         // 1. Extract failed results with shape you defined
         const failed = results
             .map((res) => {
-                if (res.status === 'fulfilled' && res.value?.status === 400) {
-                    return res.value;
+                if (res.status === 'rejected' || (res.status === 'fulfilled' && res.value?.status === 400)) {
+                    return res;
                 }
                 return undefined;
             })
@@ -278,8 +291,10 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
         // 2. If there are any failures, build an aggregated error response
         if (failed.length > 0) {
             const aggregatedMessage = failed.reduce((msg, curr) => {
-                return msg + `\n executionId: ${curr.executionId} message: ${curr.message}`;
+                return msg + `\n ${JSON.stringify(curr)}`;
             }, 'Some threads failed to resolve:');
+
+            console.log(`Aggregated Failure MEssages:\n${aggregatedMessage}`);
 
             return {
                 status: 400,

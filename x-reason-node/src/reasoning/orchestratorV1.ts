@@ -47,6 +47,9 @@ export async function getState(
   try {
     execution = await machineDao.read(solution.id);
   } catch (e) {
+    const error = (e as Error);
+
+    log(solution.id, `machineDao.read returned the following error:\n${error.message}\n${error.stack}`);
     console.log(e);
   }
 
@@ -89,9 +92,11 @@ export async function getState(
     ];
 
   if (forward && savePoint && stateDefinition && savePoint !== stateDefinition.value) {
+    log(solution.id, `resetting stateDefinition.value from ${stateDefinition.value} to ${savePoint}`);
     console.log(
       `resetting stateDefinition.value from ${stateDefinition.value} to ${savePoint}`
     );
+
     stateDefinition.value = savePoint;
   } else if (
     !forward &&
@@ -102,6 +107,8 @@ export async function getState(
     console.log(
       `resetting stateDefinition.value from ${stateDefinition.value} to ${previousState}`
     );
+    log(solution.id, `resetting stateDefinition.value from ${stateDefinition.value} to ${previousState}`);
+
     stateDefinition.value = previousState;
     // remove the last element of the stack
     stateDefinition?.context?.stack?.pop();
@@ -116,6 +123,7 @@ export async function getState(
     const context = targetState.context;
     const jsonState = JSON.stringify(targetState);
 
+    log(solution.id, `moving backward, returning previous state of ${targetState.value}`);
     console.log(`moving backward, returning previous state of ${targetState.value}`);
 
     return {
@@ -204,7 +212,9 @@ export async function getState(
     programmedState?.includesLogic ?? false
   );
 
+  log(solution.id, `calling start on the machine with starting state of: ${startingState?.value}`);
   console.log(`calling start on the machine with starting state of: ${startingState?.value}`);
+
   start();
 
   if (stateDefinition && startingState && (programmedState?.includesLogic ?? false) === false) {
@@ -218,7 +228,10 @@ export async function getState(
   const MAX_ITERATIONS = 60;
   while (!done() && iterations < MAX_ITERATIONS) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    log(solution.id, `awaiting results`);
     console.log("awaiting results");
+
     iterations++;
   }
 
