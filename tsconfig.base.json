@@ -1,0 +1,48 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2015",
+    "module": "esnext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@codestrap/developer-foundations-di": ["packages/di/src/index.ts"],
+      "@codestrap/developer-foundations-services-devtools": [
+        "packages/services/devtools/src/index.ts"
+      ],
+      "@codestrap/developer-foundations-services-eia": [
+        "packages/services/eia/src/index.ts"
+      ],
+      "@codestrap/developer-foundations-services-google": [
+        "packages/services/google/src/index.ts"
+      ],
+      "@codestrap/developer-foundations-services-palantir": [
+        "packages/services/palantir/src/index.ts"
+      ],
+      "@codestrap/developer-foundations-services-rangr": [
+        "packages/services/rangr/src/index.ts"
+      ],
+      "@codestrap/developer-foundations-services-slack": [
+        "packages/services/slack/src/index.ts"
+      ],
+      "@codestrap/developer-foundations-services-weather": [
+        "packages/services/weather/src/index.ts"
+      ],
+      "@codestrap/developer-foundations-types": ["packages/types/src/index.ts"],
+      "@codestrap/developer-foundations-utils": ["packages/utils/src/index.ts"],
+      "@codestrap/developer-foundations-x-reason": [
+        "packages/x-reason/src/index.ts"
+      ]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

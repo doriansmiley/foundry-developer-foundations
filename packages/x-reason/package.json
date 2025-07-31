@@ -1,0 +1,11 @@
+{
+  "name": "@codestrap/developer-foundations-x-reason",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "xstate": "4.37.2",
+    "tslib": "^2.3.0"
+  }
+}
