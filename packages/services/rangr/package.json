@@ -1,0 +1,14 @@
+{
+  "name": "@codestrap/developer-foundations-services-rangr",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "@codestrap/developer-foundations-types": "*",
+    "@osdk/client": "^2.2.1",
+    "@osdk/foundry.admin": "^2.22.0",
+    "@osdk/oauth": "^1.1.2",
+    "tslib": "^2.3.0"
+  }
+}

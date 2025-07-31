@@ -1,0 +1,12 @@
+{
+  "name": "@codestrap/developer-foundations-utils",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "@codestrap/developer-foundations-types": "*",
+    "@codestrap/developer-foundations-x-reason": "*",
+    "tslib": "^2.3.0"
+  }
+}
