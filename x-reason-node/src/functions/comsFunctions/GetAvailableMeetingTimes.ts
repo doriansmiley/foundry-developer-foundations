@@ -23,10 +23,12 @@ export async function getAvailableMeetingTimes(context: Context, event?: Machine
         console.log(`formatted int date: ${formatted}`);
         const isPDT = formatted.includes("PDT");
 
-        const stateId = context.stack?.[context.stack?.length - 1];
-        const resolveStateId = context.stack?.[context.stack?.length - 2];
+        const getAvailableStateId = context.stack?.slice().reverse().find(item => item.includes('getAvailableMeetingTimes'));
+        // find the last instance of a resolveUnavailableAttendees state in the stack
+        const resolveStateId = context.stack?.slice().reverse().find(item => item.includes('resolveUnavailableAttendees'));
+
         const { resolution } = resolveStateId && context[resolveStateId] ? context[resolveStateId] as DraftAtendeeEmailResponse : { resolution: undefined };
-        const { allAvailable } = stateId && context[stateId] ? context[stateId] as ProposedTimes : { allAvailable: false };
+        const { allAvailable } = getAvailableStateId && context[getAvailableStateId] ? context[getAvailableStateId] as ProposedTimes : { allAvailable: false };
         let resolutionClause = '';
         if (!allAvailable && resolution) {
             resolutionClause = `# Conflict Resolution
@@ -147,7 +149,8 @@ Your response is:
         const codeStrapParticipants = participants.filter(participant => participant.indexOf('codestrap.me') >= 0 || participant.indexOf('codestrap.com') >= 0);
         const inputs = {
             participants: codeStrapParticipants,
-            timeframe_context: timeFrame,
+            localDateString: timeFrame,
+            timeframe_context: parsedResult.timeframe_context,
             subject: parsedResult.subject,
             duration_minutes: parsedResult.duration_minutes,
             working_hours: {

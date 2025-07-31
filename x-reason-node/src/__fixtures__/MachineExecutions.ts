@@ -85,87 +85,250 @@ export const mockExecution = {
         ]`
 };
 
+const date = new Date();
+// get tomorrow
+date.setDate(date.getDate() + 1);
+const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+
 // this is the second state in the machine
 export const mockExecution2 = {
     id: machineId2,
     state: `{
-            "actions":[{"type":"entry"}],
-            "activities":{},
-            "meta":{},
-            "events":[],
-            "value":"pause",
-            "context":{
-                "status":0,
-                "requestId":"test",
-                "stack":["sendEmail","sendSlackMessage"],
-                "sendEmail":{
-                    "id":"message_id_here",
-                    "threadId":"thread_id_here",
-                    "labels":["label_name_1","label_name_2"]
-                },
-                "sendSlackMessage": {
-                    "message": "Test message",
-                    "channelId": "test-channel"
+    "actions": [
+        {
+            "type": "entry"
+        }
+    ],
+    "activities": {},
+    "meta": {},
+    "events": [],
+    "value": "success",
+    "context": {
+        "requestId": "2117368a-3119-44dd-878b-d9ff886ae7f5",
+        "status": 0,
+        "childToParentStateMap": {},
+        "machineExecutionId": "2618bc50-d865-4aaf-8625-a05eb608e4e3",
+        "solution": "1. **Get available times for meeting attendees** - Attendees: Dorian Smiley <dsmiley@codestrap.me>, Connor Deeks <connor.deeks@codestrap.me>    Proposed date: 2025-7-25    Start Time: 3:00 PM    Duration: 1 hour    If all attendees are not available, resolve unavailable attendees  2. **Schedule a meeting** - Subject: Meeting with Dorian and Connor. - Attendees: Dorian Smiley <dsmiley@codestrap.me>, Connor Deeks <connor.deeks@codestrap.me>    Date: 2025-7-25    Start Time: 3:00 PM    Duration: 1 hour",
+        "stack": [
+            "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+            "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+            "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+            "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+            "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+            "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+            "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+            "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+            "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+            "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+            "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+            "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+            "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+            "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+            "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+            "scheduleMeeting|7f8824d7-bb8e-4bb3-a820-5ab9e7dc6533",
+            "success"
+        ],
+        "stateId": "scheduleMeeting|7f8824d7-bb8e-4bb3-a820-5ab9e7dc6533",
+        "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152": {
+            "times": [
+                {
+                    "start": "2025-08-04T16:30:00.000Z",
+                    "end": "2025-08-04T17:30:00.000Z",
+                    "availableAttendees": [
+                        "dsmiley@codestrap.me",
+                        "connor.deeks@codestrap.me"
+                    ],
+                    "unavailableAttendees": []
+                }
+            ],
+            "subject": "Meeting with Dorian and Connor",
+            "durationInMinutes": 60,
+            "allAvailable": true,
+            "agenda": "Found 1 optimal time slots."
+        },
+        "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42": {
+            "emailId": "1984e2ae93f40a57",
+            "message": "Hi Dorian and Connor, Happy Sunday! I'm having trouble finding an available day/time that works for the both of you for our meeting about task list items 1 and 2. I have the following time as available but it looks like both of you are unavailable: Tue Jul 29 2025 10:00:00 GMT-0700 (Pacific Daylight Time). Please respond to this message with a proposed day/time that works. If you can move any existing meetings around to make the unavailable time work, that would be preferred. Thanks, Vickie.",
+            "meetingSubject": "Meeting with Dorian and Connor.",
+            "meetingDuration": 60,
+            "dayTimes": "                  start: Tue Jul 29 2025 10:00:00 GMT-0700 (Pacific Daylight Time),         end: Tue Jul 29 2025 10:00:00 GMT-0700 (Pacific Daylight Time),         available: ,         unavailable: dsmiley@codestrap.me, connor.deeks@codestrap.me         ",
+            "modelDialog": "Hi Dorian and Connor, Happy Sunday! I'm having trouble finding an available day/time that works for the both of you for our meeting about task list items 1 and 2. I have the following time as available but it looks like both of you are unavailable: Tue Jul 29 2025 10:00:00 GMT-0700 (Pacific Daylight Time). Please respond to this message with a proposed day/time that works. If you can move any existing meetings around to make the unavailable time work, that would be preferred. Thanks, Vickie.",
+            "ts": 1753658092064,
+            "resolution": "${dayName} at 4",
+            "processEmail": true
+        },
+        "scheduleMeeting|7f8824d7-bb8e-4bb3-a820-5ab9e7dc6533": {
+            "id": "pccjsddgde4kjalihqb6pnsohs",
+            "htmlLink": "https://www.google.com/calendar/event?eid=cGNjanNkZGdkZTRramFsaWhxYjZwbnNvaHMgdmljaUBjb2Rlc3RyYXAubWU",
+            "status": "confirmed"
+        },
+        "success": {
+            "resolution": "${dayName} at 4",
+            "processEmail": true
+        }
+    },
+    "_event": {
+        "name": "CONTINUE",
+        "data": {
+            "type": "CONTINUE",
+            "payload": {
+                "stateId": "scheduleMeeting|7f8824d7-bb8e-4bb3-a820-5ab9e7dc6533",
+                "scheduleMeeting|7f8824d7-bb8e-4bb3-a820-5ab9e7dc6533": {
+                    "id": "pccjsddgde4kjalihqb6pnsohs",
+                    "htmlLink": "https://www.google.com/calendar/event?eid=cGNjanNkZGdkZTRramFsaWhxYjZwbnNvaHMgdmljaUBjb2Rlc3RyYXAubWU",
+                    "status": "confirmed"
+                }
+            }
+        },
+        "$$type": "scxml",
+        "type": "external"
+    },
+    "_sessionid": "x:9",
+    "event": {
+        "type": "CONTINUE",
+        "payload": {
+            "stateId": "scheduleMeeting|7f8824d7-bb8e-4bb3-a820-5ab9e7dc6533",
+            "scheduleMeeting|7f8824d7-bb8e-4bb3-a820-5ab9e7dc6533": {
+                "id": "pccjsddgde4kjalihqb6pnsohs",
+                "htmlLink": "https://www.google.com/calendar/event?eid=cGNjanNkZGdkZTRramFsaWhxYjZwbnNvaHMgdmljaUBjb2Rlc3RyYXAubWU",
+                "status": "confirmed"
+            }
+        }
+    },
+    "historyValue": {
+        "current": "success",
+        "states": {}
+    },
+    "history": {
+        "actions": [
+            {
+                "type": "entry"
+            }
+        ],
+        "activities": {},
+        "meta": {},
+        "events": [],
+        "value": "scheduleMeeting|7f8824d7-bb8e-4bb3-a820-5ab9e7dc6533",
+        "context": {
+            "requestId": "2117368a-3119-44dd-878b-d9ff886ae7f5",
+            "status": 0,
+            "childToParentStateMap": {},
+            "machineExecutionId": "2618bc50-d865-4aaf-8625-a05eb608e4e3",
+            "solution": "1. **Get available times for meeting attendees** - Attendees: Dorian Smiley <dsmiley@codestrap.me>, Connor Deeks <connor.deeks@codestrap.me>    Proposed date: 2025-7-25    Start Time: 3:00 PM    Duration: 1 hour    If all attendees are not available, resolve unavailable attendees  2. **Schedule a meeting** - Subject: Meeting with Dorian and Connor. - Attendees: Dorian Smiley <dsmiley@codestrap.me>, Connor Deeks <connor.deeks@codestrap.me>    Date: 2025-7-25    Start Time: 3:00 PM    Duration: 1 hour",
+            "stack": [
+                "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+                "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+                "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+                "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+                "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+                "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+                "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+                "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+                "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+                "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+                "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+                "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+                "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+                "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42",
+                "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+                "scheduleMeeting|7f8824d7-bb8e-4bb3-a820-5ab9e7dc6533",
+                "success"
+            ],
+            "stateId": "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+            "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152": {
+                "times": [
+                    {
+                        "start": "2025-08-04T16:30:00.000Z",
+                        "end": "2025-08-04T17:30:00.000Z",
+                        "availableAttendees": [
+                            "dsmiley@codestrap.me",
+                            "connor.deeks@codestrap.me"
+                        ],
+                        "unavailableAttendees": []
+                    }
+                ],
+                "subject": "Meeting with Dorian and Connor",
+                "durationInMinutes": 60,
+                "allAvailable": true,
+                "agenda": "Found 1 optimal time slots."
+            },
+            "resolveUnavailableAttendees|c47a4244-979e-4090-a325-89447368fd42": {
+                "emailId": "1984e2ae93f40a57",
+                "message": "Hi Dorian and Connor, Happy Sunday! I'm having trouble finding an available day/time that works for the both of you for our meeting about task list items 1 and 2. I have the following time as available but it looks like both of you are unavailable: Tue Jul 29 2025 10:00:00 GMT-0700 (Pacific Daylight Time). Please respond to this message with a proposed day/time that works. If you can move any existing meetings around to make the unavailable time work, that would be preferred. Thanks, Vickie.",
+                "meetingSubject": "Meeting with Dorian and Connor.",
+                "meetingDuration": 60,
+                "dayTimes": "                  start: Tue Jul 29 2025 10:00:00 GMT-0700 (Pacific Daylight Time),         end: Tue Jul 29 2025 10:00:00 GMT-0700 (Pacific Daylight Time),         available: ,         unavailable: dsmiley@codestrap.me, connor.deeks@codestrap.me         ",
+                "modelDialog": "Hi Dorian and Connor, Happy Sunday! I'm having trouble finding an available day/time that works for the both of you for our meeting about task list items 1 and 2. I have the following time as available but it looks like both of you are unavailable: Tue Jul 29 2025 10:00:00 GMT-0700 (Pacific Daylight Time). Please respond to this message with a proposed day/time that works. If you can move any existing meetings around to make the unavailable time work, that would be preferred. Thanks, Vickie.",
+                "ts": 1753658092064,
+                "resolution": "${dayName} at 4",
+                "processEmail": true
+            }
+        },
+        "_event": {
+            "name": "CONTINUE",
+            "data": {
+                "type": "CONTINUE",
+                "payload": {
+                    "stateId": "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+                    "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152": {
+                        "times": [
+                            {
+                                "start": "2025-08-04T16:30:00.000Z",
+                                "end": "2025-08-04T17:30:00.000Z",
+                                "availableAttendees": [
+                                    "dsmiley@codestrap.me",
+                                    "connor.deeks@codestrap.me"
+                                ],
+                                "unavailableAttendees": []
+                            }
+                        ],
+                        "subject": "Meeting with Dorian and Connor",
+                        "durationInMinutes": 60,
+                        "allAvailable": true,
+                        "agenda": "Found 1 optimal time slots."
+                    }
                 }
             },
-            "_event":{
-                "name":"CONTINUE",
-                "data":{
-                    "type":"CONTINUE",
-                    "payload":{
-                        "sendEmail":{
-                            "id":"message_id_here",
-                            "threadId":"thread_id_here",
-                            "labels":["label_name_1","label_name_2"]
+            "$$type": "scxml",
+            "type": "external"
+        },
+        "_sessionid": "x:1",
+        "event": {
+            "type": "CONTINUE",
+            "payload": {
+                "stateId": "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152",
+                "getAvailableMeetingTimes|ba26e192-9a5c-4c34-8a9c-c4a7a4567152": {
+                    "times": [
+                        {
+                            "start": "2025-08-04T16:30:00.000Z",
+                            "end": "2025-08-04T17:30:00.000Z",
+                            "availableAttendees": [
+                                "dsmiley@codestrap.me",
+                                "connor.deeks@codestrap.me"
+                            ],
+                            "unavailableAttendees": []
                         }
-                    }
-                },
-                "$$type":"scxml",
-                "type":"external"
-            },
-            "_sessionid":"x:1",
-            "event":{
-                "type":"CONTINUE",
-                "payload":{
-                    "sendEmail":{
-                        "id":"message_id_here",
-                        "threadId":"thread_id_here",
-                        "labels":["label_name_1","label_name_2"]
-                    }
+                    ],
+                    "subject": "Meeting with Dorian and Connor",
+                    "durationInMinutes": 60,
+                    "allAvailable": true,
+                    "agenda": "Found 1 optimal time slots."
                 }
-            },
-            "historyValue":{
-                "current":"sendSlackMessage|aca1f9cd-0284-4d7c-9029-6b96170b0390",
-                "states":{}
-            },
-            "history":{
-                "actions":[{"type":"entry"}],
-                "activities":{},
-                "meta":{},
-                "events":[],
-                "value":"sendEmail|832f76c6-ee35-44d2-8e27-65310c62352e",
-                "context":{
-                    "status":0,
-                    "requestId":"test",
-                    "stack":["sendEmail","sendSlackMessage"]
-                },
-                "_event":{
-                    "name":"xstate.init",
-                    "data":{"type":"xstate.init"},
-                    "$$type":"scxml",
-                    "type":"external"
-                },
-                "_sessionid":"x:1",
-                "event":{"type":"xstate.init"},
-                "children":{},
-                "done":false,
-                "tags":[]
-            },
-            "children":{},
-            "done":false,
-            "changed":true,
-            "tags":[]
-        }`,
+            }
+        },
+        "historyValue": {
+            "current": "scheduleMeeting|7f8824d7-bb8e-4bb3-a820-5ab9e7dc6533",
+            "states": {}
+        },
+        "children": {},
+        "done": false,
+        "changed": true,
+        "tags": []
+    },
+    "children": {},
+    "done": true,
+    "tags": []
+}`,
     machine: `
         [
             {

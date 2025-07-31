@@ -1,5 +1,15 @@
 import { Context } from "@xreason/reasoning";
 
+const date = new Date();
+// get tomorrow
+date.setDate(date.getDate() + 1);
+
+// Helper to generate ISO strings with specified hour and minute in UTC
+function getISOTime(date: Date, hour: number, minute: number): string {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute));
+    return d.toISOString();
+}
+
 // Mock email response data
 export const mockEmailResponse = {
     data: {
@@ -85,7 +95,7 @@ export const mockEmailHistoryWithResolution = {
                     'Resolve Meeting Conflicts - ID f41b004c-c032-4f3a-b7b8-be831804cb03',
                 threadId: THREAD_ID,
                 from: 'dsmiley@codestrap.me',
-                body: `Hey Connor what about tomorrow at 1 PM?`,
+                body: `Hey Connor what about tomorrow at 4 PM?`,
                 id: 'mock-email-id-2',
             },
             {
@@ -207,14 +217,14 @@ export const mockCalendarList = {
             {
                 id: 'mockEventId',
                 summary: 'Meet with Komatsu',
-                start: { dateTime: '2025-07-21T20:00:00Z' },
-                end: { dateTime: '2025-07-21T21:00:00Z' },
+                start: { dateTime: getISOTime(date, 20, 0) },
+                end: { dateTime: getISOTime(date, 21, 0) },
             },
             {
                 id: 'mockEventId2',
                 summary: 'Stand Up',
-                start: { dateTime: '2025-07-21T21:00:00Z' },
-                end: { dateTime: '2025-07-21T21:30:00Z' },
+                start: { dateTime: getISOTime(date, 21, 0) },
+                end: { dateTime: getISOTime(date, 21, 30) },
             },
         ],
         nextPageToken: null,
@@ -236,3 +246,28 @@ export const mockCalendarInsert = {
         },
     },
 };
+
+export function getMockFreeBusyResponse(timeMin: any, timeMax: any) {
+    return {
+        data: {
+            kind: 'calendar#freeBusy',
+            timeMin,
+            timeMax,
+            calendars: {
+                // each email requested in params.requestBody.items[*].id gets an entry:
+                'dsmiley@codestrap.me': {
+                    busy: [
+                        {
+                            start: { dateTime: getISOTime(date, 20, 0) },
+                            end: { dateTime: getISOTime(date, 21, 0) },
+                        },
+                        {
+                            start: { dateTime: getISOTime(date, 21, 0) },
+                            end: { dateTime: getISOTime(date, 21, 30) },
+                        },
+                    ],
+                },
+            },
+        },
+    }
+}

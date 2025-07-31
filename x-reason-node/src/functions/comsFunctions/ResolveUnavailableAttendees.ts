@@ -17,20 +17,12 @@ export type DraftAtendeeEmailResponse = {
 
 // This function extracts the channel ID and recepients from the input context and sends a slack message
 export async function resolveUnavailableAttendees(context: Context, event?: MachineEvent, task?: string): Promise<DraftAtendeeEmailResponse> {
-    // TODO see if there is a better way to do this. I think we can assume though that the only time this is invoked
-    // is if we failed to find available times in the getAvailableMeetingTimes execution
-    // we calculate the index this way because at this point in execution the entry function has already pushed this state
-    // into the the stack, ie context.stack?.push(state.id); See the programmerV1.ts for the exact line, but should be line 47
-    const index = (context.stack?.length ?? 0) - 2;
-
-    if (index < 0) {
-        throw new Error(`Invalid index found ${index}`);
-    }
-    const stateId = context.stack?.[context.stack?.length - 2];
+    // find the last occurrence of a getAvailableMeetingTimes execution which had to proceed this state transition
+    const stateId = context.stack?.slice().reverse().find(item => item.indexOf('getAvailableMeetingTimes') >= 0);
 
     console.log(`resolveUnavailableAttendees found stateId: ${stateId}`);
 
-    if (!stateId) {
+    if (!stateId || stateId.length === 0) {
         throw new Error('Unable to find associated getAvailableMeetingTimes state in the machine stack.')
     }
 

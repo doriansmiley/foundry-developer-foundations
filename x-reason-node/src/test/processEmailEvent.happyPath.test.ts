@@ -1,5 +1,5 @@
 import { mockProcessEmailEventExecution } from '@xreason/__fixtures__/MachineExecutions';
-import { mockCalendarInsert, mockCalendarList, mockEmailHistoryWithResolution, mockEmailResponse, mockMessageGetResponse, mockMessageGetThreadsResponse } from '@xreason/__fixtures__/Email';
+import { getMockFreeBusyResponse, mockCalendarInsert, mockCalendarList, mockEmailHistoryWithResolution, mockEmailResponse, mockMessageGetResponse, mockMessageGetThreadsResponse } from '@xreason/__fixtures__/Email';
 
 
 let counter = 0;
@@ -79,28 +79,8 @@ jest.mock('googleapis', () => ({
                 freebusy: {
                     query: jest.fn((params: any) => {
                         console.log(`Calendar mock freebusy.query called with: ${JSON.stringify(params)}`);
-                        return Promise.resolve({
-                            data: {
-                                kind: 'calendar#freeBusy',
-                                timeMin: params.requestBody.timeMin,
-                                timeMax: params.requestBody.timeMax,
-                                calendars: {
-                                    // each email requested in params.requestBody.items[*].id gets an entry:
-                                    'dsmiley@codestrap.me': {
-                                        busy: [
-                                            {
-                                                start: '2025-07-22T18:00:00Z',
-                                                end: '2025-07-22T19:00:00Z',
-                                            },
-                                            {
-                                                start: '2025-07-23T15:00:00Z',
-                                                end: '2025-07-23T16:30:00Z',
-                                            },
-                                        ],
-                                    },
-                                },
-                            },
-                        });
+                        const mockResponse = getMockFreeBusyResponse(params.requestBody.timeMin, params.requestBody.timeMax)
+                        return Promise.resolve(mockResponse);
                     }),
                 },
             };
