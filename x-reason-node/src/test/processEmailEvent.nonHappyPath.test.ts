@@ -154,7 +154,7 @@ describe('testing Vickie', () => {
         const vickie = new Vickie();
         const result = await vickie.processEmailEvent('eyJlbWFpbEFkZHJlc3MiOiJkc21pbGV5QGNvZGVzdHJhcC5tZSIsImhpc3RvcnlJZCI6MTc5MDUxMn0=', '2025-07-22T20:43:55.184Z');
         expect(result).toBeDefined();
-        expect(result.message).toBe('Some threads failed to resolve:\n executionId: 1 message: ERROR');
+        expect(result.message).toBe('Some threads failed to resolve:\n {"status":"fulfilled","value":{"status":400,"executionId":"1","message":"ERROR","error":"No resolution found","taskList":"ERROR"}}');
         expect(result.status).toBe(400);
     }, 120000);
 
