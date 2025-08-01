@@ -71,7 +71,7 @@
     "npm": "^11.5.2",
     "openai": "^4.92.1",
     "ramda": "^0.30.1",
-    "xstate": "4.37.2"
+    "xstate": "5.20.1"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.9",
