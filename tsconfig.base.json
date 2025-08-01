@@ -15,6 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@codestrap/developer-foundations-data-access-communications": [
+        "packages/data-access/communications/src/index.ts"
+      ],
       "@codestrap/developer-foundations-data-access-x-reason": [
         "packages/data-access/x-reason/src/index.ts"
       ],
