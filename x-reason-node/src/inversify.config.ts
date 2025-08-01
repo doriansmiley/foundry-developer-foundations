@@ -10,7 +10,7 @@ import { makeUserDao } from "@xreason/domain/userDao";
 import { makeMachineDao } from "@xreason/domain/machineDao";
 import { geminiService } from "@xreason/services/geminiService";
 import { makeCommsDao } from "@xreason/domain/commsDao";
-import { gemeniStockMarketConditions } from "@xreason/services/gemeniStockMarketConditions";
+import { researchAssistant } from "@xreason/services/researchAssistant";
 import { makeThreadsDao } from "@xreason/domain/threadsDao";
 import { makeRfpRequestsDao } from "@xreason/domain/rfpRequestsDao";
 import { makeRangrRfpRequestsDao } from "@xreason/domain/rangrRfpRequestsDao";
@@ -114,8 +114,8 @@ container
     .toConstantValue(createLoggingService(1 * 1024 * 1024, 64 * 1024 * 1024));
 
 container
-    .bind(TYPES.GeminiSearchStockMarket)
-    .toConstantValue(gemeniStockMarketConditions);
+    .bind(TYPES.ResearchAssistant)
+    .toConstantValue(researchAssistant);
 
 // IMPORTANT use container.getAsync when retrieving!
 container

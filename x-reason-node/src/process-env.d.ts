@@ -32,6 +32,7 @@ declare global {
             EIA_BASE_URL: string;
             EIA_API_KEY: string;
             CA_SERIES_ID: string;
+            FIRECRAWL_API_KEY: string;
         }
     }
 }

@@ -1,6 +1,8 @@
 import { google } from 'googleapis';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from '@google/genai';
 import { extractJsonFromBackticks } from '@xreason/utils/Extractors';
+import FirecrawlApp, { CrawlParams, CrawlStatusResponse, ScrapeResponse } from '@mendable/firecrawl-js';
+
 // import playwright from 'playwright';
 
 // Assuming you have API keys loaded from environment variables
@@ -9,12 +11,12 @@ const SEARCH_API_KEY = process.env.GOOGLE_SEARCH_API_KEY;
 // https://programmablesearchengine.google.com/controlpanel/overview?cx=b7dc27c8f2cf14af1
 const SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_MARKETS;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 
 const customSearch = google.customsearch('v1');
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-const geminiFlashModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-const geminiProModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro-001" });
+const app = new FirecrawlApp({ apiKey: FIRECRAWL_API_KEY });
 
 interface SearchResultItem {
     title?: string;
@@ -30,33 +32,23 @@ async function loadPageContent(results: SearchResultItem[]): Promise<string[]> {
     if (!results) {
         return [];
     }
-    // TODO replace this service with local playwright
-    /*const browser = await playwright.chromium.launch()
-    const pageContents: string[] = [];
 
-    for (const result of results) {
-        if (result.link && result.snippet && result.title) {
-            try {
-                console.log('Connected! Navigating...');
-                const page = await browser.newPage();
-                await page.goto(result.link, { waitUntil: 'networkidle', timeout: 2 * 60 * 1000 });
-                //console.log('Taking screenshot to page.png');
-                // await page.screenshot({ path: './page.png', fullPage: true });
-                console.log('Navigated! Scraping page content...');
-                const textContent = await page.innerText('body', { timeout: 2 * 60 * 1000 }); // Extract text from the body element
-                if (textContent) {
-                    pageContents.push(textContent);
-                }
-            } catch (e) {
-                console.log(e);
-            }
-        }
-    }
+    const pageContentsPromises = results
+        .filter(result => typeof result.link === 'string' && result.link.trim() !== '')
+        .map(result => {
+            // Scrape a website
+            return app.scrapeUrl(result.link!, {
+                formats: ['markdown'],
+            });
+        });
 
-    await browser.close();
+    const scrapeResults = await Promise.allSettled(pageContentsPromises);
 
-    return pageContents;*/
-    return new Promise((resolve) => resolve([]));
+    const pageContents: string[] = scrapeResults
+        .filter((r): r is PromiseFulfilledResult<ScrapeResponse> => r.status === 'fulfilled' && r.value.success)
+        .map(r => r.value.markdown ?? '');
+
+    return pageContents;
 }
 
 
@@ -65,12 +57,21 @@ async function synthesizeAnswer(summaries: string[], originalQuery: string): Pro
         return "No relevant information found.";
     }
 
-    const prompt = `You are a helpful AI analyst tasked with helping users understand the current market conditions. You always format your responses per the users instructions and use tables to format key facts and figures. Using only the following information:\n\n${summaries.join("\n\n")} \n\n Generate a market report for the users query: "${originalQuery}"`;
-    const geminiProResponse = await geminiProModel.generateContent(prompt);
-    return geminiProResponse.response?.text() ?? "Could not synthesize an answer.";
+    const contents = `You are a helpful AI analyst tasked with helping users understand the current market conditions. You always format your responses per the users instructions and use tables to format key facts and figures. Using only the following information:\n\n${summaries.join("\n\n")} \n\n Generate a market report for the users query: "${originalQuery}"`;
+    const geminiProResponse = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-001',
+        contents,
+    });
+    return geminiProResponse.text ?? "Could not synthesize an answer.";
 }
 
-async function performSearch(query: string, numResults: number = 5): Promise<SearchResult> {
+async function performSearch(
+    query: string,
+    num: number = 5,
+    dateRestrict?: string,
+    siteSearch?: string,
+    siteSearchFilter?: string,
+): Promise<SearchResult> {
     if (!SEARCH_API_KEY || !SEARCH_ENGINE_ID) {
         throw new Error("Search API key or Search Engine ID missing.");
     }
@@ -80,10 +81,10 @@ async function performSearch(query: string, numResults: number = 5): Promise<Sea
             cx: SEARCH_ENGINE_ID,
             q: query,
             auth: SEARCH_API_KEY,
-            num: numResults,
-            dateRestrict: 'd1',  // Restricts results to the last 24 hours
-            //siteSearch: 'finance.yahoo.com',
-            //siteSearchFilter: 'i',
+            num,
+            dateRestrict,
+            siteSearch,
+            siteSearchFilter,
 
         });
         return response.data as SearchResult;
@@ -94,7 +95,7 @@ async function performSearch(query: string, numResults: number = 5): Promise<Sea
 }
 
 async function generateSearchQueries(userInput: string): Promise<string[]> {
-    const prompt = `You are a helpful AI market analyst that specializes in writing search queries based on the user query.
+    const contents = `You are a helpful AI market analyst that specializes in writing search queries based on the user query.
     You carefully deconstruct keywords for the search queries to ensure the user gets valid search results
     Users tend to supply lots of information in their queries and passing this directly to the search engine will cause it to return null results
     Decompose the following user query into the required number of searches to cover their request while obtaining valid search results: 
@@ -111,17 +112,33 @@ async function generateSearchQueries(userInput: string): Promise<string[]> {
     }
     Explanation: They query is broken out into separate queries so the search engine will return valid results. There is timeliness to each query limiting the results to the last 24 hours.
     `;
-    const geminiProResponse = await geminiFlashModel.generateContent(prompt);
-    const result = geminiProResponse.response?.text() ?? "Could not synthesize an answer.";
+    const geminiProResponse = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-001',
+        contents,
+    });
+    const result = geminiProResponse.text ?? "Could not synthesize an answer.";
     const clean = JSON.parse(extractJsonFromBackticks(result)) as { queries: string[] };
 
     return clean.queries;
 }
 
-async function researchAssistant(userInput: string): Promise<string> {
+export async function researchAssistant(
+    userInput: string,
+    num: number = 5,
+    dateRestrict?: string,
+    siteSearch?: string,
+    siteSearchFilter?: string,
+
+): Promise<string> {
     const queries = await generateSearchQueries(userInput);
 
-    const searchPromises = queries.map(query => performSearch(query));
+    const searchPromises = queries.map(query => performSearch(
+        query,
+        num,
+        dateRestrict,
+        siteSearch,
+        siteSearchFilter,
+    ));
     const searchResults = await Promise.all(searchPromises);
 
     const flattenedResults: SearchResultItem[] = searchResults.reduce((acc: SearchResultItem[], curr) => {
@@ -132,14 +149,13 @@ async function researchAssistant(userInput: string): Promise<string> {
     }, [] as SearchResultItem[]);
 
 
-    const summaries = await loadPageContent(flattenedResults);
+    const summaries: string[] = [];
+    // we are rate limited by firecrawl to two concurrent requests in the free tier
+    for (let i = 0; i < flattenedResults.length; i += 2) {
+        const batch = flattenedResults.slice(i, i + 2);
+        const batchResults = await loadPageContent(batch);
+        summaries.push(...batchResults.flat());
+    }
     return synthesizeAnswer(summaries, userInput);
 }
 
-
-// Example Usage:
-export async function gemeniStockMarketConditions(userInput: string): Promise<string> {
-    const answer = await researchAssistant(userInput);
-
-    return answer;
-}

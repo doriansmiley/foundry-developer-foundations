@@ -21,7 +21,7 @@ export const TYPES = {
     ContactsDao: Symbol.for("ContactsDao"),
     GeminiService: Symbol.for("GeminiService"),
     Gpt4oService: Symbol.for("Gpt4oService"),
-    GeminiSearchStockMarket: Symbol.for("GeminiSearchStockMarket"),
+    ResearchAssistant: Symbol.for("ResearchAssistant"),
     OfficeService: Symbol.for("OfficeService"),
     MessageService: Symbol.for("MessageService"),
     EmbeddingsService: Symbol.for("EmbeddingsService"),
@@ -426,7 +426,13 @@ export interface WeatherService {
 }
 
 export interface GeminiSearchStockMarket {
-    (userQuery: string): Promise<string>;
+    (
+        userQuery: string,
+        num?: number,
+        dateRestrict?: string,
+        siteSearch?: string,
+        siteSearchFilter?: string,
+    ): Promise<string>;
 }
 
 export interface APIError extends Error {
