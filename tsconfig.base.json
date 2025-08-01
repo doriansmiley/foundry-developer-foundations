@@ -18,6 +18,15 @@
       "@codestrap/developer-foundations-data-access-communications": [
         "packages/data-access/communications/src/index.ts"
       ],
+      "@codestrap/developer-foundations-data-access-crm": [
+        "packages/data-access/crm/src/index.ts"
+      ],
+      "@codestrap/developer-foundations-data-access-project-management": [
+        "packages/data-access/project-management/src/index.ts"
+      ],
+      "@codestrap/developer-foundations-data-access-sales": [
+        "packages/data-access/sales/src/index.ts"
+      ],
       "@codestrap/developer-foundations-data-access-x-reason": [
         "packages/data-access/x-reason/src/index.ts"
       ],
