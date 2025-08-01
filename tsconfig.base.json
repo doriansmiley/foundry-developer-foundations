@@ -15,6 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@codestrap/developer-foundations-data-access-x-reason": [
+        "packages/data-access/x-reason/src/index.ts"
+      ],
       "@codestrap/developer-foundations-di": ["packages/di/src/index.ts"],
       "@codestrap/developer-foundations-services-devtools": [
         "packages/services/devtools/src/index.ts"
