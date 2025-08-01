@@ -21,6 +21,9 @@
       "@codestrap/developer-foundations-data-access-crm": [
         "packages/data-access/crm/src/index.ts"
       ],
+      "@codestrap/developer-foundations-data-access-hello-world": [
+        "packages/data-access/hello-world/src/index.ts"
+      ],
       "@codestrap/developer-foundations-data-access-project-management": [
         "packages/data-access/project-management/src/index.ts"
       ],
