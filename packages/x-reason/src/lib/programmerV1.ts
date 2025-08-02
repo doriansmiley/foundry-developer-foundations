@@ -52,8 +52,8 @@ function generateStateConfig(
   state: StateConfig,
   functionCatalog: Map<string, Task>,
   context: Context,
-  parallel: boolean = false,
-  isNestedState: boolean = false
+  parallel = false,
+  isNestedState = false
 ): Partial<StateNode<Context, any, MachineEvent>> {
   if (parallel) {
     const stateConfig: any = {};

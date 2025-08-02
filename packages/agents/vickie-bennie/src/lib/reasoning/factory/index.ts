@@ -1,0 +1,1 @@
+export {default as xReasonFactory, XReasonEngine, SupportedEngines, SupportTrainingDataTypes } from './XreasonFactory';
