@@ -43,6 +43,7 @@
   "dependencies": {
     "@codestrap/developer-foundations.foundry-tracing-foundations": "^1.2.3",
     "@google/generative-ai": "^0.24.1",
+    "@mendable/firecrawl-js": "^1.29.3",
     "@osdk/client": "^2.2.1",
     "@osdk/foundry.admin": "^2.22.0",
     "@osdk/oauth": "^1.1.2",
