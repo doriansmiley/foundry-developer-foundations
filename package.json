@@ -24,13 +24,16 @@
   ],
   "author": "Dorian Smiley <dsmiley@codestrap.me>",
   "private": true,
-  "workspaces": [
-    "packages/*",
-    "packages/*/*",
-    "hello-world",
-    "x-reason-node",
-    "foundry-tracing-foundations"
-  ],
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "packages/*/*",
+      "hello-world",
+      "x-reason-node",
+      "foundry-tracing-foundations"
+    ],
+    "ignore": [".github/**"]
+  },
   "packageManager": "npm@10.0.0",
   "scripts": {
     "nx": "nx",
