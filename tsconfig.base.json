@@ -15,6 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@codestrap/developer-foundations-data-access-platform": [
+        "packages/data-access/platform/src/index.ts"
+      ],
       "@codestrap/developer-foundations-data-access-communications": [
         "packages/data-access/communications/src/index.ts"
       ],
@@ -29,9 +32,6 @@
       ],
       "@codestrap/developer-foundations-data-access-sales": [
         "packages/data-access/sales/src/index.ts"
-      ],
-      "@codestrap/developer-foundations-data-access-x-reason": [
-        "packages/data-access/x-reason/src/index.ts"
       ],
       "@codestrap/developer-foundations-di": ["packages/di/src/index.ts"],
       "@codestrap/developer-foundations-services-eia": [
