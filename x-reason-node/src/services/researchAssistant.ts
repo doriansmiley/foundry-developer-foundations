@@ -9,7 +9,7 @@ import FirecrawlApp, { CrawlParams, CrawlStatusResponse, ScrapeResponse } from '
 const SEARCH_API_KEY = process.env.GOOGLE_SEARCH_API_KEY;
 // this search engine is specific to stock markets indices and current conditions
 // https://programmablesearchengine.google.com/controlpanel/overview?cx=b7dc27c8f2cf14af1
-const SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_MARKETS;
+const SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 
@@ -71,14 +71,15 @@ async function performSearch(
     dateRestrict?: string,
     siteSearch?: string,
     siteSearchFilter?: string,
+    searchEngineId?: string
 ): Promise<SearchResult> {
     if (!SEARCH_API_KEY || !SEARCH_ENGINE_ID) {
-        throw new Error("Search API key or Search Engine ID missing.");
+        throw new Error("Search API key or Default Search Engine ID missing.");
     }
 
     try {
         const response = await customSearch.cse.list({
-            cx: SEARCH_ENGINE_ID,
+            cx: searchEngineId || SEARCH_ENGINE_ID,
             q: query,
             auth: SEARCH_API_KEY,
             num,
@@ -128,6 +129,7 @@ export async function researchAssistant(
     dateRestrict?: string,
     siteSearch?: string,
     siteSearchFilter?: string,
+    searchEngineId?: string
 
 ): Promise<string> {
     const queries = await generateSearchQueries(userInput);
@@ -138,6 +140,7 @@ export async function researchAssistant(
         dateRestrict,
         siteSearch,
         siteSearchFilter,
+        searchEngineId,
     ));
     const searchResults = await Promise.all(searchPromises);
 

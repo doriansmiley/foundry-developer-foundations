@@ -425,13 +425,14 @@ export interface WeatherService {
     (city: string): Promise<string>;
 }
 
-export interface GeminiSearchStockMarket {
+export interface ResearchAssistant {
     (
         userQuery: string,
         num?: number,
         dateRestrict?: string,
         siteSearch?: string,
         siteSearchFilter?: string,
+        searchEngineId?: string,
     ): Promise<string>;
 }
 
