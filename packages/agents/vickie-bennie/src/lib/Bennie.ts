@@ -1,8 +1,8 @@
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundations';
 
-import { SupportedEngines } from '@xreason/reasoning/factory';
-import { Text2Action } from '@xreason/Text2Action';
-import { extractJsonFromBackticks, uuidv4 } from '@xreason/utils';
+import { SupportedEngines } from './reasoning/factory';
+import { Text2Action } from './Text2Action';
+import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
 import {
   GeminiService,
   MachineDao,
@@ -13,10 +13,9 @@ import {
   RfpResponseReceipt,
   RfpRequestResponse,
   RfpResponsesResult,
-  Communications,
-} from '@xreason/types';
-import { container } from '@xreason/inversify.config';
-import { StateConfig } from '@xreason/reasoning';
+  StateConfig,
+} from '@codestrap/developer-foundations-types';
+import { container } from './inversify.config';
 
 interface BennieResponse {
   status: number;
