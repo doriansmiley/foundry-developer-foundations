@@ -23,6 +23,11 @@ jobs:
       - name: Install Dependencies and Run Tests
         if: ${{ steps.detect-paths.outputs.affected-dirs != '' }}
         run: |
+          # DEBUG: Print the contents of package.json to see what the CI runner is reading
+          echo "--- Contents of package.json on CI runner ---"
+          cat package.json
+          echo "---------------------------------------------"
+
           # 1. Install all dependencies from the root of the repository.
           echo "Installing all dependencies from the root..."
           npm ci
