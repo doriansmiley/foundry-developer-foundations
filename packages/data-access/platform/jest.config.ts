@@ -1,10 +1,10 @@
 export default {
-  displayName: 'data-access-x-reason',
+  displayName: 'data-access-platform',
   preset: '../../../jest.preset.js',
   testEnvironment: 'node',
   transform: {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../../coverage/packages/data-access/x-reason',
+  coverageDirectory: '../../../coverage/packages/data-access/platform',
 };

@@ -1,7 +1,7 @@
 {
-  "name": "data-access-x-reason",
+  "name": "data-access-platform",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "packages/data-access/x-reason/src",
+  "sourceRoot": "packages/data-access/platform/src",
   "projectType": "library",
   "release": {
     "version": {
@@ -16,10 +16,10 @@
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "dist/packages/data-access/x-reason",
-        "main": "packages/data-access/x-reason/src/index.ts",
-        "tsConfig": "packages/data-access/x-reason/tsconfig.lib.json",
-        "assets": ["packages/data-access/x-reason/*.md"]
+        "outputPath": "dist/packages/data-access/platform",
+        "main": "packages/data-access/platform/src/index.ts",
+        "tsConfig": "packages/data-access/platform/tsconfig.lib.json",
+        "assets": ["packages/data-access/platform/*.md"]
       }
     },
     "nx-release-publish": {
@@ -31,7 +31,7 @@
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "packages/data-access/x-reason/jest.config.ts"
+        "jestConfig": "packages/data-access/platform/jest.config.ts"
       }
     }
   }
