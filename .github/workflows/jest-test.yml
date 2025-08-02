@@ -23,6 +23,11 @@ jobs:
       - name: Install Dependencies and Run Tests
         if: ${{ steps.detect-paths.outputs.affected-dirs != '' }}
         run: |
+          # 1. Install all dependencies from the root of the repository.
+          echo "Installing all dependencies from the root..."
+          npm ci
+          # 2. Install dependencies for each affected project.
+          echo "Installing dependencies for affected projects..."
           AFFECTED_DIRS="${{ steps.detect-paths.outputs.affected-dirs }}"
           echo "Affected directories: $AFFECTED_DIRS"
           for DIR in $AFFECTED_DIRS; do
