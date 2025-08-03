@@ -20,10 +20,10 @@ if (!process.env.E2E) {
             try {
                 const results = await researchAssistant(
                     query,
-                    1,
-                    'd1',
-                    undefined, //'finance.yahoo.com',
-                    undefined, //'i',
+                    1, // number of results per search to sample
+                    'd1', // restrict to past 24 hours
+                    undefined, //you can restrict to a specific site if you want: 'finance.yahoo.com',
+                    undefined, //include or exclude: 'i' = include results from 'finance.yahoo.com',
                     process.env.GOOGLE_SEARCH_ENGINE_MARKETS,
                 );
 

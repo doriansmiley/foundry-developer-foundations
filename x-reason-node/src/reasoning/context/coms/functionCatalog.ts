@@ -1,5 +1,6 @@
 import { Context, MachineEvent, Task, ActionType } from "@xreason/reasoning/types";
 import { readEmails, writeEmail, researchReport, resolveUnavailableAttendees, createTask, getAvailableMeetingTimes, getProjectFiles, getProjectStatusReport, scheduleMeeting, sendEmail, sendSlackMessage, writeSlackMessage } from '@xreason/functions';
+import { readWebPage } from "@xreason/functions/comsFunctions/ReadWebPage";
 
 function getPayload(context: Context, result: Record<string, any>) {
     const stateId = context.stack?.[context.stack?.length - 1]
@@ -19,6 +20,25 @@ function getPayload(context: Context, result: Record<string, any>) {
 }
 export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
     return new Map<string, Task>([
+        [
+            "readWebPage",
+            {
+                description:
+                    "Use this tool to for requests to read the contents of a web page or other artifact as a web URL",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    console.log('readWebPage implementation in function catalog called');
+                    const result = await readWebPage(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`readWebPage returned: ${JSON.stringify(result)}`);
+                    console.log('dispatching CONTINUE from readWebPage');
+
+                    dispatch({
+                        type: 'CONTINUE',
+                        payload,
+                    });
+                },
+            },
+        ],
         [
             "readEmails",
             {
