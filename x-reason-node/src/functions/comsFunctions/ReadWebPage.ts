@@ -4,7 +4,19 @@ import { container } from "@xreason/inversify.config";
 import { GeminiService, TYPES } from "@xreason/types";
 import FirecrawlApp from "@mendable/firecrawl-js";
 
-
+/**
+ * Returns `true` only when `input` is a syntactically valid
+ * HTTP or HTTPS URL (must include the protocol).
+ */
+function isValidWebUrl(input: string): boolean {
+    try {
+        const u = new URL(input);
+        const valid = u.protocol === "http:" || u.protocol === "https:"
+        return valid;
+    } catch {
+        return false;
+    }
+}
 
 export async function readWebPage(context: Context, event?: MachineEvent, task?: string): Promise<{ result: string }> {
     const system = `You are a helpful virtual ai assistant tasked with extracting the url from user queries.`;
@@ -37,7 +49,32 @@ export async function readWebPage(context: Context, event?: MachineEvent, task?:
     const response = await geminiService(userPrompt, system);
     // eslint-disable-next-line no-useless-escape
     const extractedResponse = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
-    const { url } = JSON.parse(extractedResponse) as { url: string };
+    let { url } = JSON.parse(extractedResponse) as { url: string };
+
+    if (!isValidWebUrl(url)) {
+        // ask Gemini to fix the bad URL
+        const retryPrompt = `
+The URL you just returned (“${url}”) is invalid.  
+Please correct it.  Respond **only** with JSON in the form:
+
+{
+  "url": "https://example.com"
+}
+
+Original user query:
+${task}
+`;
+
+        const retryRaw = await geminiService(retryPrompt, system);
+        // eslint-disable-next-line no-useless-escape
+        const extractedResponse = extractJsonFromBackticks(retryRaw.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
+
+        url = (JSON.parse(extractedResponse) as { url: string }).url;
+
+        if (!isValidWebUrl(url)) {
+            throw new Error(`Invalid URL after retry: “${url}”`);
+        }
+    }
 
     const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 

@@ -43,6 +43,7 @@
     "test:gmailPubSub": "E2E=true npx jest gmail.pubsub.e2e.test.ts",
     "test:eiaService": "E2E=true npx jest eiaService.e2e.test.ts",
     "test:researchAssistant": "E2E=true npx jest researchAssistant.test.ts",
+    "test:readWebPage": "E2E=true npx jest readWebPage.test.ts",
     "test:watch": "jest --watch",
     "lint": "eslint 'src/**/*.{js,ts}'",
     "build": "tsup --no-watch --silent",
