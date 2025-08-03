@@ -23,6 +23,18 @@ Get me caught up on my emails.
 
         }, 60000);
 
+        it("It should return the webpage contents as markdown with protocol", async () => {
+            const vickie = new Vickie();
+
+            const result = await vickie.askVickie(`
+Vickie, read me the page contents of https://docs.google.com/document/d/12Osa66iz9Z4FCM4fvZwbZGpqFghSMWYaEixYvwrBEns/edit?usp=sharing.
+`, process.env.FOUNDRY_TEST_USER);
+            expect(result.executionId).toBeDefined();
+            expect(result.message).toBeDefined();
+            expect(result.status).toBe(200);
+
+        }, 60000);
+
         it("It should schedule a meeting for today with me", async () => {
             const vickie = new Vickie();
 
