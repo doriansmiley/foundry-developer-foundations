@@ -82,15 +82,23 @@ ${task}
         throw new Error('FIRECRAWL_API_KEY is not defined!');
     }
 
-    const app = new FirecrawlApp({ apiKey: FIRECRAWL_API_KEY });
+    try {
+        const app = new FirecrawlApp({ apiKey: FIRECRAWL_API_KEY });
 
-    const pageContents = await app.scrapeUrl(url, {
-        formats: ['markdown'],
-    });
+        const pageContents = await app.scrapeUrl(url, {
+            formats: ['markdown'],
+        });
 
-    if (pageContents.success && pageContents.markdown) {
-        return { result: pageContents.markdown };
+        if (pageContents.success && pageContents.markdown) {
+            return { result: pageContents.markdown };
+        }
+
+        return { result: `Failed to load ${url}\n${pageContents.error}` };
+    } catch (e) {
+        console.log((e as Error).message);
+        console.log((e as Error).stack);
+
+        return { result: `Failed to scrape the webpage with FireCraw: ${(e as Error).message}` };
     }
 
-    return { result: `Failed to load ${url}\n${pageContents.error}` };
 }

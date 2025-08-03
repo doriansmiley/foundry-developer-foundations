@@ -16,8 +16,6 @@ const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 const customSearch = google.customsearch('v1');
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-const app = new FirecrawlApp({ apiKey: FIRECRAWL_API_KEY });
-
 interface SearchResultItem {
     title?: string;
     link?: string;
@@ -28,7 +26,7 @@ interface SearchResult {
     items?: SearchResultItem[];
 }
 
-async function loadPageContent(results: SearchResultItem[]): Promise<string[]> {
+async function loadPageContent(results: SearchResultItem[], app: FirecrawlApp): Promise<string[]> {
     if (!results) {
         return [];
     }
@@ -132,33 +130,41 @@ export async function researchAssistant(
     searchEngineId?: string
 
 ): Promise<string> {
-    const queries = await generateSearchQueries(userInput);
+    try {
+        const app = new FirecrawlApp({ apiKey: FIRECRAWL_API_KEY });
 
-    const searchPromises = queries.map(query => performSearch(
-        query,
-        num,
-        dateRestrict,
-        siteSearch,
-        siteSearchFilter,
-        searchEngineId,
-    ));
-    const searchResults = await Promise.all(searchPromises);
+        const queries = await generateSearchQueries(userInput);
 
-    const flattenedResults: SearchResultItem[] = searchResults.reduce((acc: SearchResultItem[], curr) => {
-        if (curr.items && curr.items.length > 0) {
-            acc = [...acc, ...curr.items]
+        const searchPromises = queries.map(query => performSearch(
+            query,
+            num,
+            dateRestrict,
+            siteSearch,
+            siteSearchFilter,
+            searchEngineId,
+        ));
+        const searchResults = await Promise.all(searchPromises);
+
+        const flattenedResults: SearchResultItem[] = searchResults.reduce((acc: SearchResultItem[], curr) => {
+            if (curr.items && curr.items.length > 0) {
+                acc = [...acc, ...curr.items]
+            }
+            return acc;
+        }, [] as SearchResultItem[]);
+
+
+        const summaries: string[] = [];
+        // we are rate limited by firecrawl to two concurrent requests in the free tier
+        for (let i = 0; i < flattenedResults.length; i += 2) {
+            const batch = flattenedResults.slice(i, i + 2);
+            const batchResults = await loadPageContent(batch, app);
+            summaries.push(...batchResults.flat());
         }
-        return acc;
-    }, [] as SearchResultItem[]);
-
-
-    const summaries: string[] = [];
-    // we are rate limited by firecrawl to two concurrent requests in the free tier
-    for (let i = 0; i < flattenedResults.length; i += 2) {
-        const batch = flattenedResults.slice(i, i + 2);
-        const batchResults = await loadPageContent(batch);
-        summaries.push(...batchResults.flat());
+        return synthesizeAnswer(summaries, userInput);
+    } catch (e) {
+        console.log((e as Error).message);
+        console.log((e as Error).stack);
+        return `Failed to scrape the webpage with FireCraw: ${(e as Error).message}`;
     }
-    return synthesizeAnswer(summaries, userInput);
 }
 
