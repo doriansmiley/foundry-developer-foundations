@@ -15,9 +15,6 @@
     "sourceMap": true,
     "types": ["jest", "node"],
     "baseUrl": ".",
-    "paths": {
-        "@tracing/*": ["src/*"]
-    },
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },

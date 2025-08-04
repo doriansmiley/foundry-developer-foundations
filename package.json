@@ -29,7 +29,6 @@
       "packages/*",
       "packages/*/*",
       "hello-world",
-      "x-reason-node",
       "foundry-tracing-foundations"
     ],
     "ignore": [".github/**"]
