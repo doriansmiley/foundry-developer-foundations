@@ -14,13 +14,14 @@
   "tags": ["type:agent", "type:backend-app"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
-      "outputs": ["{options.outputPath}"],
+      "executor": "@nx/esbuild:esbuild",
       "options": {
         "outputPath": "dist/packages/agents/vickie-bennie",
         "main": "packages/agents/vickie-bennie/src/index.ts",
         "tsConfig": "packages/agents/vickie-bennie/tsconfig.lib.json",
-        "assets": ["packages/agents/vickie-bennie/*.md"]
+        "platform": "node",
+        "bundle": true,
+        "format": ["cjs"]
       }
     },
     "nx-release-publish": {
