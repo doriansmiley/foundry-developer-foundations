@@ -8,7 +8,7 @@ testGitWorklows.sh
 .nx/installation
 .nx/cache
 .nx/workspace-data
-
+/packages/**/.env
 
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md

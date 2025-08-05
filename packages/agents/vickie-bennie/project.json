@@ -18,6 +18,7 @@
       "options": {
         "outputPath": "dist/packages/agents/vickie-bennie",
         "main": "packages/agents/vickie-bennie/src/index.ts",
+        "additionalEntryPoints": ["packages/agents/vickie-bennie/src/lib/computeModule.ts"],
         "tsConfig": "packages/agents/vickie-bennie/tsconfig.lib.json",
         "platform": "node",
         "bundle": true,

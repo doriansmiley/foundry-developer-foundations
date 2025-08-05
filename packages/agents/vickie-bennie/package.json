@@ -5,7 +5,10 @@
   "main": "./index.cjs",
   "types": "./src/index.d.ts",
   "dependencies": {
-    "tslib": "^2.3.0",
+    "@sinclair/typebox": "^0.34.33",
+    "dotenv": "^16.5.0",
+    "reflect-metadata": "^0.2.2",
+    "ramda": "^0.30.1",
     "@codestrap/developer-foundations.foundry-tracing-foundations": "^1.2.3",
     "@codestrap/developer-foundations-types": "*",
     "@codestrap/developer-foundations-utils": "*",
