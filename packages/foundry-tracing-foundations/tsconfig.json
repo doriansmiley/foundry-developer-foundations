@@ -15,6 +15,7 @@
     "sourceMap": true,
     "types": ["jest", "node"],
     "baseUrl": ".",
+    "allowJs": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
