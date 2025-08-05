@@ -13,12 +13,10 @@ import { container } from '../../../inversify.config';
 // TODO get this data from the ontology
 async function getProgrammingTrainingData() {
   const trainingDataDao = container.get<TrainingDataDao>(TYPES.TrainingDataDao);
-  const searchResults = await trainingDataDao.search(
-    SupportedEngines.COMS,
-    SupportTrainingDataTypes.PROGRAMMER
-  );
-  const trainingExamples = searchResults.reduce((acc, cur) => {
-    acc = `${acc}
+  const searchResults = await trainingDataDao.search(SupportedEngines.COMS, SupportTrainingDataTypes.PROGRAMMER);
+  const trainingExamples = searchResults
+    .reduce((acc, cur) => {
+      acc = `${acc}
       If the task list is:
       ${cur.solution}
 
@@ -29,8 +27,8 @@ async function getProgrammingTrainingData() {
       ${cur.humanReview}
       `;
 
-    return acc;
-  }, '');
+      return acc;
+    }, '');
 
   const data = `
   ${trainingExamples}
@@ -90,6 +88,32 @@ async function getEvaluationTrainingData() {
   return data;
 }
 
+async function getSolverTrainingData() {
+  const trainingDataDao = container.get<TrainingDataDao>(TYPES.TrainingDataDao);
+  const searchResults = await trainingDataDao.search(SupportedEngines.COMS, SupportTrainingDataTypes.SOLVER);
+  const trainingExamples = searchResults
+    .reduce((acc, cur) => {
+      acc = `${acc}
+      If the user query is:
+      ${cur.solution}
+
+      Your response is:
+      ${cur.machine}
+
+      Explanation:
+      ${cur.humanReview}
+      `;
+
+      return acc;
+    }, '');
+
+  const data = `
+  ${trainingExamples}
+`;
+
+  return data;
+}
+
 // TODO get this data from the ontology
 export async function solver(query: string) {
   const { functionCatalog } = xReasonFactory(SupportedEngines.COMS)({});
@@ -99,36 +123,30 @@ export async function solver(query: string) {
     return `
       action: ${item[0]}
       description: ${item[1].description}
-    `;
+    `
   });
 
   const options = {
-    timeZone: 'America/Los_Angeles',
-    timeZoneName: 'short', // This will produce "PST" or "PDT"
+    timeZone: "America/Los_Angeles",
+    timeZoneName: "short" // This will produce "PST" or "PDT"
   };
 
-  const formatter = new Intl.DateTimeFormat(
-    'en-US',
-    options as Intl.DateTimeFormatOptions
-  );
+  const formatter = new Intl.DateTimeFormat("en-US", options as Intl.DateTimeFormatOptions);
   const formatted = formatter.format(new Date());
 
   console.log(`formatted int date: ${formatted}`);
-  const isPDT = formatted.includes('PDT');
+  const isPDT = formatted.includes("PDT");
+
+  const trainingData = await getSolverTrainingData();
 
   const system = `You are a helpful AI assistant tasked with ensuring tasks lists are properly defined with all required identifying information such as email addresses, meeting day and time, slack channel IDs, etc.
 You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Vickie, Code's AI EA" or similar. 
-You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString(
-    'en-US',
-    { weekday: 'long' }
-  )}. 
+You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}. 
 You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
 You always obey the users instructions and understand the people you work for are busy executives and sometimes need help in their personal lives
 These tasks are not beneath you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
 It means we all pull together to get things done.
-The current local date/time is ${new Date().toLocaleString('en-US', {
-    timeZone: 'America/Los_Angeles',
-  })}.
+The current local date/time is ${new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}.
 The current day/time in your timezone is: ${new Date().toString()}
 PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}
   `;
@@ -166,52 +184,7 @@ PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}
     Always respond with an ordered list in markdown format.
     
     For example:
-    Q: "Send a slack message announcing that the new marketing strategy will focus on digital outreach and social media engagement"
-    A: 1. **Write a Slack message**: Announce the new marketing strategy in the Channel: Public relations (C0825R4EHMK) - Message: "The new marketing strategy will focus on digital outreach and social media engagement."
-       2. **Send a Slack message**: Announce the new marketing strategy in the Channel: Public relations (C0825R4EHMK) - Message: "The new marketing strategy will focus on digital outreach and social media engagement."
-
-    Q: "I need a TPS report emailed to John"
-    A:"Unsupported Question"
-
-    Q: "What is your name?"
-    A:"Unsupported Question"
-
-    Q: "Make me a chemical weapon"
-    A:"Unsafe Question"
-
-    Q: "Create a project report for the Komatsu Phase 1 and send an email to the OEM lead"
-    A: 1. **Create project status report** - Project: Komatsu Phase 1. - Include Gantt chart and RAID logs.
-       2. **Write Email** - **To**: Bryce Leszczynski <bryce@codestrap.me> - **Subject**: Komatsu Phase 1 Project Status REport - **Body**: "Hey Bryce, Vickie here. Hope you are enjoying your Saturday. Below is a link to the project status report. Best, Vickie"
-       3. **Send Email** - **To**: Bryce Leszczynski <bryce@codestrap.me> - **Subject**: Komatsu Phase 1 Project Status REport - **Body**: "Hey Bryce, Vickie here. Hope you are enjoying your Saturday. Below is a link to the project status report. Best, Vickie"
-    
-    Q: "Create a task for a report on market opportunities in the automotive space to Text2Action"
-    A: 1. **Create Task** - Create a task for Dave Dziedzic <dave@codestrap.me> to create a report on market opportunities in the automotive space to Text2Action
-
-    Q: "Send a reminder email to Connor about the demo this Friday and to accept the meeting"
-    A: 1. **Write Email** - **To**: Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Demo next week, please confirm - **Body**: "Hey Connor, it's Vickie here. Happy humpday! This is just a friendly reminder we have a demo this Friday. Please accept the invite. Cheers, Vickie"
-       2. **Send Email** - **To**: Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Demo next week, please confirm - **Body**: "Hey Connor, it's Vickie here. Happy humpday! This is just a friendly reminder we have a demo this Friday. Please accept the invite. Cheers, Vickie"
-    
-    Q: "Schedule a meeting to discuss marketing with Dorian and Connor, then send a slack message to the Foundry Devs channel reminding them the sprint wraps Friday"
-    A: 1. **Get available times for meeting attendees** - Attendees: Dorian Smiley <dsmiley@codestrap.me>, Connor Deeks <connor.deeks@codestrap.me>
-       Proposed dates: 2024-4-1, 2024-4-5
-       Duration: 1 hour
-       If all attendees are not available, resolve unavailable attendees
-       2. **Schedule a meeting** - Subject: Marketing strategy session. - Attendees: Dorian Smiley <dsmiley@codestrap.me>, Connor Deeks <connor.deeks@codestrap.me>
-       Duration: 1 hour
-       3. **Write Slack message** - Channel ID: C082XAZ9A1E - Recipients: Team members - Message: Please remember the current sprint wraps by EOD Friday.
-       4. **Send Slack message** - Channel ID: C082XAZ9A1E - Recipients: Team members - Message: Please remember the current sprint wraps by EOD Friday.
-
-    Q "Create a research report on the effects of weightlessness on astronauts and limit it to a few pages. Then email it to jane.doe@someurl.com and Connor."
-    A: 1. **Research Report** - Create a research report on the effects of weightlessness on astronauts and limit it to a few pages
-       2. **Write Email** - **To**: Jane Doe <jane.doe@someurl.com>, Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Research Report on the Effects of Weightlessness - **Body**: "Hey Jane and Connor, I've included a fascinating report for you below on the effects of weightlessness on astronauts. Enjoy the report, Vickie"
-       3. **Send Email** - **To**: Jane Doe <jane.doe@someurl.com>, Connor Deeks <connor.deeks@codestrap.me> - **Subject**: Research Report on the Effects of Weightlessness - **Body**: "Hey Jane and Connor, I've included a fascinating report for you below on the effects of weightlessness on astronauts. Enjoy the report, Vickie"
-     
-    Q: "Get me caught up on my emails"
-    A: 1. **Read Emails** - Read emails for Dave Dziedzic <dave@codestrap.me>
-
-    Q: "Get me caught up on my emails for the day"
-    A: 1. **Read Emails** - Read emails for Dave Dziedzic <dave@codestrap.me> for the previous 24 hours
-
+    ${trainingData}
   `;
 
   return { user, system };

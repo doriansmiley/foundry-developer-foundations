@@ -11,14 +11,10 @@ import {
   TYPES,
 } from '@codestrap/developer-foundations-types';
 
-export async function readEmails(
-  context: Context,
-  event?: MachineEvent,
-  task?: string
-): Promise<ReadEmailOutput> {
-  const system = `You are a helpful virtual ai assistant tasked with extracting the time frame in minutes for an email query.`;
+export async function readEmails(context: Context, event?: MachineEvent, task?: string): Promise<ReadEmailOutput> {
+    const system = `You are a helpful virtual ai assistant tasked with extracting the time frame in minutes for an email query.`;
 
-  const userPrompt = `
+    const userPrompt = `
     Using the task from the end user below classify the time frame for the email query into one of the following:
     1. past 15 minutes (also the default if no time from is specified)
     2. past hour
@@ -53,40 +49,32 @@ export async function readEmails(
     }
     `;
 
-  const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
-  const response = await geminiService(userPrompt, system);
-  // eslint-disable-next-line no-useless-escape
-  const extractedResponse = extractJsonFromBackticks(
-    response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, '') ?? '{}'
-  );
-  const { timeframe, email } = JSON.parse(extractedResponse) as {
-    timeframe: string;
-    email: string;
-  };
+    const response = await geminiService(userPrompt, system);
+    // eslint-disable-next-line no-useless-escape
+    const extractedResponse = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
+    const { timeframe, email } = JSON.parse(extractedResponse) as { timeframe: string, email: string };
 
-  let parsedTime = 15;
+    let parsedTime = 15;
 
-  switch (timeframe) {
-    case 'past hour':
-      parsedTime = 60;
-      break;
-    case 'past day':
-      parsedTime = 720; // we use 12 hours instead of 24 as it's probably the most relevant window.
-  }
+    switch (timeframe) {
+        case 'past hour':
+            parsedTime = 60
+            break;
+        case 'past day':
+            parsedTime = 720; // we use 12 hours instead of 24 as it's probably the most relevant window.
 
-  const officeService = await container.getAsync<OfficeService>(
-    TYPES.OfficeService
-  );
+    }
 
-  const publishTime = new Date(
-    new Date().getTime() - parsedTime * 60 * 1000
-  ).toISOString();
+    const officeService = await container.getAsync<OfficeService>(TYPES.OfficeService);
 
-  const result = await officeService.readEmailHistory({
-    email,
-    publishTime, // TODO construct the published time from the extracted timeframe parameter
-  });
+    const publishTime = new Date((new Date().getTime() - parsedTime * 60 * 1000)).toISOString();
 
-  return result;
+    const result = await officeService.readEmailHistory({
+        email,
+        publishTime, // TODO construct the published time from the extracted timeframe parameter
+    });
+
+    return result;
 }

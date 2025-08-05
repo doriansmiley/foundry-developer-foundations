@@ -57,7 +57,10 @@
     "inversify": "^7.5.1",
     "openai": "^4.92.1",
     "ramda": "^0.30.1",
-    "xstate": "4.37.2"
+    "xstate": "4.37.2",
+    "@google/genai": "^1.12.0",
+    "install": "^0.13.0",
+    "npm": "^11.5.2"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.9",

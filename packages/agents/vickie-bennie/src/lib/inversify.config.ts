@@ -25,8 +25,8 @@ import {
   makeThreadsDao,
 } from '@codestrap/developer-foundations-data-access-communications';
 import {
-  gemeniStockMarketConditions,
   makeGSuiteClientV2,
+  researchAssistant,
 } from '@codestrap/developer-foundations-services-google';
 import {
   makeRfpRequestsDao,
@@ -93,8 +93,8 @@ container
   .toConstantValue(createLoggingService(1 * 1024 * 1024, 64 * 1024 * 1024));
 
 container
-  .bind(TYPES.GeminiSearchStockMarket)
-  .toConstantValue(gemeniStockMarketConditions);
+  .bind(TYPES.ResearchAssistant)
+  .toConstantValue(researchAssistant);
 
 // IMPORTANT use container.getAsync when retrieving!
 container

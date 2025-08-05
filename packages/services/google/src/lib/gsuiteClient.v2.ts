@@ -1,16 +1,33 @@
 import {
   MeetingRequest,
-  OfficeService,
+  OfficeServiceV2,
+  Summaries,
 } from '@codestrap/developer-foundations-types';
 import { makeGSuiteClient } from './gsuiteClient';
 import { findOptimalMeetingTimeV2 } from './delegates/findOptimalMeetingTime.v2';
 import { deriveWindowFromTimeframe } from './delegates/deriveWindowFromTimeframe';
+import { summarizeCalendars } from './delegates/summerizeCalanders';
 
-export async function makeGSuiteClientV2(user: string): Promise<OfficeService> {
+export async function makeGSuiteClientV2(
+  user: string
+): Promise<OfficeServiceV2> {
   const v1Client = await makeGSuiteClient(user);
 
   return {
     ...v1Client,
+    summarizeCalendars: async (args: {
+      emails: string[];
+      timezone: string;
+      windowStartLocal: Date;
+      windowEndLocal: Date;
+    }): Promise<Summaries> => {
+      const result = await summarizeCalendars({
+        ...args,
+        calendar: v1Client.getCalendarClient(),
+      });
+
+      return result;
+    },
     getAvailableMeetingTimes: async (
       meetingRequest: MeetingRequest
     ): Promise<{
