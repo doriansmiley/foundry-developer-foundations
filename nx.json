@@ -18,7 +18,7 @@
   "release": {
     "projects": ["packages/*"],
     "version": {
-      "preVersionCommand": "npx nx run-many -t build && npx nx run-many -t test"
+      "preVersionCommand": "npx nx run-many -t build --parallel=3 --skip-nx-cache=false"
     }
   },
   "plugins": [

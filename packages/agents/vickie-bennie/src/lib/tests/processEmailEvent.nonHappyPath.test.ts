@@ -1,14 +1,13 @@
-import { mockProcessEmailEventExecution } from './__fixtures__/MachineExecutions';
+import { mockProcessEmailEventExecution } from '../__fixtures__/MachineExecutions';
 import {
-  getMockFreeBusyResponse,
   mockCalendarInsert,
   mockCalendarList,
-  mockEmailHistoryWithResolution,
+  mockEmailHistoryNoResolution,
   mockEmailResponse,
   mockMessageGetResponse,
-  mockMessageGetThreadsResponse,
-} from './__fixtures__/Email';
-import { Vickie } from './Vickie';
+  mockMessageGetThreadsResponseNoResolution,
+} from '../__fixtures__/Email';
+import { Vickie } from '../Vickie';
 
 let counter = 0;
 
@@ -123,7 +122,7 @@ jest.mock('googleapis', () => ({
             }),
             list: jest.fn((request: any) => {
               console.log(`Gmail mock messages.list called with: ${request}`);
-              return Promise.resolve(mockEmailHistoryWithResolution);
+              return Promise.resolve(mockEmailHistoryNoResolution);
             }),
             get: jest.fn((request: any) => {
               console.log(`Gmail mock messages.get called with: ${request}`);
@@ -133,7 +132,7 @@ jest.mock('googleapis', () => ({
           threads: {
             get: jest.fn((request: any) => {
               console.log(`Gmail mock threads.get called with: ${request}`);
-              return Promise.resolve(mockMessageGetThreadsResponse);
+              return Promise.resolve(mockMessageGetThreadsResponseNoResolution);
             }),
           },
         },
@@ -163,11 +162,28 @@ jest.mock('googleapis', () => ({
                 params
               )}`
             );
-            const mockResponse = getMockFreeBusyResponse(
-              params.requestBody.timeMin,
-              params.requestBody.timeMax
-            );
-            return Promise.resolve(mockResponse);
+            return Promise.resolve({
+              data: {
+                kind: 'calendar#freeBusy',
+                timeMin: params.requestBody.timeMin,
+                timeMax: params.requestBody.timeMax,
+                calendars: {
+                  // each email requested in params.requestBody.items[*].id gets an entry:
+                  'dsmiley@codestrap.me': {
+                    busy: [
+                      {
+                        start: '2025-07-22T18:00:00Z',
+                        end: '2025-07-22T19:00:00Z',
+                      },
+                      {
+                        start: '2025-07-23T15:00:00Z',
+                        end: '2025-07-23T16:30:00Z',
+                      },
+                    ],
+                  },
+                },
+              },
+            });
           }),
         },
       };
@@ -216,14 +232,16 @@ describe('testing Vickie', () => {
     jest.clearAllMocks();
   });
 
-  it('it handle a mock event using processEmailEvent when a resolution is found', async () => {
+  it('it handle a mock event using processEmailEvent when no resolution is found', async () => {
     const vickie = new Vickie();
     const result = await vickie.processEmailEvent(
       'eyJlbWFpbEFkZHJlc3MiOiJkc21pbGV5QGNvZGVzdHJhcC5tZSIsImhpc3RvcnlJZCI6MTc5MDUxMn0=',
       '2025-07-22T20:43:55.184Z'
     );
     expect(result).toBeDefined();
-    expect(result.message).toBeDefined();
-    expect(result.status).toBe(200);
+    expect(result.message).toBe(
+      'Some threads failed to resolve:\n {"status":"fulfilled","value":{"status":400,"executionId":"1","message":"ERROR","error":"No resolution found","taskList":"ERROR"}}'
+    );
+    expect(result.status).toBe(400);
   }, 120000);
 });

@@ -1,5 +1,5 @@
-import { Bennie } from './Bennie';
-import { container } from './inversify.config';
+import { Bennie } from '../Bennie';
+import { container } from '../inversify.config';
 import {
   Context,
   MachineEvent,

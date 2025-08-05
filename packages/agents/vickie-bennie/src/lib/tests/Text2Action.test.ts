@@ -1,15 +1,23 @@
-import { mockProcessEmailEventExecution } from './__fixtures__/MachineExecutions';
 import {
-  mockCalendarInsert,
-  mockCalendarList,
-  mockEmailHistoryNoResolution,
-  mockEmailResponse,
-  mockMessageGetResponse,
-  mockMessageGetThreadsResponseNoResolution,
-} from './__fixtures__/Email';
-import { Vickie } from './Vickie';
+  text2ActionTestMachineExecution,
+  machineId,
+} from '../__fixtures__/MachineExecutions';
+import { Text2Action } from '../Text2Action';
+import { mockEmailResponse } from '../__fixtures__/Email';
 
 let counter = 0;
+
+// Mock FoundryClient before any imports that use inversify
+jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
+  ...jest.requireActual('@codestrap/developer-foundations-services-palantir'),
+  createFoundryClient: jest.fn(() => ({
+    // Mock FoundryClient methods as needed
+    someMethod: jest.fn(),
+  })),
+  geminiService: jest.fn(() => {
+    return text2ActionTestMachineExecution.machine;
+  }),
+}));
 
 jest.mock('@codestrap/developer-foundations-utils', () => ({
   ...jest.requireActual('@codestrap/developer-foundations-utils'),
@@ -27,12 +35,12 @@ jest.mock('@codestrap/developer-foundations-data-access-platform', () => ({
         lockOwner?: string,
         lockUntil?: number
       ) => {
-        return mockProcessEmailEventExecution;
+        return text2ActionTestMachineExecution;
       }
     ),
     delete: jest.fn(),
     read: jest.fn((machineExecutionId: string) => {
-      return Promise.resolve(mockProcessEmailEventExecution);
+      return Promise.resolve(text2ActionTestMachineExecution);
     }),
   })),
   makeMemoryRecallDao: jest.fn(() => ({
@@ -117,22 +125,8 @@ jest.mock('googleapis', () => ({
         users: {
           messages: {
             send: jest.fn((request: any) => {
-              console.log(`Gmail mock messages.send called with: ${request}`);
+              console.log(`Gmail mock called with: ${request}`);
               return Promise.resolve(mockEmailResponse);
-            }),
-            list: jest.fn((request: any) => {
-              console.log(`Gmail mock messages.list called with: ${request}`);
-              return Promise.resolve(mockEmailHistoryNoResolution);
-            }),
-            get: jest.fn((request: any) => {
-              console.log(`Gmail mock messages.get called with: ${request}`);
-              return Promise.resolve(mockMessageGetResponse);
-            }),
-          },
-          threads: {
-            get: jest.fn((request: any) => {
-              console.log(`Gmail mock threads.get called with: ${request}`);
-              return Promise.resolve(mockMessageGetThreadsResponseNoResolution);
             }),
           },
         },
@@ -145,45 +139,7 @@ jest.mock('googleapis', () => ({
         events: {
           insert: jest.fn((request: any) => {
             console.log(`Calendar mock called with: ${request}`);
-            return Promise.resolve(mockCalendarInsert);
-          }),
-          list: jest.fn((params: any) => {
-            console.log(
-              `Calendar mock events.list called with: ${JSON.stringify(params)}`
-            );
-            return Promise.resolve(mockCalendarList);
-          }),
-        },
-        /* ---------- freebusy.query mock ---------- */
-        freebusy: {
-          query: jest.fn((params: any) => {
-            console.log(
-              `Calendar mock freebusy.query called with: ${JSON.stringify(
-                params
-              )}`
-            );
-            return Promise.resolve({
-              data: {
-                kind: 'calendar#freeBusy',
-                timeMin: params.requestBody.timeMin,
-                timeMax: params.requestBody.timeMax,
-                calendars: {
-                  // each email requested in params.requestBody.items[*].id gets an entry:
-                  'dsmiley@codestrap.me': {
-                    busy: [
-                      {
-                        start: '2025-07-22T18:00:00Z',
-                        end: '2025-07-22T19:00:00Z',
-                      },
-                      {
-                        start: '2025-07-23T15:00:00Z',
-                        end: '2025-07-23T16:30:00Z',
-                      },
-                    ],
-                  },
-                },
-              },
-            });
+            return Promise.resolve({ data: { id: 'mockEventId' } });
           }),
         },
       };
@@ -227,21 +183,25 @@ jest.mock('googleapis', () => ({
   },
 }));
 
-describe('testing Vickie', () => {
+describe('testing Text2Action', () => {
   afterAll(() => {
     jest.clearAllMocks();
   });
 
-  it('it handle a mock event using processEmailEvent when no resolution is found', async () => {
-    const vickie = new Vickie();
-    const result = await vickie.processEmailEvent(
-      'eyJlbWFpbEFkZHJlc3MiOiJkc21pbGV5QGNvZGVzdHJhcC5tZSIsImhpc3RvcnlJZCI6MTc5MDUxMn0=',
-      '2025-07-22T20:43:55.184Z'
-    );
-    expect(result).toBeDefined();
-    expect(result.message).toBe(
-      'Some threads failed to resolve:\n {"status":"fulfilled","value":{"status":400,"executionId":"1","message":"ERROR","error":"No resolution found","taskList":"ERROR"}}'
-    );
-    expect(result.status).toBe(400);
-  }, 120000);
+  it('it should rehydrate an existing execution and return pause', async () => {
+    const solution = {
+      input: '', //not relevant for this
+      id: machineId || '',
+      plan: '', //not relevant for retrieving an execution
+    };
+
+    const t2a = new Text2Action();
+    const result = await t2a.upsertState(undefined, true, machineId);
+    const state = JSON.parse(result.state!);
+    // TODO make this test better. Currently we are returning the mock value which
+    // does not reflect the updates which should return the success state
+    expect(state.value).toBe('sendEmail|1');
+    expect(state.context.stack).toHaveLength(1);
+    expect(state.context.stack[0]).toBe('sendEmail|1');
+  }, 30000);
 });

@@ -1,4 +1,4 @@
-import { Vickie } from './Vickie';
+import { Vickie } from '../Vickie';
 
 if (!process.env.E2E) {
   test.skip('e2e test skipped in default run', () => {

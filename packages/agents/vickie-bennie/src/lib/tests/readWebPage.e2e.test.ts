@@ -2,7 +2,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-import { readWebPage } from './ReadWebPage';
+import { readWebPage } from '../functions/comsFunctions/ReadWebPage';
 
 if (!process.env.E2E) {
   test.skip('e2e test skipped in default run', () => {
