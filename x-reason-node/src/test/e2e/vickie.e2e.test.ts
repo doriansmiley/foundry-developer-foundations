@@ -11,6 +11,18 @@ if (!process.env.E2E) {
             jest.clearAllMocks();
         });
 
+        it("It should retrieve my calendar events for tomorrow", async () => {
+            const vickie = new Vickie();
+
+            const result = await vickie.askVickie(`
+What's coming up on my calendar tomorrow
+                `, process.env.FOUNDRY_TEST_USER);
+            expect(result.executionId).toBeDefined();
+            expect(result.message).toBeDefined();
+            expect(result.status).toBe(200);
+
+        }, 60000);
+
         it("It should retrieve my emails", async () => {
             const vickie = new Vickie();
 

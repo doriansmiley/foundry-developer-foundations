@@ -1,6 +1,7 @@
 import { Context, MachineEvent, Task, ActionType } from "@xreason/reasoning/types";
 import { readEmails, writeEmail, researchReport, resolveUnavailableAttendees, createTask, getAvailableMeetingTimes, getProjectFiles, getProjectStatusReport, scheduleMeeting, sendEmail, sendSlackMessage, writeSlackMessage } from '@xreason/functions';
 import { readWebPage } from "@xreason/functions/comsFunctions/ReadWebPage";
+import { summarizeCalendars } from "@xreason/functions/comsFunctions/SummerizeCalendars";
 
 function getPayload(context: Context, result: Record<string, any>) {
     const stateId = context.stack?.[context.stack?.length - 1]
@@ -20,6 +21,25 @@ function getPayload(context: Context, result: Record<string, any>) {
 }
 export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
     return new Map<string, Task>([
+        [
+            "summarizeCalendars",
+            {
+                description:
+                    "Use this tool to summarize the upcoming calendar events for the specified email addresses",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    console.log('summarizeCalendars implementation in function catalog called');
+                    const result = await summarizeCalendars(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`summarizeCalendars returned: ${JSON.stringify(result)}`);
+                    console.log('dispatching CONTINUE from summarizeCalendars');
+
+                    dispatch({
+                        type: 'CONTINUE',
+                        payload,
+                    });
+                },
+            },
+        ],
         [
             "readWebPage",
             {

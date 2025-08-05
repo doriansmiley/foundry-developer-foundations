@@ -678,6 +678,44 @@ export type OfficeService = {
     watchEmails: (context: WatchEmailsInput) => Promise<WatchEmailsOutput>,
 }
 
+export type ListCalendarArgs = {
+    calendar: calendar_v3.Calendar;
+    emails: string[];            // calendars to query (primary)
+    timezone: string;            // e.g. "America/Los_Angeles"
+    windowStartLocal: Date;      // PT wall clock
+    windowEndLocal: Date;        // PT wall clock
+};
+
+export type EventSummary = {
+    id: string;
+    subject: string;
+    description?: string;
+    start: string;               // local ISO with offset, e.g. 2025-07-22T10:30:00-07:00
+    end: string;                 // same format
+    durationMinutes: number;
+    participants: string[];      // attendee email list
+    meetingLink?: string;        // Meet/Zoom/Teams link if found
+};
+
+export type CalendarSummary = {
+    email: string;
+    events: EventSummary[];
+};
+
+export type Summaries = {
+    message: string;
+    calendars: CalendarSummary[];
+};
+
+export type OfficeServiceV2 = {
+    summarizeCalendars: (args: {
+        emails: string[];
+        timezone: string;
+        windowStartLocal: Date;
+        windowEndLocal: Date;
+    }) => Promise<Summaries>
+} & OfficeService
+
 export type GSuiteCalendarService = {
     getCalendarClient: () => calendar_v3.Calendar;
     getEmailClient: () => gmail_v1.Gmail;

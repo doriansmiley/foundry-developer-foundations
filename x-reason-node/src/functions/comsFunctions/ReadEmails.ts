@@ -3,8 +3,6 @@ import { extractJsonFromBackticks, uuidv4 } from "@xreason/utils";
 import { container } from "@xreason/inversify.config";
 import { GeminiService, OfficeService, ReadEmailOutput, TYPES } from "@xreason/types";
 
-
-
 export async function readEmails(context: Context, event?: MachineEvent, task?: string): Promise<ReadEmailOutput> {
     const system = `You are a helpful virtual ai assistant tasked with extracting the time frame in minutes for an email query.`;
 

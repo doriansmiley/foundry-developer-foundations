@@ -111,7 +111,7 @@ function getOffsetForUTCInstant(tz: string, utc: Date, fallback = -420): number 
 }
 
 /** Build a UTC instant from a PT wall‑clock (Y/M/D/H/M/S) independent of host TZ. */
-function toUTCFromWallClock(localWall: Date, tz: string, fallback = -420): Date {
+export function toUTCFromWallClock(localWall: Date, tz: string, fallback = -420): Date {
     const y = localWall.getFullYear();
     const m = localWall.getMonth();      // 0-based
     const d = localWall.getDate();
@@ -128,7 +128,7 @@ function toUTCFromWallClock(localWall: Date, tz: string, fallback = -420): Date 
 }
 
 /** ISO string in target tz with correct +/-07:00 or +/-08:00 suffix (DST-safe). */
-function toZonedISOString(utc: Date, tz: string, fallback = -420): string {
+export function toZonedISOString(utc: Date, tz: string, fallback = -420): string {
     try {
         const dtf = new Intl.DateTimeFormat("en-US", {
             timeZone: tz,
