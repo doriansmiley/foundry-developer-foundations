@@ -1,0 +1,40 @@
+{
+  "name": "foundry-tracing-foundations",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/foundry-tracing-foundations/src",
+  "projectType": "library",
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
+  },
+  "implicitDependencies": ["foundry-tracing-foundations"],
+  "tags": ["type:agent", "type:backend-app"],
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "options": {
+        "outputPath": "dist/packages/foundry-tracing-foundations",
+        "main": "packages/foundry-tracing-foundations/src/index.ts",
+        "tsConfig": "packages/foundry-tracing-foundations/tsconfig.json",
+        "platform": "node",
+        "bundle": true,
+        "format": ["cjs"]
+      }
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "packages/foundry-tracing-foundations/jest.config.ts"
+      }
+    }
+  }
+}

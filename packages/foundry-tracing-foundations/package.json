@@ -1,0 +1,77 @@
+{
+  "name": "@codestrap/developer-foundations.foundry-tracing-foundations",
+  "version": "1.2.3",
+  "description": "## Introduction",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doriansmiley/foundry-developer-foundations.git"
+  },
+  "bugs": {
+    "url": "https://github.com/doriansmiley/foundry-developer-foundations/issues"
+  },
+  "homepage": "https://github.com/doriansmiley/foundry-developer-foundations/tree/master/foundry-tracing-foundations",
+  "keywords": [
+    "tracing",
+    "otel",
+    "telemetry",
+    "typescript",
+    "decorator",
+    "palantir",
+    "foundry"
+  ],
+  "author": "Dorian Smiley <dsmiley@codestrap.me>",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "commonjs",
+  "main": "./index.cjs",
+  "types": "./src/index.d.ts",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint 'src/**/*.{js,ts}'",
+    "build": "tsup --no-watch --silent",
+    "build:npm": "tsup --config tsup.npm.config.ts --no-watch --silent",
+    "build:docker": "npm run build && docker build --build-arg FOUNDRY_TOKEN=${FOUNDRY_TOKEN} -t codestrap/foundry-tracing-foundations .",
+    "prepublishOnly": "npm run lint && npm run test && npm run build:npm",
+    "publishPackage:dry": "npm publish --dry-run --access public",
+    "publishPackage": "npm publish --access public",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean"
+  },
+  "dependencies": {
+    "@osdk/client": "^2.2.1",
+    "@osdk/foundry.admin": "^2.19.0",
+    "@osdk/oauth": "^1.1.2",
+    "@palantir/compute-module": "^0.2.7",
+    "@sinclair/typebox": "^0.34.33",
+    "eslint-plugin-import": "^2.31.0",
+    "inversify": "^7.5.1",
+    "tsup": "^8.5.0"
+  },
+  "devDependencies": {
+    "@eslint/compat": "^1.2.9",
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.26.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.15.3",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.5.0",
+    "eslint": "^9.26.0",
+    "eslint-import-resolver-typescript": "^4.3.4",
+    "globals": "^16.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20.10.0"
+  }
+}

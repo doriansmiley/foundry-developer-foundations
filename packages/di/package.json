@@ -1,0 +1,11 @@
+{
+  "name": "@codestrap/developer-foundations-di",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "inversify": "^7.5.1",
+    "tslib": "^2.3.0"
+  }
+}
