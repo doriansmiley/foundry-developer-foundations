@@ -28,7 +28,6 @@
     "packages": [
       "packages/*",
       "packages/*/*",
-      "hello-world",
       "foundry-tracing-foundations"
     ],
     "ignore": [".github/**"]
