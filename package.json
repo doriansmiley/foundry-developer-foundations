@@ -28,12 +28,11 @@
     "packages": [
       "packages/*",
       "packages/*/*",
-      "hello-world",
       "foundry-tracing-foundations"
     ],
     "ignore": [".github/**"]
   },
-  "packageManager": "npm@10.0.0",
+  "packageManager": "npm@10.9.0",
   "scripts": {
     "nx": "nx",
     "build": "nx run-many --target=build",
@@ -57,10 +56,7 @@
     "inversify": "^7.5.1",
     "openai": "^4.92.1",
     "ramda": "^0.30.1",
-    "xstate": "4.37.2",
-    "@google/genai": "^1.12.0",
-    "install": "^0.13.0",
-    "npm": "^11.5.2"
+    "xstate": "4.37.2"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.9",
@@ -104,7 +100,7 @@
     "verdaccio": "^6.0.5"
   },
   "engines": {
-    "node": ">=20.10.0"
+    "node": ">=22.13.0"
   },
   "nx": {
     "includedScripts": []

@@ -1,4 +1,5 @@
 {
+  "exclude": ["hello-world"],
   "installation": {
     "version": "21.3.10",
     "plugins": {
@@ -16,7 +17,7 @@
     }
   },
   "release": {
-    "projects": ["packages/*"],
+    "projects": ["packages/**/*"],
     "version": {
       "preVersionCommand": "npx nx run-many -t build --parallel=3 --skip-nx-cache=false"
     }

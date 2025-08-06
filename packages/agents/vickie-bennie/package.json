@@ -4,6 +4,9 @@
   "type": "commonjs",
   "main": "./index.cjs",
   "types": "./src/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@sinclair/typebox": "^0.34.33",
     "dotenv": "^16.5.0",

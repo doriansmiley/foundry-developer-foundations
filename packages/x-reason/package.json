@@ -4,6 +4,9 @@
   "type": "commonjs",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "xstate": "4.37.2",
     "@codestrap/developer-foundations-types": "*",

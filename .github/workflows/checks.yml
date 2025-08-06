@@ -1,0 +1,69 @@
+name: checks
+
+on:
+  pull_request:
+    branches:
+      - master
+  deployment_status:
+
+jobs:
+  run-checks:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Configure npm
+        run: |
+          npm config set fund false
+          npm config set audit false
+          npm config set progress false
+          npm config set loglevel error
+
+      - name: Clean install
+        run: |
+          echo "Cleaning up any existing node_modules..."
+          rm -rf node_modules package-lock.json
+          echo "Installing all dependencies from the root..."
+          # Skip nx wrapper postinstall to prevent hanging
+          NX_WRAPPER_SKIP_INSTALL=true npm install --no-fund --no-audit --prefer-offline
+        timeout-minutes: 10
+        env:
+          NX_WRAPPER_SKIP_INSTALL: true
+
+      - name: Initialize Nx
+        run: |
+          echo "Manually initializing nx installation..."
+          npx nx --version
+        timeout-minutes: 5
+
+      - name: Build Affected Projects
+        run: |
+          echo "Building affected projects..."
+          npx nx affected --target=build --base=origin/${{ github.base_ref }} --parallel=3
+
+      - name: Run Tests on Affected Projects
+        run: |
+          echo "Running tests for affected projects..."
+          npx nx affected --target=test --base=origin/${{ github.base_ref }} --parallel=3
+        env:
+          BASE_URL: ${{ github.event.deployment_status.environment_url || 'http://localhost:3000' }}
+          GITLAB_HOST: https://gitlabhubdev.chemli.app
+          GITLAB_ROOT_TOKEN: ${{secrets.GITLAB_ROOT_TOKEN}}
+          OPENAI_API_KEY: ${{secrets.OPENAI_API_KEY}}
+          BLOB_READ_WRITE_TOKEN: ${{secrets.BLOB_READ_WRITE_TOKEN}}
+          KV_REST_API_READ_ONLY_TOKEN: ${{secrets.KV_REST_API_READ_ONLY_TOKEN}}
+          KV_REST_API_TOKEN: ${{secrets.KV_REST_API_TOKEN}}
+          KV_REST_API_URL: ${{secrets.KV_REST_API_URL}}
+          KV_URL: ${{secrets.KV_URL}}
+          GSUITE_SERVICE_ACCOUNT: ${{secrets.GSUITE_SERVICE_ACCOUNT}}

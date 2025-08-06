@@ -12,14 +12,18 @@ import { computeModule } from '../src/computeModule';
 const testModule = computeModule as TestModule;
 
 describe('Compute Module Registration', () => {
-
   beforeEach(() => {
+    process.env.GSUITE_SERVICE_ACCOUNT = 'test-service-account';
+    process.env.OSDK_CLIENT_ID = 'test-client-id';
+    process.env.OSDK_CLIENT_SECRET = 'test-client-secret';
+    process.env.FOUNDRY_STACK_URL = 'http://localhost:3000';
+    process.env.ONTOLOGY_RID = 'test-ontology-rid';
 
     // Register operations with actual handlers
-    testModule.register("Trace", collectTelemetryFetchWrapper);
+    testModule.register('Trace', collectTelemetryFetchWrapper);
 
     // Register responsive handler
-    testModule.on("responsive", () => {
+    testModule.on('responsive', () => {
       console.log(`${process.env.LOG_PREFIX} Module is now responsive`);
     });
   });
@@ -28,7 +32,7 @@ describe('Compute Module Registration', () => {
     const operations = ['Trace'];
 
     // Initial check
-    operations.forEach(op => {
+    operations.forEach((op) => {
       expect(testModule.listeners[op]).toBeDefined();
       expect(testModule.listeners[op].type).toBe('response');
     });
@@ -41,16 +45,17 @@ describe('Compute Module Registration', () => {
       }
 
       // Verify after each event
-      operations.forEach(op => {
+      operations.forEach((op) => {
         expect(testModule.listeners[op]).toBeDefined();
         expect(testModule.listeners[op].type).toBe('response');
       });
     }
 
     // Execute calendar operations
-    const result = await testModule.listeners['Trace'].listener(JSON.stringify(mockPayload));
+    const result = await testModule.listeners['Trace'].listener(
+      JSON.stringify(mockPayload)
+    );
 
     expect(result).toBeDefined();
   }, 10000);
-
-}); 
+});
