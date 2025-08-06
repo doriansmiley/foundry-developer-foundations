@@ -1,4 +1,4 @@
-name: jest-tests
+name: checks
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
   deployment_status:
 
 jobs:
-  run-e2es:
+  run-checks:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
