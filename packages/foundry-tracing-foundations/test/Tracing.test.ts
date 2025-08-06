@@ -1,7 +1,5 @@
 import dotenv from 'dotenv';
-import {
-  collectTelemetryFetchWrapper,
-} from '../src/Tracing';
+import { collectTelemetryFetchWrapper } from '../src/Tracing';
 import { mockPayload } from './__fixtures__/telemetryPayload';
 // Load environment variables
 dotenv.config();
@@ -12,6 +10,11 @@ describe('Tracing', () => {
   afterAll(() => jest.clearAllMocks());
 
   beforeEach(() => {
+    process.env.GSUITE_SERVICE_ACCOUNT = 'test-service-account';
+    process.env.OSDK_CLIENT_ID = 'test-client-id';
+    process.env.OSDK_CLIENT_SECRET = 'test-client-secret';
+    process.env.FOUNDRY_STACK_URL = 'test-foundry-stack-url';
+    process.env.ONTOLOGY_RID = 'test-ontology-rid';
     jest.clearAllMocks();
 
     (global.fetch as jest.Mock).mockImplementation((url: string) => {
@@ -39,7 +42,9 @@ describe('Tracing', () => {
   });
 
   it('should collect telemetry data', async () => {
-    const result = await collectTelemetryFetchWrapper(JSON.stringify(mockPayload));
+    const result = await collectTelemetryFetchWrapper(
+      JSON.stringify(mockPayload)
+    );
     expect(result).toBeDefined();
     expect(JSON.parse(result)).toEqual({ message: 'OK' });
   });
