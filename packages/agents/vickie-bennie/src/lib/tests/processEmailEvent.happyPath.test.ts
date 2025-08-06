@@ -220,7 +220,7 @@ describe('testing Vickie', () => {
     process.env.GSUITE_SERVICE_ACCOUNT = 'test-service-account';
     process.env.OSDK_CLIENT_ID = 'test-client-id';
     process.env.OSDK_CLIENT_SECRET = 'test-client-secret';
-    process.env.FOUNDRY_STACK_URL = 'test-foundry-stack-url';
+    process.env.FOUNDRY_STACK_URL = 'http://localhost:3000';
     process.env.ONTOLOGY_RID = 'test-ontology-rid';
   });
 
