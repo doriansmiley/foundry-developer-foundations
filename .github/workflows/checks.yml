@@ -66,3 +66,4 @@ jobs:
           KV_REST_API_TOKEN: ${{secrets.KV_REST_API_TOKEN}}
           KV_REST_API_URL: ${{secrets.KV_REST_API_URL}}
           KV_URL: ${{secrets.KV_URL}}
+          GSUITE_SERVICE_ACCOUNT: ${{secrets.GSUITE_SERVICE_ACCOUNT}}

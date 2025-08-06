@@ -156,6 +156,7 @@ global.fetch = jest.fn().mockImplementation(() =>
 describe('testing orchestrator', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.GSUITE_SERVICE_ACCOUNT = 'test-service-account';
   });
 
   afterAll(() => {
