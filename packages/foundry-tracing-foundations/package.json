@@ -3,6 +3,9 @@
   "version": "1.2.3",
   "description": "## Introduction",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/doriansmiley/foundry-developer-foundations.git"

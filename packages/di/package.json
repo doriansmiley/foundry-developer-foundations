@@ -4,6 +4,9 @@
   "type": "commonjs",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "inversify": "^7.5.1",
     "tslib": "^2.3.0"
