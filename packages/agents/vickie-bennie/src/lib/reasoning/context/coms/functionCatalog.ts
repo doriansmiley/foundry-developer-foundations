@@ -20,6 +20,7 @@ import {
   sendSlackMessage,
   writeSlackMessage,
 } from '../../../functions';
+import { generateRIOs } from '../../../functions/comsFunctions/GenerateRIOs';
 
 
 function getPayload(context: Context, result: Record<string, any>) {
@@ -108,6 +109,24 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const payload = getPayload(context, result);
                     console.log(`researchReport returned: ${JSON.stringify(result)}`);
                     console.log('dispatching CONTINUE from researchReport');
+
+                    dispatch({
+                        type: 'CONTINUE',
+                        payload,
+                    });
+                },
+            },
+        ],
+        [
+            "generateRIOs",
+            {
+                description:
+                    "Generates RIOs (Risks, Insights, and Opportunities) by researching the given task and providing structured, actionable insights.",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    const result = await generateRIOs(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`generateRIOs returned: ${JSON.stringify(result)}`);
+                    console.log('dispatching CONTINUE from generateRIOs');
 
                     dispatch({
                         type: 'CONTINUE',
