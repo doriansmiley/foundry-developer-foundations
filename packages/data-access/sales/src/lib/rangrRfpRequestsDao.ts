@@ -1,12 +1,12 @@
 import type {
   RangrClient,
-  RangrRequestsDao,
+  VendorRequestsDao,
 } from '@codestrap/developer-foundations-types';
 import { TYPES } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import { submitRangrRfp } from './delegates/rangr/submit';
 
-export function makeRangrRfpRequestsDao(): RangrRequestsDao {
+export function makeRangrRfpRequestsDao(): VendorRequestsDao {
   const client = container.get<RangrClient>(TYPES.RangrClient);
 
   return {

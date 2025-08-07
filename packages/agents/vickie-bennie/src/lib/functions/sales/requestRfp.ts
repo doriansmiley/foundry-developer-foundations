@@ -1,18 +1,12 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import { uuidv4 } from '@codestrap/developer-foundations-utils';
 import {
-  RangrRequestsDao,
   RfpRequestsDao,
   TYPES,
   RfpRequestResponse,
+  VendorRequestsDao,
 } from '@codestrap/developer-foundations-types';
 import { container } from '../../inversify.config';
-
-enum VendorType {
-  RANGR = 'RANGR',
-  // Add more vendor types here as needed
-  // OTHER = 'OTHER',
-}
 
 class VendorParsingError extends Error {
     constructor(message: string) {
@@ -28,11 +22,29 @@ class VendorNotSupportedError extends Error {
     }
 }
 
+enum VendorType {
+  RANGR = 'RANGR',
+  // Add more vendor types here as needed
+  // NORTHSLOPE = 'NORTHSLOPE',
+  // PWC = 'PWC',
+  // OTHER = 'OTHER',
+}
+
+//TODO: this should be coming from foundry 
 const VENDOR_DOMAINS = {
-  [VendorType.RANGR]: ['axisdata.com', 'rangrdata.com', 'rangr.com'],
-  // Add other vendors here as needed
-  // [VendorType.OTHER]: ['othervendor.com', 'ov.com'],
+  RANGR: ['axisdata.com', 'rangrdata.com', 'rangr.com'],
+  // other vendors goes here as needed
+  // NORTHSLOPE: ['northslope.com', 'northslopedata.com'],
+  // PWC: ['pwc.com', 'pricewaterhousecoopers.com'],
 } as const;
+// Vendor type to TYPES symbol mapping
+const VENDOR_TYPE_MAPPING= {
+  [VendorType.RANGR]: TYPES.RangrRfpRequestsDao,
+  // more mappings as new vendors are supported
+  // [VendorType.NORTHSLOPE]: TYPES.NorthslopeRfpRequestsDao,
+  // [VendorType.PWC]: TYPES.PwcRfpRequestsDao,
+  // [VendorType.OTHER]: TYPES.OtherRfpRequestsDao,
+};
 
 const DOMAIN_REGEX = /<([^>]+)>/;
 const VENDOR_NAME_REGEX = /:\s*([\w\s]+)\s*</;
@@ -49,53 +61,33 @@ function extractVendorName(input: string): string | null {
     return match ? match[1].trim() : null;
 }
 
-interface VendorHandler {
-    submit(task: string, executionId: string): Promise<any>;
-}
-
-class RangrVendorHandler implements VendorHandler {
-    async submit(task: string, executionId: string): Promise<any> {
-        const rangrRfpDao = container.get<RangrRequestsDao>(TYPES.RangrRfpRequestsDao);
-        return await rangrRfpDao.submit(task, executionId);
-    }
-}
-
-// Vendor Handler Factory
-type VendorHandlerFactory = (config?: Record<string, any>) => VendorHandler;
-
-const vendorHandlers: Record<VendorType, VendorHandlerFactory> = {
-    [VendorType.RANGR]: (config?: Record<string, any>) => {
-        console.log(`Creating Rangr vendor handler with config: ${config}`);
-        return new RangrVendorHandler();
-    },
-    // Add more vendor handlers here as needed
-    // [VendorType.OTHER]: (config?: Record<string, any>) => {
-    //     console.log(`Creating Other vendor handler with config: ${config}`);
-    //     return new OtherVendorHandler();
-    // },
-};
-
-function determineVendorType(vendorId: string): VendorType {
-    // Iterate through all vendor domains to find a match
+//TODO: all vendors and their ids should be stored in ontology and there should be a service in foundry that gives vendor type based on given vendorID from vendors details stored in ontology
+function findVendorType(vendorId: string): VendorType | null {
+    if (!vendorId) return null;
+    
     for (const [vendorType, domains] of Object.entries(VENDOR_DOMAINS)) {
-        if (domains.some(domain => 
+        const isMatch = domains.some(domain => 
             vendorId === domain || vendorId.includes(domain)
-        )) {
+        );
+        if (isMatch) {
             return vendorType as VendorType;
         }
     }
-    throw new VendorNotSupportedError(vendorId);
+    
+    return null;
 }
 
-function createVendorHandler(vendorId: string, config?: Record<string, any>): VendorHandler {
-    const vendorType = determineVendorType(vendorId);
-    const handlerFactory = vendorHandlers[vendorType];
-    
-    if (!handlerFactory) {
+function getVendorType(vendorId: string): VendorType {
+    const vendorType = findVendorType(vendorId);
+    if (!vendorType) {
         throw new VendorNotSupportedError(vendorId);
     }
-    
-    return handlerFactory(config);
+    return vendorType;
+}
+
+function getVendorDao<T extends VendorType>(vendorType: T):VendorRequestsDao {
+    const typeSymbol = VENDOR_TYPE_MAPPING[vendorType];
+    return container.get<VendorRequestsDao>(typeSymbol);
 }
 
 export async function requestRfp(
@@ -115,9 +107,10 @@ export async function requestRfp(
     }
 
     try {
-        const vendorHandler = createVendorHandler(vendorId);
+        const vendorType = getVendorType(vendorId);
+        const vendorDao = getVendorDao(vendorType);
         
-        const vendorResponse = await vendorHandler.submit(task, context.machineExecutionId!);
+        const vendorResponse = await vendorDao.submit(task, context.machineExecutionId!);
         
         console.log(`${vendorId} returned the following response:`, vendorResponse);
 
