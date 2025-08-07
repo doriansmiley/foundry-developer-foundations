@@ -1,1 +1,6 @@
-export {default as xReasonFactory, XReasonEngine, SupportedEngines, SupportTrainingDataTypes } from './XreasonFactory';
+export {
+  default as xReasonFactory,
+  SupportedEngines,
+  SupportTrainingDataTypes,
+} from './XreasonFactory';
+export type { XReasonEngine } from './XreasonFactory';

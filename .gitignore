@@ -17,3 +17,7 @@ testGitWorklows.sh
 /dist
 .verdaccio/
 /tmp
+
+# Next.js
+.next
+out
