@@ -8,68 +8,141 @@ import {
 } from '@codestrap/developer-foundations-types';
 import { container } from '../../inversify.config';
 
-function extractDomain(input: string) {
-  const match = input.match(/<([^>]+)>/);
-  return match ? match[1] : null;
+enum VendorType {
+  RANGR = 'RANGR',
+  // Add more vendor types here as needed
+  // OTHER = 'OTHER',
 }
 
-function extractVendorName(input: string) {
-  const match = input.match(/:\s*([\w\s]+)\s*</);
-  return match ? match[1].trim() : null;
+class VendorParsingError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'VendorParsingError';
+    }
+}
+
+class VendorNotSupportedError extends Error {
+    constructor(vendorId: string) {
+        super(`Vendor ${vendorId} is not currently supported`);
+        this.name = 'VendorNotSupportedError';
+    }
+}
+
+const VENDOR_DOMAINS = {
+  [VendorType.RANGR]: ['axisdata.com', 'rangrdata.com', 'rangr.com'],
+  // Add other vendors here as needed
+  // [VendorType.OTHER]: ['othervendor.com', 'ov.com'],
+} as const;
+
+const DOMAIN_REGEX = /<([^>]+)>/;
+const VENDOR_NAME_REGEX = /:\s*([\w\s]+)\s*</;
+
+function extractVendorId(input: string): string | null {
+    if (!input) return null;
+    const match = input.match(DOMAIN_REGEX);
+    return match ? match[1] : null;
+}
+
+function extractVendorName(input: string): string | null {
+    if (!input) return null;
+    const match = input.match(VENDOR_NAME_REGEX);
+    return match ? match[1].trim() : null;
+}
+
+interface VendorHandler {
+    submit(task: string, executionId: string): Promise<any>;
+}
+
+class RangrVendorHandler implements VendorHandler {
+    async submit(task: string, executionId: string): Promise<any> {
+        const rangrRfpDao = container.get<RangrRequestsDao>(TYPES.RangrRfpRequestsDao);
+        return await rangrRfpDao.submit(task, executionId);
+    }
+}
+
+// Vendor Handler Factory
+type VendorHandlerFactory = (config?: Record<string, any>) => VendorHandler;
+
+const vendorHandlers: Record<VendorType, VendorHandlerFactory> = {
+    [VendorType.RANGR]: (config?: Record<string, any>) => {
+        console.log(`Creating Rangr vendor handler with config: ${config}`);
+        return new RangrVendorHandler();
+    },
+    // Add more vendor handlers here as needed
+    // [VendorType.OTHER]: (config?: Record<string, any>) => {
+    //     console.log(`Creating Other vendor handler with config: ${config}`);
+    //     return new OtherVendorHandler();
+    // },
+};
+
+function determineVendorType(vendorId: string): VendorType {
+    // Iterate through all vendor domains to find a match
+    for (const [vendorType, domains] of Object.entries(VENDOR_DOMAINS)) {
+        if (domains.some(domain => 
+            vendorId === domain || vendorId.includes(domain)
+        )) {
+            return vendorType as VendorType;
+        }
+    }
+    throw new VendorNotSupportedError(vendorId);
+}
+
+function createVendorHandler(vendorId: string, config?: Record<string, any>): VendorHandler {
+    const vendorType = determineVendorType(vendorId);
+    const handlerFactory = vendorHandlers[vendorType];
+    
+    if (!handlerFactory) {
+        throw new VendorNotSupportedError(vendorId);
+    }
+    
+    return handlerFactory(config);
 }
 
 export async function requestRfp(
-  context: Context,
-  event?: MachineEvent,
-  task?: string
+    context: Context, 
+    event?: MachineEvent, 
+    task?: string
 ): Promise<RfpRequestResponse> {
-  const vendorName = extractVendorName(task!);
-  const vendorId = extractDomain(task!);
-  const message = 'We have received your RFP and will respond shortly';
+    if (!task) {
+        throw new VendorParsingError('Task parameter is required');
+    }
 
-  if (!vendorName || !vendorId) {
-    throw new Error('Vendor name or id not found!');
-  }
+    const vendorName = extractVendorName(task);
+    const vendorId = extractVendorId(task);
 
-  // TODO handle all vendors. The only thing that should change in the code below is the four params for url, certs, etc
-  // maybe just create a factory to get the clientId, clientSecret, ontologyRid, and url
-  if (
-    vendorId === 'axisdata.com' ||
-    vendorId === 'rangrdata.com' ||
-    vendorId === 'rangr.com' ||
-    vendorId.indexOf('rangr.com') >= 0
-  ) {
-    // TODO inject ranger dao and execute
-    const rangrRfpDao = container.get<RangrRequestsDao>(
-      TYPES.RangrRfpRequestsDao
-    );
-    // submit to RANGR
-    const rangrRfpResult = rangrRfpDao.submit(
-      task!,
-      context.machineExecutionId!
-    );
+    if (!vendorName || !vendorId) {
+        throw new VendorParsingError('Vendor name or ID could not be extracted from task');
+    }
 
-    console.log(`RANGR returned the following response: ${rangrRfpResult}`);
-  }
+    try {
+        const vendorHandler = createVendorHandler(vendorId);
+        
+        const vendorResponse = await vendorHandler.submit(task, context.machineExecutionId!);
+        
+        console.log(`${vendorId} returned the following response:`, vendorResponse);
 
-  // record the request in our system, this is useful for demos and for our records
-  const rfpDao = container.get<RfpRequestsDao>(TYPES.RfpRequestsDao);
-  await rfpDao.upsert(task!, message, vendorId, context.machineExecutionId!);
+        const rfpDao = container.get<RfpRequestsDao>(TYPES.RfpRequestsDao);
+        await rfpDao.upsert(task, vendorResponse.message || 'Request submitted successfully', vendorId, context.machineExecutionId!);
 
-  return {
-    // TODO replace with status and message from service
-    status: 200,
-    message,
-    // Note: vendor name and ID are extract via the LLM above
-    vendorName,
-    vendorId,
-    received: false,
-    // TODO add executionId to context
-    machineExecutionId: context.executionId,
-    // TODO replace with reciept from service
-    receipt: {
-      id: uuidv4(),
-      timestamp: new Date(),
-    },
-  };
+        return {
+            status: vendorResponse.status || 200,
+            message: vendorResponse.message || 'We have received your RFP and will respond shortly',
+            vendorName,
+            vendorId,
+            received: vendorResponse.received || false,
+            machineExecutionId: context.machineExecutionId || uuidv4(),
+            receipt: vendorResponse.receipt || {
+                id: uuidv4(),
+                timestamp: new Date(),
+            }
+        };
+    } catch (error) {
+        console.error(`Error processing RFP for vendor ${vendorId}:`, error);
+        
+        if (error instanceof VendorNotSupportedError) {
+            throw error;
+        }
+        
+        throw new Error(`Failed to process RFP request: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 }
