@@ -15,9 +15,6 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@codestrap/developer-foundations.foundry-tracing-foundations": [
-        "packages/foundry-tracing-foundations/src/index.ts"
-      ],
       "@codestrap/developer-foundations-agents-vickie-bennie": [
         "packages/agents/vickie-bennie/src/index.ts"
       ],
@@ -62,6 +59,9 @@
       "@codestrap/developer-foundations-utils": ["packages/utils/src/index.ts"],
       "@codestrap/developer-foundations-x-reason": [
         "packages/x-reason/src/index.ts"
+      ],
+      "@codestrap/developer-foundations.foundry-tracing-foundations": [
+        "packages/foundry-tracing-foundations/src/index.ts"
       ]
     }
   },

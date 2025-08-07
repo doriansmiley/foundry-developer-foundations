@@ -93,7 +93,8 @@ export class Vickie extends Text2Action {
     // for each thread in the map call an llm to determine of a resolution has been found, and if so rehydrate the machine
     // passing the updated information and calling getNextState
     const threadPromises = Array.from(resolveMeetingConflicts.entries())
-      // @ts-expect-error - threadId is a string
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - threadId is a string
       .map(async ([threadId, messages]) => {
         const errorResponse = {
           status: 400,
