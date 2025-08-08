@@ -1,0 +1,23 @@
+import { make<%= capitalizedName %>Dao } from '../<%= name %>Dao';
+
+describe('<%= capitalizedName %>Dao', () => {
+  it('should be defined', () => {
+    const dao = make<%= capitalizedName %>Dao();
+    expect(dao).toBeDefined();
+  });
+
+  // TODO: Add more comprehensive tests
+  describe('read', () => {
+    it('should throw not implemented error', async () => {
+      const dao = make<%= capitalizedName %>Dao();
+      await expect(dao.read('test-id')).rejects.toThrow('Not implemented');
+    });
+  });
+
+  describe('upsert', () => {
+    it('should throw not implemented error', async () => {
+      const dao = make<%= capitalizedName %>Dao();
+      await expect(dao.upsert()).rejects.toThrow('Not implemented');
+    });
+  });
+}); 

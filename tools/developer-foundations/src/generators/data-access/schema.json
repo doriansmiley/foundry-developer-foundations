@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "DataAccess",
+  "title": "Data Access Generator",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name for the DAO or library",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use for the DAO/library?"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["new-library", "add-dao"],
+      "description": "Whether to create a new library or add DAO to existing one",
+      "default": "add-dao",
+      "x-prompt": {
+        "message": "What would you like to do?",
+        "type": "list",
+        "items": [
+          { "value": "add-dao", "label": "Add DAO to existing data-access library" },
+          { "value": "new-library", "label": "Create new data-access library" }
+        ]
+      }
+    },
+    "domain": {
+      "type": "string",
+      "description": "Domain name for the new data-access library (e.g. inventory, billing, etc.)"
+    },
+    "existingLibrary": {
+      "type": "string",
+      "description": "Existing data-access library to add DAO to"
+    },
+    "directory": {
+      "type": "string",
+      "description": "Directory where the library should be created (relative to packages/)",
+      "default": "data-access"
+    },
+    "importPath": {
+      "type": "string",
+      "description": "Import path for the library"
+    },
+    "isPublic": {
+      "type": "boolean",
+      "description": "Whether the package should be publicly published",
+      "default": true
+    }
+  },
+  "required": ["name"]
+}
