@@ -15,6 +15,9 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@codestrap/developer-foundations": [
+        "tools/developer-foundations/src/index.ts"
+      ],
       "@codestrap/developer-foundations-agents-vickie-bennie": [
         "packages/agents/vickie-bennie/src/index.ts"
       ],

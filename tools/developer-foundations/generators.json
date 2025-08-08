@@ -1,0 +1,9 @@
+{
+  "generators": {
+    "data-access": {
+      "factory": "./src/generators/data-access/data-access",
+      "schema": "./src/generators/data-access/schema.json",
+      "description": "Generate data-access DAOs or new data-access libraries"
+    }
+  }
+}

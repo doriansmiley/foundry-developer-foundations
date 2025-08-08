@@ -1,0 +1,30 @@
+import type {
+  FoundryClient,
+  <%= capitalizedName %>Dao,
+} from '@codestrap/developer-foundations-types';
+import { TYPES } from '@codestrap/developer-foundations-types';
+import { container } from '@codestrap/developer-foundations-di';
+
+export function make<%= capitalizedName %>Dao(): <%= capitalizedName %>Dao {
+  const client = container.get<FoundryClient>(TYPES.FoundryClient);
+
+  return {
+    // TODO: Implement DAO methods using OSDK API calls
+    upsert: async (...params) => {
+      console.log('stub upsert method for <%= capitalizedName %>. Implement using OSDK API calls.');
+      // Implementation goes here
+      throw new Error('Not implemented');
+    },
+    delete: async (id: string) => {
+      console.log(
+        `stub delete method called for: ${id}. We do not support deleting <%= name %> but include the method as it is part of the interface.`
+      );
+      // Implementation goes here if needed
+    },
+    read: async (id: string) => {
+      console.log(`stub read method for <%= capitalizedName %> with id: ${id}`);
+      // Implementation goes here
+      throw new Error('Not implemented');
+    },
+  };
+} 
