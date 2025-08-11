@@ -846,12 +846,13 @@ export type RfpRequestsDao = {
   ) => Promise<RfpRequests>;
 };
 
-export type RangrRequestsDao = {
+// Generic interface for vendor DAOs that have a submit method
+export interface VendorRequestsDao {
   submit: (
     rfp: string,
     machineExecutionId: string
   ) => Promise<RfpRequestResponse>;
-};
+}
 
 export type MemoryRecallDao = {
   upsert: (
