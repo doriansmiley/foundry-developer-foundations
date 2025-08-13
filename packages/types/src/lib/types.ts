@@ -707,6 +707,13 @@ export type Summaries = {
   calendars: CalendarSummary[];
 };
 
+export type DriveFile = {
+  id: string;
+  fileName: string;
+  owners: { emailAddress: string; displayName?: string }[]
+
+};
+
 export type OfficeService = {
   getAvailableMeetingTimes: (
     meetingRequest: MeetingRequest
@@ -727,6 +734,15 @@ export type OfficeServiceV2 = {
     windowEndLocal: Date;
   }) => Promise<Summaries>;
 } & OfficeService;
+
+export type OfficeServiceV3 = {
+  searchDriveFiles: (args: {
+    name: string;
+    windowStartLocal: Date;
+    windowEndLocal: Date;
+    owner?: string;
+  }) => Promise<DriveFile[]>;
+} & OfficeServiceV2;
 
 export type GSuiteCalendarService = {
   getCalendarClient: () => calendar_v3.Calendar;
