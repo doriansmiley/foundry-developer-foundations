@@ -36,24 +36,18 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
     [
       'incompleteQuestion',
       {
-        description: 'Sends a request for proposal to a vendor.',
-        implementation: async (
-          context: Context,
-          event?: MachineEvent,
-          task?: string
-        ) => {
-          console.log(
-            'incompleteQuestion function catalog implementation called'
-          );
-          const result = await incompleteQuestion(context, event, task);
-          const payload = getPayload(context, result);
+        description: "Summarizes missing information from incomplete questions.",
+        implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+            console.log('incompleteQuestion function catalog implementation called');
+            const result = await incompleteQuestion(context, event, task);
+            const payload = getPayload(context, result);
 
-          dispatch({
-            type: 'CONTINUE',
-            payload,
-          });
+            dispatch({
+                type: 'CONTINUE',
+                payload,
+            });
         },
-      },
+    },
     ],
     [
       'requestRfp',
