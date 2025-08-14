@@ -13,6 +13,6 @@ export async function makeGSuiteClientV3(user: string): Promise<OfficeServiceV3>
 
   return {
     ...v2Client,
-    searchDriveFiles: (args) => searchDriveFiles(drive, args),
+    searchDriveFiles: async (args) => await searchDriveFiles(drive, args),
   };
 }
