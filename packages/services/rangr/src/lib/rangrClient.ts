@@ -3,7 +3,17 @@ import { User, Users } from '@osdk/foundry.admin';
 import { createConfidentialOauthClient } from '@osdk/oauth';
 import { RangrClient } from '@codestrap/developer-foundations-types';
 
-export function createRangrClient(): RangrClient {
+let client: RangrClient | undefined = undefined;
+
+export function getRangrClient(): RangrClient {
+  if (!client) {
+    client = createRangrClient();
+  }
+
+  return client;
+}
+
+function createRangrClient(): RangrClient {
   // log ENV vars
   console.log('Environment variable keys:');
   Object.keys(process.env).forEach((key) => {
