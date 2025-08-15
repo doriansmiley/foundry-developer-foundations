@@ -1,0 +1,49 @@
+import { make<%= capitalizedName %>, <%= capitalizedName %>Service, <%= capitalizedName %>Config } from '../../clients/<%= name %>';
+
+describe('<%= capitalizedName %>', () => {
+  let service: <%= capitalizedName %>Service;
+  const mockUser = 'test.user@example.com';
+
+  beforeEach(async () => {
+    // TODO: Mock authentication and client creation
+    service = await make<%= capitalizedName %>(mockUser);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should create service instance successfully', async () => {
+    const result = await make<%= capitalizedName %>(mockUser);
+    expect(result).toBeDefined();
+    // TODO: Add specific assertions for service interface
+  });
+
+  xit('should execute service methods successfully', async () => {
+    // TODO: Mock any external dependencies and function imports
+    
+    // Example test structure:
+    // const mockParams = {
+    //   // TODO: Add mock parameters
+    // };
+    // 
+    // const result = await service.exampleMethod(mockParams);
+    // 
+    // expect(result).toBeDefined();
+    // TODO: Add more specific assertions based on expected output
+  });
+
+  xit('should handle authentication errors gracefully', async () => {
+    // TODO: Mock authentication failure conditions
+    
+    await expect(make<%= capitalizedName %>('invalid-user')).rejects.toThrow();
+    // TODO: Add specific error handling tests
+  });
+
+  // TODO: Add more test cases as needed:
+  // - Test different users and authentication scenarios
+  // - Test various service methods
+  // - Test client initialization
+  // - Test error responses from external APIs
+  // - Test permission/scope handling
+}); 

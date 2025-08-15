@@ -1,0 +1,79 @@
+// TODO: Import functions from function catalog
+// import { exampleFunction } from '../functions/example/exampleFunction';
+
+/**
+ * Configuration interface for <%= capitalizedName %>
+ */
+export interface <%= capitalizedName %>Config {
+  // TODO: Add configuration options as needed
+  apiKey?: string;
+  baseUrl?: string;
+  // Add other service-specific config options
+}
+
+/**
+ * Internal client creation and authentication
+ * @param user - User identifier for authentication
+ * @returns Authenticated client(s)
+ */
+async function makeClient(user: string) {
+  console.log(`Creating <%= name %> client for user: ${user}`);
+  
+  // TODO: Implement authentication logic here
+  // This is where you would:
+  // 1. Load credentials/service account
+  // 2. Set up authentication
+  // 3. Configure scopes/permissions
+  // 4. Create authenticated SDK clients
+  
+  // Example structure:
+  // const credentials = await loadCredentials();
+  // const auth = new SomeAuth({
+  //   credentials,
+  //   scopes: [...],
+  //   clientOptions: { subject: user }
+  // });
+  // const client = createApiClient({ auth });
+  
+  // Placeholder client - replace with actual implementation
+  const client = {
+    // TODO: Replace with actual authenticated client instance
+    authenticated: true,
+    user: user,
+  };
+
+  return { client };
+}
+
+/**
+ * Public interface for <%= capitalizedName %>
+ */
+export interface <%= capitalizedName %>Service {
+  // TODO: Define service interface methods here
+  // exampleMethod: (params: any) => Promise<any>;
+}
+
+/**
+ * Factory function to create <%= capitalizedName %> service
+ * @param user - User identifier for authentication
+ * @returns <%= capitalizedName %> service interface
+ */
+export async function make<%= capitalizedName %>(
+  user: string
+): Promise<<%= capitalizedName %>Service> {
+  const { client } = await makeClient(user);
+
+  return {
+    // TODO: Implement service methods using functions from function catalog
+    // Example pattern:
+    // exampleMethod: async (params: any) => {
+    //   const result = await exampleFunction(client, params);
+    //   return result;
+    // },
+    
+    // Each method should:
+    // 1. Be imported from the function catalog
+    // 2. Receive the authenticated client as first parameter
+    // 3. Pass through other parameters as needed
+  };
+} 

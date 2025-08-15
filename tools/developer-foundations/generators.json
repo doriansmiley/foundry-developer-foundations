@@ -9,6 +9,11 @@
       "factory": "./src/generators/service-function/service-function",
       "schema": "./src/generators/service-function/schema.json",
       "description": "Generate SDK service functions and tests in service libraries"
+    },
+    "service-client": {
+      "factory": "./src/generators/service-client/service-client",
+      "schema": "./src/generators/service-client/schema.json",
+      "description": "Generate service clients and tests in service libraries"
     }
   }
 }
