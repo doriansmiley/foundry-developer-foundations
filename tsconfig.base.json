@@ -46,6 +46,9 @@
       "@codestrap/developer-foundations-services-google": [
         "packages/services/google/src/index.ts"
       ],
+      "@codestrap/developer-foundations-services-google-v2": [
+        "packages/services/google-v2/src/index.ts"
+      ],
       "@codestrap/developer-foundations-services-palantir": [
         "packages/services/palantir/src/index.ts"
       ],

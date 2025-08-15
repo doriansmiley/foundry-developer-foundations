@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/schema",
+  "$id": "ServiceFunction",
+  "title": "Service Function Generator",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the function to generate",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What name would you like to use for the function?"
+    },
+    "serviceLib": {
+      "type": "string",
+      "description": "Service library name (e.g., google-service-2)",
+      "x-prompt": "Which service library should this function be added to?"
+    },
+    "path": {
+      "type": "string",
+      "description": "Path within the functions directory (e.g., gmail, calendar)",
+      "x-prompt": "What path should the function be placed in?"
+    }
+  },
+  "required": ["name", "serviceLib", "path"]
+} 

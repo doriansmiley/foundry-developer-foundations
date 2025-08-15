@@ -4,6 +4,11 @@
       "factory": "./src/generators/data-access/data-access",
       "schema": "./src/generators/data-access/schema.json",
       "description": "Generate data-access DAOs or new data-access libraries"
+    },
+    "service-function": {
+      "factory": "./src/generators/service-function/service-function",
+      "schema": "./src/generators/service-function/schema.json",
+      "description": "Generate SDK service functions and tests in service libraries"
     }
   }
 }

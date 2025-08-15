@@ -1,0 +1,38 @@
+import { <%= name %> } from '../../functions/<%= path %>/<%= name %>';
+
+describe('<%= name %>', () => {
+  let mockProps: any;
+
+  beforeEach(() => {
+    mockProps = {
+      // TODO: Add mock properties based on function requirements
+    };
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should execute successfully with valid inputs', async () => {
+    // TODO: Mock any external dependencies
+
+    const result = await <%= name %>(mockProps);
+
+    expect(result).toBeDefined();
+    expect(result.success).toBe(true);
+    // TODO: Add more specific assertions based on expected output
+  });
+
+  xit('should handle errors gracefully', async () => {
+    // TODO: Mock error conditions or invalid props
+
+    await expect(<%= name %>({})).rejects.toThrow();
+    // TODO: Add specific error handling tests
+  });
+
+  // TODO: Add more test cases as needed:
+  // - Test with different prop configurations
+  // - Test with invalid inputs
+  // - Test integration with external services
+  // - Test edge cases
+}); 
