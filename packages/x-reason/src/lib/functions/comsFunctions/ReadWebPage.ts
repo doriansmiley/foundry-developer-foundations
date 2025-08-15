@@ -1,6 +1,6 @@
 import { Context, MachineEvent } from "@codestrap/developer-foundations-types";
 import { extractJsonFromBackticks } from "@codestrap/developer-foundations-utils";
-import { container } from "../../inversify.config";
+import { container } from "@codestrap/developer-foundations-di";
 import { GeminiService, TYPES } from "@codestrap/developer-foundations-types";
 import FirecrawlApp from "@mendable/firecrawl-js";
 

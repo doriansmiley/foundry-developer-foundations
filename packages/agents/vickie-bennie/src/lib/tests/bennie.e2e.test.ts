@@ -1,5 +1,5 @@
 import { Bennie } from '../Bennie';
-import { container } from '../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 import {
   Context,
   MachineEvent,

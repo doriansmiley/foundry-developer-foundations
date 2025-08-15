@@ -6,7 +6,7 @@ import {
   TYPES,
   RfpRequestResponse,
 } from '@codestrap/developer-foundations-types';
-import { container } from '../../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 
 function extractDomain(input: string) {
   const match = input.match(/<([^>]+)>/);

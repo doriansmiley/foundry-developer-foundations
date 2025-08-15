@@ -1,6 +1,6 @@
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundations';
 
-import { SupportedEngines } from './reasoning/factory';
+import { SupportedEngines } from '@codestrap/developer-foundations-x-reason';
 import { Text2Action } from './Text2Action';
 import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
 import {
@@ -15,7 +15,7 @@ import {
   RfpResponsesResult,
   StateConfig,
 } from '@codestrap/developer-foundations-types';
-import { container } from './inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 
 interface BennieResponse {
   status: number;
@@ -388,9 +388,8 @@ ${result}`;
 - Machine and ThreadId: ${machineExecutionId}
 
 ### Summary
-Your RFP for ${vendorRfpRequest.vendorName} using ID: ${
-      vendorRfpRequest.vendorId
-    } was sent and we received the following response from their agent:
+Your RFP for ${vendorRfpRequest.vendorName} using ID: ${vendorRfpRequest.vendorId
+      } was sent and we received the following response from their agent:
 ${vendorRfpRequest.response}
 `;
     const appendedMessage = `${thread?.messages}

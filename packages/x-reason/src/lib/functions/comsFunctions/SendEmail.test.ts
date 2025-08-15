@@ -2,7 +2,7 @@ import {
   mockEmailResponse,
   missingRecipientContext,
   validContext,
-} from '../../__fixtures__/Email';
+} from '../../../../../agents/vickie-bennie/src/lib/__fixtures__/Email';
 import { google } from 'googleapis';
 
 import { sendEmail } from './SendEmail';

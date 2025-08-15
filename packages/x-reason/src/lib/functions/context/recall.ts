@@ -9,7 +9,7 @@ import {
   UserProfile,
 } from '@codestrap/developer-foundations-types';
 import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
-import { container } from '../../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 
 export type ModelMemory = {
   contacts: {
@@ -142,23 +142,23 @@ export async function recall(
     Use the provided message, if any, to give you more context on which contact is the most relevant
     If not contacts are are relevant to the task return an empty array
     ${JSON.stringify([
-      {
-        name: 'Bob Seager',
-        email: 'bob.seager@ford.com',
-        talksTo: 'DORIAN',
-        contextOfTheRelatioship: [
-          'Met a few times at AIP/DevCon, See each other at every event, Worked with him on several bootcamps, small sessions, and AIPcon prep',
-        ],
-        account: 'Ford',
-      },
-      {
-        name: 'Bob Baymon',
-        email: 'bob.baymon@gmail.com',
-        talksTo: 'CONNOR',
-        contextOfTheRelatioship: ['Friend of mine that works at IBM'],
-        account: 'Personal',
-      },
-    ])}
+    {
+      name: 'Bob Seager',
+      email: 'bob.seager@ford.com',
+      talksTo: 'DORIAN',
+      contextOfTheRelatioship: [
+        'Met a few times at AIP/DevCon, See each other at every event, Worked with him on several bootcamps, small sessions, and AIPcon prep',
+      ],
+      account: 'Ford',
+    },
+    {
+      name: 'Bob Baymon',
+      email: 'bob.baymon@gmail.com',
+      talksTo: 'CONNOR',
+      contextOfTheRelatioship: ['Friend of mine that works at IBM'],
+      account: 'Personal',
+    },
+  ])}
 
     # Messages retrieved using vector search:
     Only return messages where you are 90% sure or more they are relevant to the task at hand, if any

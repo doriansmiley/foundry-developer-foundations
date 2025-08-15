@@ -6,7 +6,7 @@ import {
   MessageService,
   OfficeService,
 } from '@codestrap/developer-foundations-types';
-import { container } from '../../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 
 // Types for Email functionality
 export type EmailThread = {
@@ -120,7 +120,7 @@ export async function sendEmail(
   );
 
   const response = await messageService.sendEmail({
-    from: process.env.OFFICE_SERVICE_ACCOUNT,
+    from: process.env.OFFICE_SERVICE_ACCOUNT!,
     recipients: emailData.recipients,
     subject: emailData.subject,
     message,

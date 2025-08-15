@@ -1,14 +1,14 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import {
-  extractJsonFromBackticks,
-  uuidv4,
+    extractJsonFromBackticks,
+    uuidv4,
 } from '@codestrap/developer-foundations-utils';
-import { container } from '../../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 import {
-  GeminiService,
-  OfficeService,
-  ReadEmailOutput,
-  TYPES,
+    GeminiService,
+    OfficeService,
+    ReadEmailOutput,
+    TYPES,
 } from '@codestrap/developer-foundations-types';
 
 export async function readEmails(context: Context, event?: MachineEvent, task?: string): Promise<ReadEmailOutput> {

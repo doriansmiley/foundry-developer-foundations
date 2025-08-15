@@ -1,12 +1,12 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
 import {
-  GeminiService,
-  ProposedTimes,
-  TYPES,
-  OfficeService,
+    GeminiService,
+    ProposedTimes,
+    TYPES,
+    OfficeService,
 } from '@codestrap/developer-foundations-types';
-import { container } from '../../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 
 export type DraftAtendeeEmailResponse = {
     emailId: string,

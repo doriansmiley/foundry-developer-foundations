@@ -3,7 +3,20 @@ import { User, Users } from '@osdk/foundry.admin';
 import { createConfidentialOauthClient } from '@osdk/oauth';
 import { FoundryClient } from '@codestrap/developer-foundations-types';
 
-export function createFoundryClient(): FoundryClient {
+// this is a utility method to manage usage of the Foundry Client and ensure we only get a singleton
+// files in the palantir services package can't use the container to get the foundry client, nor should they really
+// They are in the same package
+let client: FoundryClient | undefined = undefined;
+
+export function getFoundryClient(): FoundryClient {
+  if (!client) {
+    client = createFoundryClient();
+  }
+
+  return client;
+}
+
+function createFoundryClient(): FoundryClient {
   // log ENV vars
   console.log('Environment variable keys:');
   Object.keys(process.env).forEach((key) => {

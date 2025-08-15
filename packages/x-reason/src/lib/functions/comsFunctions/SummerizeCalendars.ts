@@ -5,7 +5,7 @@ import {
   Summaries,
 } from '@codestrap/developer-foundations-types';
 import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
-import { container } from '../../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 import { GeminiService, TYPES } from '@codestrap/developer-foundations-types';
 
 function nowInTZ(tz: string, ref: Date): Date {

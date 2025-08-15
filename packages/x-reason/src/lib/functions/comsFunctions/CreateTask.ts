@@ -3,7 +3,7 @@ import {
   extractJsonFromBackticks,
   uuidv4,
 } from '@codestrap/developer-foundations-utils';
-import { container } from '../../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 import {
   GeminiService,
   TicketsDao,
@@ -35,13 +35,13 @@ export async function createTask(
   const system = `You are a helpful virtual project manager in charge of task creation and assignments.
     You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Viki, Code's AI EA" or similar. 
     You can get creative on your greeting, taking into account the day of the week. Today is ${new Date().toLocaleDateString(
-      'en-US',
-      { weekday: 'long' }
-    )}. 
+    'en-US',
+    { weekday: 'long' }
+  )}. 
     You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
     The current month is ${new Date().toLocaleDateString('en-US', {
-      month: 'long',
-    })}. 
+    month: 'long',
+  })}. 
     When creating a task you always create a task title, description, and point estimation.
     You also careful decide on the severity based on the ask from the end user.`;
 

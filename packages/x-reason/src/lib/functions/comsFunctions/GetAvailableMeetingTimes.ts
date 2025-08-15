@@ -1,15 +1,15 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import {
-  extractJsonFromBackticks,
-  uuidv4,
+    extractJsonFromBackticks,
+    uuidv4,
 } from '@codestrap/developer-foundations-utils';
-import { container } from '../../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 import {
-  GeminiService,
-  ProposedTimes,
-  TYPES,
-  MeetingRequest,
-  OfficeService,
+    GeminiService,
+    ProposedTimes,
+    TYPES,
+    MeetingRequest,
+    OfficeService,
 } from '@codestrap/developer-foundations-types';
 import { DraftAtendeeEmailResponse } from './ResolveUnavailableAttendees';
 

@@ -1,6 +1,6 @@
 import { Buffer } from 'buffer';
 import { OfficeService, TYPES } from '@codestrap/developer-foundations-types';
-import { container } from '../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 
 if (!process.env.E2E) {
   test.skip('e2e test skipped in default run', () => {

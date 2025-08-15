@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "@codestrap/developer-foundations-types": "*",
-    "@codestrap/developer-foundations-di": "*",
     "@osdk/client": "^2.2.1",
     "@osdk/foundry.admin": "^2.22.0",
     "@osdk/oauth": "^1.1.2",

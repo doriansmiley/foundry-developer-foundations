@@ -2,13 +2,13 @@ import {
   SupportedEngines,
   xReasonFactory,
   SupportTrainingDataTypes,
-} from '../../factory';
+} from '../../../factory';
 import {
   ActionType,
   TrainingDataDao,
   TYPES,
 } from '@codestrap/developer-foundations-types';
-import { container } from '../../../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 
 async function getSolverTrainingData() {
   const trainingDataDao = container.get<TrainingDataDao>(TYPES.TrainingDataDao);

@@ -5,7 +5,7 @@ import {
   MessageService,
   TYPES,
 } from '@codestrap/developer-foundations-types';
-import { container } from '../../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 
 // This function is called by the state machine and uses the connection already established in Text2Action
 export async function sendSlackMessage(

@@ -1,16 +1,14 @@
-import { container } from '@codestrap/developer-foundations-di';
 import type {
-  FoundryClient,
   GeminiParameters,
 } from '@codestrap/developer-foundations-types';
-import { TYPES } from '@codestrap/developer-foundations-types';
+import { getFoundryClient } from './foundryClient';
 
 export async function geminiService(
   user: string,
   system: string,
   params?: GeminiParameters
 ): Promise<string> {
-  const client = container.get<FoundryClient>(TYPES.FoundryClient);
+  const client = getFoundryClient();
 
   const token = await client.auth.signIn();
   const apiKey = token.access_token;

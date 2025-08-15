@@ -4,7 +4,7 @@ import { container } from '@codestrap/developer-foundations-di';
 import { TYPES } from '@codestrap/developer-foundations-types';
 import { openWeatherService } from '@codestrap/developer-foundations-services-weather';
 import {
-  createFoundryClient,
+  getFoundryClient,
   geminiService,
   gpt4oService,
   embeddingsService,
@@ -44,7 +44,7 @@ import { eiaService } from '@codestrap/developer-foundations-services-eia';
 
 container
   .bind(TYPES.FoundryClient)
-  .toDynamicValue(createFoundryClient)
+  .toDynamicValue(getFoundryClient)
   .inSingletonScope();
 
 container
