@@ -12,6 +12,12 @@
   },
   "tags": ["type:service"],
   "targets": {
+    "x-reason": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ts-node --project packages/services/google-v2/tsconfig.cli.json -r tsconfig-paths/register packages/services/google-v2/src/lib/x-reason/cli.ts"
+      }
+    },
     "build": {
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
