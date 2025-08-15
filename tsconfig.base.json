@@ -18,24 +18,6 @@
       "@codestrap/developer-foundations-agents-vickie-bennie": [
         "packages/agents/vickie-bennie/src/index.ts"
       ],
-      "@codestrap/developer-foundations-data-access-communications": [
-        "packages/data-access/communications/src/index.ts"
-      ],
-      "@codestrap/developer-foundations-data-access-crm": [
-        "packages/data-access/crm/src/index.ts"
-      ],
-      "@codestrap/developer-foundations-data-access-hello-world": [
-        "packages/data-access/hello-world/src/index.ts"
-      ],
-      "@codestrap/developer-foundations-data-access-platform": [
-        "packages/data-access/platform/src/index.ts"
-      ],
-      "@codestrap/developer-foundations-data-access-project-management": [
-        "packages/data-access/project-management/src/index.ts"
-      ],
-      "@codestrap/developer-foundations-data-access-sales": [
-        "packages/data-access/sales/src/index.ts"
-      ],
       "@codestrap/developer-foundations-di": ["packages/di/src/index.ts"],
       "@codestrap/developer-foundations-services-eia": [
         "packages/services/eia/src/index.ts"

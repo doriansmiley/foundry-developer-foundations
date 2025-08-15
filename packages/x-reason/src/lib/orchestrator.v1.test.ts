@@ -9,7 +9,7 @@ import {
   mockExecution2,
 } from './__fixtures__/MachineExecutions';
 
-jest.mock('@codestrap/developer-foundations-data-access-platform', () => ({
+jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   makeMemoryRecallDao: jest.fn(() => ({
     search: jest.fn(),
     read: jest.fn(),
@@ -57,7 +57,7 @@ jest.mock('@codestrap/developer-foundations-data-access-platform', () => ({
   })),
 }));
 
-jest.mock('@codestrap/developer-foundations-data-access-crm', () => ({
+jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   makeContactsDao: jest.fn(() => ({
     search: jest.fn(),
     read: jest.fn(),
@@ -68,7 +68,7 @@ jest.mock('@codestrap/developer-foundations-data-access-crm', () => ({
 }));
 
 jest.mock(
-  '@codestrap/developer-foundations-data-access-communications',
+  '@codestrap/developer-foundations-services-palantir',
   () => ({
     makeCommsDao: jest.fn(() => ({
       search: jest.fn(),
@@ -83,7 +83,7 @@ jest.mock(
   })
 );
 
-jest.mock('@codestrap/developer-foundations-data-access-sales', () => ({
+jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   makeRfpRequestsDao: jest.fn(() => ({
     search: jest.fn(),
     read: jest.fn(),
@@ -97,7 +97,7 @@ jest.mock('@codestrap/developer-foundations-data-access-sales', () => ({
 }));
 
 jest.mock(
-  '@codestrap/developer-foundations-data-access-project-management',
+  '@codestrap/developer-foundations-services-palantir',
   () => ({
     makeTicketsDao: jest.fn(() => ({
       search: jest.fn(),
@@ -107,7 +107,7 @@ jest.mock(
   })
 );
 
-jest.mock('@codestrap/developer-foundations-data-access-hello-world', () => ({
+jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   makeWorldDao: jest.fn(() => ({
     read: jest.fn(),
   })),

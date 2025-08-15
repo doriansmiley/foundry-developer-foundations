@@ -9,21 +9,21 @@ import {
   gpt4oService,
   embeddingsService,
 } from '@codestrap/developer-foundations-services-palantir';
-import { createRangrClient } from '@codestrap/developer-foundations-services-rangr';
-import { makeWorldDao } from '@codestrap/developer-foundations-data-access-hello-world';
+import { getRangrClient } from '@codestrap/developer-foundations-services-rangr';
+import { makeWorldDao } from '@codestrap/developer-foundations-services-palantir';
 import {
   makeUserDao,
   makeContactsDao,
-} from '@codestrap/developer-foundations-data-access-crm';
+} from '@codestrap/developer-foundations-services-palantir';
 import {
   makeMachineDao,
   makeMemoryRecallDao,
   makeTrainingDataDao,
-} from '@codestrap/developer-foundations-data-access-platform';
+} from '@codestrap/developer-foundations-services-palantir';
 import {
   makeCommsDao,
   makeThreadsDao,
-} from '@codestrap/developer-foundations-data-access-communications';
+} from '@codestrap/developer-foundations-services-palantir';
 import {
   makeGSuiteClientV2,
   researchAssistant,
@@ -31,8 +31,8 @@ import {
 import {
   makeRfpRequestsDao,
   makeRangrRfpRequestsDao,
-} from '@codestrap/developer-foundations-data-access-sales';
-import { makeTicketsDao } from '@codestrap/developer-foundations-data-access-project-management';
+} from '@codestrap/developer-foundations-services-rangr';
+import { makeTicketsDao } from '@codestrap/developer-foundations-services-palantir';
 import { makeSlackClient } from '@codestrap/developer-foundations-services-slack';
 import { createLoggingService } from '@codestrap/developer-foundations-utils';
 import { eiaService } from '@codestrap/developer-foundations-services-eia';
@@ -49,7 +49,7 @@ container
 
 container
   .bind(TYPES.RangrClient)
-  .toDynamicValue(createRangrClient)
+  .toDynamicValue(getRangrClient)
   .inSingletonScope();
 
 container.bind(TYPES.WorldDao).toConstantValue(makeWorldDao());

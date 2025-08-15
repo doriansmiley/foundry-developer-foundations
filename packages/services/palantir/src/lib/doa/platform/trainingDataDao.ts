@@ -1,14 +1,12 @@
 import type {
-  FoundryClient,
   TrainingDataDao,
 } from '@codestrap/developer-foundations-types';
-import { TYPES } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
+import { getFoundryClient } from '../../foundryClient';
 import { readTrainingData } from './delegates/trainingData/read';
 import { searchTrainingData } from './delegates/trainingData/search';
 
 export function makeTrainingDataDao(): TrainingDataDao {
-  const client = container.get<FoundryClient>(TYPES.FoundryClient);
+  const client = getFoundryClient();
 
   return {
     // TODO code out all methods using OSDK API calls

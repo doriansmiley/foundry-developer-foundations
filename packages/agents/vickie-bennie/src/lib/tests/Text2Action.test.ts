@@ -24,7 +24,7 @@ jest.mock('@codestrap/developer-foundations-utils', () => ({
   uuidv4: jest.fn(() => (++counter).toString()),
 }));
 
-jest.mock('@codestrap/developer-foundations-data-access-platform', () => ({
+jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   makeMachineDao: jest.fn(() => ({
     upsert: jest.fn(
       (
@@ -53,7 +53,7 @@ jest.mock('@codestrap/developer-foundations-data-access-platform', () => ({
   })),
 }));
 
-jest.mock('@codestrap/developer-foundations-data-access-crm', () => ({
+jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   makeContactsDao: jest.fn(() => ({
     search: jest.fn(),
     read: jest.fn(),
@@ -64,7 +64,7 @@ jest.mock('@codestrap/developer-foundations-data-access-crm', () => ({
 }));
 
 jest.mock(
-  '@codestrap/developer-foundations-data-access-communications',
+  '@codestrap/developer-foundations-services-palantir',
   () => ({
     makeCommsDao: jest.fn(() => ({
       search: jest.fn(),
@@ -79,7 +79,7 @@ jest.mock(
   })
 );
 
-jest.mock('@codestrap/developer-foundations-data-access-sales', () => ({
+jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   makeRfpRequestsDao: jest.fn(() => ({
     search: jest.fn(),
     read: jest.fn(),
@@ -93,7 +93,7 @@ jest.mock('@codestrap/developer-foundations-data-access-sales', () => ({
 }));
 
 jest.mock(
-  '@codestrap/developer-foundations-data-access-project-management',
+  '@codestrap/developer-foundations-services-palantir',
   () => ({
     makeTicketsDao: jest.fn(() => ({
       search: jest.fn(),
@@ -103,7 +103,7 @@ jest.mock(
   })
 );
 
-jest.mock('@codestrap/developer-foundations-data-access-hello-world', () => ({
+jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   makeWorldDao: jest.fn(() => ({
     read: jest.fn(),
   })),
