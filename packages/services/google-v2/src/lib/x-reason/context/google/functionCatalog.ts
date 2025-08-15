@@ -141,7 +141,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
             }
 
             // Run Nx generator to scaffold function
-            const command = `nx generate @codestrap/developer-foundations:service-function --name=${name} --serviceLib=google-v2 --path=${domain}`;
+            const command = `nx generate @codestrap/developer-foundations:service-function --name=${name} --serviceLib=google-service-v2 --path=${domain}`;
             console.log(`Running: ${command}`);
 
             const output = execSync(command, {
@@ -222,19 +222,8 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
               encoding: 'utf8',
               stdio: 'pipe',
             });
-
-            const result = {
-              success: true,
-              functionPath,
-              checkpoint: 'cp:function:implemented',
-              message: `Function implementation completed for ${functionPath}`,
-              note: 'This is first iteration - actual implementation logic will be added in subsequent iterations',
-            };
-
-            const payload = getPayload(context, result);
+            const payload = getPayload(context, {});
             dispatch({ type: 'CONTINUE', payload });
-
-            return result;
           } catch (error) {
             console.error('Error implementing function:', error);
             dispatch({
