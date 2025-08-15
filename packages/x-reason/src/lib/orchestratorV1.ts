@@ -20,7 +20,7 @@ import {
   TYPES,
   StateConfig,
 } from '@codestrap/developer-foundations-types';
-import { container } from '../inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 
 
 export async function getState(

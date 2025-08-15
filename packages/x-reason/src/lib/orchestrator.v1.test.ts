@@ -1,4 +1,4 @@
-import { mockProgrammerResponse1 } from '../__fixtures__/Gemini';
+import { mockProgrammerResponse1 } from './__fixtures__/Gemini';
 import { getState } from './orchestratorV1';
 import { SupportedEngines, SupportTrainingDataTypes } from './factory';
 
@@ -7,7 +7,7 @@ import {
   machineId2,
   mockExecution,
   mockExecution2,
-} from '../__fixtures__/MachineExecutions';
+} from './__fixtures__/MachineExecutions';
 
 jest.mock('@codestrap/developer-foundations-data-access-platform', () => ({
   makeMemoryRecallDao: jest.fn(() => ({
