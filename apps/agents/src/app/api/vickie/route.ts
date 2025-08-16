@@ -1,7 +1,11 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Vickie } from '@codestrap/developer-foundations-agents-vickie-bennie';
+import {
+  createContainer,
+  Vickie,
+} from '@codestrap/developer-foundations-agents-vickie-bennie';
+import { setContainer } from '@codestrap/developer-foundations-di';
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -15,6 +19,8 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  const container = createContainer();
+  setContainer(container);
   const bodyText = await req.text();
 
   const params = new URLSearchParams(bodyText);

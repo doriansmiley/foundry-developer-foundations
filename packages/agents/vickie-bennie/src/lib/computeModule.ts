@@ -10,6 +10,8 @@ import {
   ModuleConfig,
 } from '@codestrap/developer-foundations-types';
 import { Bennie } from './Bennie';
+import { createContainer } from './di';
+import { setContainer } from '@codestrap/developer-foundations-di';
 
 dotenv.config();
 
@@ -166,6 +168,9 @@ function createComputeModule(): ComputeModuleType {
     console.log('returning mock module');
     return mockModule;
   }
+
+  const container = createContainer();
+  setContainer(container);
 
   const vickie = new Vickie();
   const bennie = new Bennie();

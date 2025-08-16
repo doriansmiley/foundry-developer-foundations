@@ -1,8 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { EnergyService, TYPES } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-agents-vickie-bennie';
+import { eiaService } from '@codestrap/developer-foundations-services-eia';
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -17,8 +16,6 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   try {
-    const eiaService = container.get<EnergyService>(TYPES.EnergyService);
-
     const {
       scenarioPrices = [5, 6, 7, 8],
       caGallonsYear = 13.4e9,

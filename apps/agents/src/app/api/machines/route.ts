@@ -1,8 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { TYPES, MachineDao } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-agents-vickie-bennie';
+import { makeMachineDao } from '@codestrap/developer-foundations-services-palantir';
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -27,8 +26,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    console.log(`calling machineDao.read with id ${id}`);
-    const machineDao = container.get<MachineDao>(TYPES.MachineDao);
+    const machineDao = makeMachineDao();
     const result = await machineDao.read(id);
 
     return NextResponse.json(result);

@@ -1,8 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { TYPES, CommsDao } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-agents-vickie-bennie';
+import { makeCommsDao } from '@codestrap/developer-foundations-services-palantir';
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -27,7 +26,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const commsDao = container.get<CommsDao>(TYPES.CommsDao);
+    const commsDao = makeCommsDao();
     const result = await commsDao.read(id);
 
     return NextResponse.json(result);

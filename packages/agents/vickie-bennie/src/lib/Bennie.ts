@@ -15,7 +15,7 @@ import {
   RfpResponsesResult,
   StateConfig,
 } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
+import { getContainer } from '@codestrap/developer-foundations-di';
 
 interface BennieResponse {
   status: number;
@@ -48,6 +48,7 @@ export class Bennie extends Text2Action {
     userId: string,
     threadId?: string
   ): Promise<BennieResponse> {
+    const container = getContainer();
     let generatedTaskList: undefined | string = undefined;
     let newThread = !threadId || threadId.length === 0;
 
@@ -254,6 +255,7 @@ ${result}`;
     vendorId: string,
     machineExecutionId: string
   ): Promise<RfpResponseReceipt> {
+    const container = getContainer();
     // rehydrate the machine
     const machineDao = container.get<MachineDao>(TYPES.MachineDao);
     // allow this to throw if no machine execution is found
@@ -388,8 +390,9 @@ ${result}`;
 - Machine and ThreadId: ${machineExecutionId}
 
 ### Summary
-Your RFP for ${vendorRfpRequest.vendorName} using ID: ${vendorRfpRequest.vendorId
-      } was sent and we received the following response from their agent:
+Your RFP for ${vendorRfpRequest.vendorName} using ID: ${
+      vendorRfpRequest.vendorId
+    } was sent and we received the following response from their agent:
 ${vendorRfpRequest.response}
 `;
     const appendedMessage = `${thread?.messages}

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { Vickie } from '@codestrap/developer-foundations-agents-vickie-bennie';
+import {
+  Vickie,
+  createContainer,
+} from '@codestrap/developer-foundations-agents-vickie-bennie';
+import { setContainer } from '@codestrap/developer-foundations-di';
 
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN!;
 const SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET!;
@@ -33,6 +37,9 @@ function verifySlackSignature(req: NextRequest, body: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  const container = createContainer();
+  setContainer(container);
+
   const bodyText = await req.text();
 
   if (!verifySlackSignature(req, bodyText)) {
