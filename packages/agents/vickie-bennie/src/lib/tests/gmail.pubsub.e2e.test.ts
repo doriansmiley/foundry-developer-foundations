@@ -1,6 +1,10 @@
 import { Buffer } from 'buffer';
 import { OfficeService, TYPES } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
+import { setContainer } from '@codestrap/developer-foundations-di';
+import { createContainer } from '../di';
+
+const container = createContainer();
+setContainer(container);
 
 if (!process.env.E2E) {
   test.skip('e2e test skipped in default run', () => {

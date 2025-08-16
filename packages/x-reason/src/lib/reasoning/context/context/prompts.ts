@@ -8,11 +8,12 @@ import {
   TrainingDataDao,
   TYPES,
 } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
+import { getContainer } from '@codestrap/developer-foundations-di';
 import { dateTime } from '../../../functions';
 
 // TODO get this data from the ontology
 async function getProgrammingTrainingData() {
+  const container = getContainer();
   const trainingDataDao = container.get<TrainingDataDao>(TYPES.TrainingDataDao);
   const searchResults = await trainingDataDao.search(
     SupportedEngines.CONTEXT,
@@ -118,8 +119,9 @@ These tasks are not beneath you. At CodeStrap, where you work we adopt the motto
 It means we all pull together to get things done.
 The current local date/time is ${dateTimeResult.currentLocalDateTime}.
 The current day/time in your timezone is: ${dateTimeResult.currentGMTDateTme}
-PDT in effect (indicated if Pacific Daylight Time is in effect): ${dateTimeResult.isPacificDaylightTime
-    }
+PDT in effect (indicated if Pacific Daylight Time is in effect): ${
+    dateTimeResult.isPacificDaylightTime
+  }
   `;
 
   // TODO import the personnel and channel info from ontology object

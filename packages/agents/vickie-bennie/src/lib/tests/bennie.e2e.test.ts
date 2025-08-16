@@ -1,5 +1,6 @@
 import { Bennie } from '../Bennie';
-import { container } from '@codestrap/developer-foundations-di';
+import { setContainer } from '@codestrap/developer-foundations-di';
+import { createContainer } from '../di';
 import {
   Context,
   MachineEvent,
@@ -10,6 +11,9 @@ import {
   TYPES,
 } from '@codestrap/developer-foundations-types';
 import { State } from 'xstate';
+
+const container = createContainer();
+setContainer(container);
 
 if (!process.env.E2E) {
   test.skip('e2e test skipped in default run', () => {

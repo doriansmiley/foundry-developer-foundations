@@ -5,7 +5,7 @@ import {
   Summaries,
 } from '@codestrap/developer-foundations-types';
 import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
-import { container } from '@codestrap/developer-foundations-di';
+import { getContainer } from '@codestrap/developer-foundations-di';
 import { GeminiService, TYPES } from '@codestrap/developer-foundations-types';
 
 function nowInTZ(tz: string, ref: Date): Date {
@@ -94,6 +94,7 @@ export async function summarizeCalendars(
     }
     `;
 
+  const container = getContainer();
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
   const response = await geminiService(userPrompt, system);

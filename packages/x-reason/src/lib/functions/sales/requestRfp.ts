@@ -6,7 +6,7 @@ import {
   TYPES,
   RfpRequestResponse,
 } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
+import { getContainer } from '@codestrap/developer-foundations-di';
 
 function extractDomain(input: string) {
   const match = input.match(/<([^>]+)>/);
@@ -30,6 +30,8 @@ export async function requestRfp(
   if (!vendorName || !vendorId) {
     throw new Error('Vendor name or id not found!');
   }
+
+  const container = getContainer();
 
   // TODO handle all vendors. The only thing that should change in the code below is the four params for url, certs, etc
   // maybe just create a factory to get the clientId, clientSecret, ontologyRid, and url

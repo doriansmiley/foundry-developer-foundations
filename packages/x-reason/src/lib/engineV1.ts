@@ -10,7 +10,7 @@ import {
 import programV1 from './programmerV1';
 
 import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
-import { container } from '@codestrap/developer-foundations-di';
+import { getContainer } from '@codestrap/developer-foundations-di';
 import {
   GeminiService,
   LoggingService,
@@ -20,7 +20,7 @@ import {
 async function solve(query: string, solver: Prompt): Promise<string> {
   // TODO remove the use of the threads API and go with completions
   const { user, system } = await solver(query);
-
+  const container = getContainer();
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);
   const response = await geminiService(user, system);
 
@@ -34,7 +34,7 @@ async function program(
   programmer: Prompt
 ): Promise<StateConfig[]> {
   const { user, system } = await programmer(query, functionCatalog);
-
+  const container = getContainer();
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);
   const response = await geminiService(user, system);
 
@@ -218,6 +218,7 @@ async function transition(
   executionId: string
 ): Promise<string> {
   const { user, system } = await aiTransition(taskList, currentState, payload);
+  const container = getContainer();
   const { log } = container.get<LoggingService>(TYPES.LoggingService);
 
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);

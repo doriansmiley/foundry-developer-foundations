@@ -6,7 +6,7 @@ import {
   MessageService,
   OfficeService,
 } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
+import { getContainer } from '@codestrap/developer-foundations-di';
 
 // Types for Email functionality
 export type EmailThread = {
@@ -75,6 +75,7 @@ If no reports are found output N/A
   const system = `You are a helpful AI assistant tasked with looking for any relevant research report(s).
     You understand common state machine DSL's like x-state.`;
 
+  const container = getContainer();
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
   const response = await geminiService(user, system);

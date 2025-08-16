@@ -8,9 +8,10 @@ import {
   TrainingDataDao,
   TYPES,
 } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
+import { getContainer } from '@codestrap/developer-foundations-di';
 
 async function getSolverTrainingData() {
+  const container = getContainer();
   const trainingDataDao = container.get<TrainingDataDao>(TYPES.TrainingDataDao);
   const searchResults = await trainingDataDao.search(
     SupportedEngines.SALES,
@@ -58,6 +59,7 @@ async function getSolverTrainingData() {
 }
 
 async function getProgrammingTrainingData() {
+  const container = getContainer();
   const trainingDataDao = container.get<TrainingDataDao>(TYPES.TrainingDataDao);
   const searchResults = await trainingDataDao.search(
     SupportedEngines.SALES,

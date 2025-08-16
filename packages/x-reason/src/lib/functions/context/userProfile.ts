@@ -5,7 +5,7 @@ import {
   TYPES,
   UserDao,
 } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
+import { getContainer } from '@codestrap/developer-foundations-di';
 
 // This function enriches the context with the most likely user profiles relevant to the user's request
 // This is usefule for sending emails and status reports where files need to be referenced
@@ -22,6 +22,7 @@ export async function userProfile(
   };
 
   if (context.userId) {
+    const container = getContainer();
     const currentUser = await container.get<UserDao>(TYPES.UserDao)(
       context.userId
     );

@@ -5,7 +5,7 @@ import {
   TYPES,
   OfficeService,
 } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
+import { getContainer } from '@codestrap/developer-foundations-di';
 
 // This function extracts the proposed time slot found on the input context and the attendees and schedules a meeting with Google Calander API
 export async function scheduleMeeting(
@@ -24,6 +24,7 @@ export async function scheduleMeeting(
       attendees: times[0].availableAttendees,
     };
 
+    const container = getContainer();
     const officeService = await container.getAsync<OfficeService>(
       TYPES.OfficeService
     );

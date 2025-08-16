@@ -1,8 +1,17 @@
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundations';
 
-import { getState, SupportedEngines, xReasonFactory } from '@codestrap/developer-foundations-x-reason';
+import {
+  getState,
+  SupportedEngines,
+  xReasonFactory,
+} from '@codestrap/developer-foundations-x-reason';
 import { engineV1 as engine } from '@codestrap/developer-foundations-x-reason';
-import { dateTime, recall, requestRfp, userProfile } from '@codestrap/developer-foundations-x-reason';
+import {
+  dateTime,
+  recall,
+  requestRfp,
+  userProfile,
+} from '@codestrap/developer-foundations-x-reason';
 import {
   extractJsonFromBackticks,
   uuidv4,
@@ -22,8 +31,8 @@ import {
   Communications,
   LoggingService,
 } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
 import { State } from 'xstate';
+import { getContainer } from '@codestrap/developer-foundations-di';
 
 // use classes to take advantage of trace decorator
 export class Text2Action {
@@ -52,6 +61,7 @@ export class Text2Action {
     tokens?: number,
     id?: string
   ): Promise<Communications> {
+    const container = getContainer();
     const { solver } = xReasonFactory(xReasonEngine as SupportedEngines)({});
     const userProfile = await container.get<UserDao>(TYPES.UserDao)(userId);
 
@@ -205,6 +215,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
     inputs = '{}',
     xreason: string = SupportedEngines.COMS
   ): Promise<MachineExecutions> {
+    const container = getContainer();
     const solution = {
       input: '', //not relevant for this
       id: executionId || uuidv4(),
@@ -255,6 +266,7 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
     userId: string,
     machineExecutionId: string
   ): Promise<Threads> {
+    const container = getContainer();
     // I changed the response of this function to void to it can be triggered as an action. Once refactored to compute modules it can return a response
     // rehydrate the machine
     const threadDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
