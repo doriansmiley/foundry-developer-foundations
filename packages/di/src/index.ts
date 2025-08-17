@@ -1,1 +1,1 @@
-export * from './lib/di';
+export * from './lib/inversify.config';

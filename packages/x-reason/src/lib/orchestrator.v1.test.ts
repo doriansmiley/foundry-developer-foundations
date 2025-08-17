@@ -55,9 +55,6 @@ jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
       }
     }),
   })),
-}));
-
-jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   makeContactsDao: jest.fn(() => ({
     search: jest.fn(),
     read: jest.fn(),
@@ -65,25 +62,33 @@ jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   makeUserDao: jest.fn(() => ({
     read: jest.fn(),
   })),
+  makeCommsDao: jest.fn(() => ({
+    search: jest.fn(),
+    read: jest.fn(),
+    upsert: jest.fn(),
+  })),
+  makeThreadsDao: jest.fn(() => ({
+    search: jest.fn(),
+    read: jest.fn(),
+    upsert: jest.fn(),
+  })),
+  makeTicketsDao: jest.fn(() => ({
+    search: jest.fn(),
+    read: jest.fn(),
+    upsert: jest.fn(),
+  })),
+  makeWorldDao: jest.fn(() => ({
+    read: jest.fn(),
+  })),
+  geminiService: jest.fn(() => {
+    return mockProgrammerResponse1;
+  }),
 }));
 
-jest.mock(
-  '@codestrap/developer-foundations-services-palantir',
-  () => ({
-    makeCommsDao: jest.fn(() => ({
-      search: jest.fn(),
-      read: jest.fn(),
-      upsert: jest.fn(),
-    })),
-    makeThreadsDao: jest.fn(() => ({
-      search: jest.fn(),
-      read: jest.fn(),
-      upsert: jest.fn(),
-    })),
-  })
-);
-
-jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
+jest.mock('@codestrap/developer-foundations-services-rangr', () => ({
+  createRangrClient: jest.fn(() => ({
+    someMethod: jest.fn(),
+  })),
   makeRfpRequestsDao: jest.fn(() => ({
     search: jest.fn(),
     read: jest.fn(),
@@ -96,29 +101,6 @@ jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
   })),
 }));
 
-jest.mock(
-  '@codestrap/developer-foundations-services-palantir',
-  () => ({
-    makeTicketsDao: jest.fn(() => ({
-      search: jest.fn(),
-      read: jest.fn(),
-      upsert: jest.fn(),
-    })),
-  })
-);
-
-jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
-  makeWorldDao: jest.fn(() => ({
-    read: jest.fn(),
-  })),
-}));
-
-jest.mock('@codestrap/developer-foundations-services-rangr', () => ({
-  createRangrClient: jest.fn(() => ({
-    someMethod: jest.fn(),
-  })),
-}));
-
 let counter = 0;
 
 jest.mock('@codestrap/developer-foundations-utils', () => ({
@@ -126,17 +108,11 @@ jest.mock('@codestrap/developer-foundations-utils', () => ({
   uuidv4: jest.fn(() => (++counter).toString()),
 }));
 
-jest.mock('../functions', () => ({
-  ...jest.requireActual('../functions'),
+jest.mock('./functions', () => ({
+  ...jest.requireActual('./functions'),
   sendEmail: jest.fn().mockImplementation(() => {
-    const { mockEmailResponse } = require('../__fixtures__/Email');
+    const { mockEmailResponse } = require('./__fixtures__/Email');
     return Promise.resolve(mockEmailResponse);
-  }),
-}));
-
-jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
-  geminiService: jest.fn(() => {
-    return mockProgrammerResponse1;
   }),
 }));
 

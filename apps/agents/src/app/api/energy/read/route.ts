@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { EnergyService, TYPES } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-agents-vickie-bennie';
+import { container } from '@codestrap/developer-foundations-di';
 
 export async function OPTIONS() {
   return new NextResponse(null, {

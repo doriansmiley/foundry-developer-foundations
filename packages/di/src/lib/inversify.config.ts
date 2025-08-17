@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { container } from '@codestrap/developer-foundations-di';
+import { Container } from 'inversify';
 
 import { TYPES } from '@codestrap/developer-foundations-types';
 import { openWeatherService } from '@codestrap/developer-foundations-services-weather';
@@ -36,6 +36,8 @@ import { makeTicketsDao } from '@codestrap/developer-foundations-services-palant
 import { makeSlackClient } from '@codestrap/developer-foundations-services-slack';
 import { createLoggingService } from '@codestrap/developer-foundations-utils';
 import { eiaService } from '@codestrap/developer-foundations-services-eia';
+
+const container = new Container();
 
 // TODO refactor with a service facade, or maybe just a getContainer method to allow for overriding default definitions
 // a service facade could hide the implementation details but it would be a lot of work and the resulting types would not look different the inversify
