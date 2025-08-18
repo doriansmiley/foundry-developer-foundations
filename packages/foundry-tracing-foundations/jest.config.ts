@@ -3,15 +3,19 @@ export default {
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
   transform: {
-    '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
+    '^.+\\.[tj]s$': [
+      'ts-jest',
+      {
+        tsconfig: '<rootDir>/tsconfig.spec.json',
+        useESM: true,
+      },
+    ],
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../coverage/packages/foundry-tracing-foundations',
-
+  coverageDirectory: '../../coverage/packages/di',
   transformIgnorePatterns: ['/node_modules/(?!(?:@osdk|@codestrap)/)'],
   extensionsToTreatAsEsm: ['.ts'],
   testPathIgnorePatterns: ['<rootDir>/dist/'],
-
   moduleNameMapper: {
     // Strip `.js` from your TS imports so ESM paths resolve
     '^(\\.{1,2}/.*)\\.js$': '$1',

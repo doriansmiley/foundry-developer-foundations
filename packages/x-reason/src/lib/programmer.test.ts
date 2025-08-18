@@ -10,7 +10,6 @@ import {
   stateConfigArray,
   stateConfigResolvePastStates,
 } from './__fixtures__/Programmer';
-import { getUniqueStateIds } from '@codestrap/developer-foundations-utils';
 
 let counter = 0;
 

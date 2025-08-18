@@ -1,9 +1,7 @@
-import { container } from '@codestrap/developer-foundations-di';
-import type { FoundryClient } from '@codestrap/developer-foundations-types';
-import { TYPES } from '@codestrap/developer-foundations-types';
+import { getFoundryClient } from "./foundryClient";
 
 export async function embeddingsService(input: string): Promise<[number[]]> {
-  const client = container.get<FoundryClient>(TYPES.FoundryClient);
+  const client = getFoundryClient();
 
   const token = await client.auth.signIn();
   const apiKey = token.access_token;

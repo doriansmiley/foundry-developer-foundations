@@ -12,6 +12,9 @@
     "@codestrap/developer-foundations-types": "*",
     "@codestrap/developer-foundations-utils": "*",
     "@codestrap/developer-foundations-di": "*",
+    "@osdk/client": "^2.2.1",
+    "@osdk/foundry.admin": "^2.22.0",
+    "@osdk/oauth": "^1.1.2",
     "tslib": "^2.3.0"
   }
 }

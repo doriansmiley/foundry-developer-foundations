@@ -1,8 +1,8 @@
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundations';
 
-import { getState, SupportedEngines, xReasonFactory } from './reasoning';
+import { getState, SupportedEngines, xReasonFactory } from '@codestrap/developer-foundations-x-reason';
 import { engineV1 as engine } from '@codestrap/developer-foundations-x-reason';
-import { dateTime, recall, requestRfp, userProfile } from './functions';
+import { dateTime, recall, requestRfp, userProfile } from '@codestrap/developer-foundations-x-reason';
 import {
   extractJsonFromBackticks,
   uuidv4,

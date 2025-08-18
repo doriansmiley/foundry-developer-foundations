@@ -12,5 +12,5 @@
     "src/**/*.spec.ts",
     "src/**/*.d.ts",
     "process-env.d.ts"
-, "src/lib/reasoning/orchestrator.v1.test.ts"  ]
+  ]
 }

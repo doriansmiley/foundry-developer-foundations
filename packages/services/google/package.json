@@ -8,7 +8,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@codestrap/developer-foundations-di": "*",
     "@codestrap/developer-foundations-types": "*",
     "@codestrap/developer-foundations-utils": "*",
     "@google/generative-ai": "^0.24.1",

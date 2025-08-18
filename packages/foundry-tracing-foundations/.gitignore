@@ -1,6 +1,5 @@
 # Environment/Credentials
 .env
-.env.*
 service_account.json
 
 # Dependencies

@@ -1,8 +1,4 @@
-import * as dotenv from 'dotenv';
-
-dotenv.config();
-
-import { readWebPage } from '../functions/comsFunctions/ReadWebPage';
+import { readWebPage } from '@codestrap/developer-foundations-x-reason/src/lib/functions/comsFunctions/ReadWebPage';
 
 if (!process.env.E2E) {
   test.skip('e2e test skipped in default run', () => {

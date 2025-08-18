@@ -16,7 +16,9 @@ jest.mock('@codestrap/developer-foundations-utils', () => ({
   uuidv4: jest.fn(() => (++counter).toString()),
 }));
 
-jest.mock('@codestrap/developer-foundations-data-access-platform', () => ({
+jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
+  // TODO mock the gemini service responses, this introduces an element on non-determinism.
+  ...jest.requireActual('@codestrap/developer-foundations-services-palantir'),
   makeMachineDao: jest.fn(() => ({
     upsert: jest.fn(
       (
@@ -43,9 +45,6 @@ jest.mock('@codestrap/developer-foundations-data-access-platform', () => ({
     search: jest.fn(),
     read: jest.fn(),
   })),
-}));
-
-jest.mock('@codestrap/developer-foundations-data-access-crm', () => ({
   makeContactsDao: jest.fn(() => ({
     search: jest.fn(),
     read: jest.fn(),
@@ -53,25 +52,30 @@ jest.mock('@codestrap/developer-foundations-data-access-crm', () => ({
   makeUserDao: jest.fn(() => ({
     read: jest.fn(),
   })),
+  makeCommsDao: jest.fn(() => ({
+    search: jest.fn(),
+    read: jest.fn(),
+    upsert: jest.fn(),
+  })),
+  makeThreadsDao: jest.fn(() => ({
+    search: jest.fn(),
+    read: jest.fn(),
+    upsert: jest.fn(),
+  })),
+  makeTicketsDao: jest.fn(() => ({
+    search: jest.fn(),
+    read: jest.fn(),
+    upsert: jest.fn(),
+  })),
+  makeWorldDao: jest.fn(() => ({
+    read: jest.fn(),
+  })),
 }));
 
-jest.mock(
-  '@codestrap/developer-foundations-data-access-communications',
-  () => ({
-    makeCommsDao: jest.fn(() => ({
-      search: jest.fn(),
-      read: jest.fn(),
-      upsert: jest.fn(),
-    })),
-    makeThreadsDao: jest.fn(() => ({
-      search: jest.fn(),
-      read: jest.fn(),
-      upsert: jest.fn(),
-    })),
-  })
-);
-
-jest.mock('@codestrap/developer-foundations-data-access-sales', () => ({
+jest.mock('@codestrap/developer-foundations-services-rangr', () => ({
+  createRangrClient: jest.fn(() => ({
+    someMethod: jest.fn(),
+  })),
   makeRfpRequestsDao: jest.fn(() => ({
     search: jest.fn(),
     read: jest.fn(),
@@ -81,29 +85,6 @@ jest.mock('@codestrap/developer-foundations-data-access-sales', () => ({
     search: jest.fn(),
     read: jest.fn(),
     upsert: jest.fn(),
-  })),
-}));
-
-jest.mock(
-  '@codestrap/developer-foundations-data-access-project-management',
-  () => ({
-    makeTicketsDao: jest.fn(() => ({
-      search: jest.fn(),
-      read: jest.fn(),
-      upsert: jest.fn(),
-    })),
-  })
-);
-
-jest.mock('@codestrap/developer-foundations-data-access-hello-world', () => ({
-  makeWorldDao: jest.fn(() => ({
-    read: jest.fn(),
-  })),
-}));
-
-jest.mock('@codestrap/developer-foundations-services-rangr', () => ({
-  createRangrClient: jest.fn(() => ({
-    someMethod: jest.fn(),
   })),
 }));
 

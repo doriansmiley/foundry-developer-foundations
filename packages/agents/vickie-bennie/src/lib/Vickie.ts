@@ -1,6 +1,6 @@
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundations';
 
-import { SupportedEngines } from './reasoning/factory';
+import { SupportedEngines } from '@codestrap/developer-foundations-x-reason';
 import { Text2Action } from './Text2Action';
 import {
   extractJsonFromBackticks,
@@ -16,7 +16,7 @@ import {
   MachineDao,
   LoggingService,
 } from '@codestrap/developer-foundations-types';
-import { container } from './inversify.config';
+import { container } from '@codestrap/developer-foundations-di';
 
 interface VickieResponse {
   status: number;
@@ -298,8 +298,7 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
 
         log(
           id,
-          `Sending updated context for the following email thread ${
-            messages[0]?.subject
+          `Sending updated context for the following email thread ${messages[0]?.subject
           }
                     contextUpdate:
                     ${JSON.stringify(contextUpdate)}
@@ -478,16 +477,16 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
     const system = `You are a helpful AI executive assistant named Vickie.
         You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Vickie, Code's AI Executive Assistant" or similar.
         You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString(
-          'en-US',
-          { weekday: 'long' }
-        )}. 
+      'en-US',
+      { weekday: 'long' }
+    )}. 
         You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
         You always obey the users instructions and understand the people you work for are busy executives and sometimes need help in their personal lives
         These tasks are not beneath you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
         It means we all pull together to get things done.
         The current local date/time is ${new Date().toLocaleString('en-US', {
-          timeZone: 'America/Los_Angeles',
-        })}.
+      timeZone: 'America/Los_Angeles',
+    })}.
         The current day/time in your timezone is: ${new Date().toString()}`;
     const user = `
                 Based on the following user query

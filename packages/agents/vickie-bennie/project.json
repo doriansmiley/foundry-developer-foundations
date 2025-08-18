@@ -50,6 +50,22 @@
         "jestConfig": "packages/agents/vickie-bennie/jest.config.ts"
       }
     },
+    "e2e": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{workspaceRoot}/coverage/{projectRoot}"
+      ],
+      "options": {
+        "jestConfig": "packages/agents/vickie-bennie/jest.config.ts"
+      },
+      "configurations": {
+        "ci": {
+          "env": {
+            "E2E": "true"
+          }
+        }
+      }
+    },
     "docker": {
       "executor": "nx:run-commands",
       "dependsOn": [
