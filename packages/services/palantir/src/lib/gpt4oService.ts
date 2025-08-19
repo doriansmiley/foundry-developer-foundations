@@ -10,8 +10,7 @@ export async function gpt4oService(
 ): Promise<string> {
   const client = getFoundryClient();
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/queries/gpt4oProxy/execute`;
 

@@ -256,10 +256,10 @@ export type MeetingRequest = {
   participants: Array<string>;
   subject: string;
   timeframe_context:
-    | 'user defined exact date/time'
-    | 'as soon as possible'
-    | 'this week'
-    | 'next week';
+  | 'user defined exact date/time'
+  | 'as soon as possible'
+  | 'this week'
+  | 'next week';
   localDateString?: string;
   duration_minutes: number;
   working_hours: {
@@ -298,13 +298,13 @@ type GptSpecificToolChoice = {
 
 type GptTool = {
   function?:
-    | {
-        name: string;
-        description?: string | undefined;
-        strict?: boolean | undefined;
-        parameters: Map<string, string>;
-      }
-    | undefined;
+  | {
+    name: string;
+    description?: string | undefined;
+    strict?: boolean | undefined;
+    parameters: Map<string, string>;
+  }
+  | undefined;
 };
 
 type GptToolChoice = {
@@ -362,6 +362,7 @@ export interface FoundryClient {
   ontologyRid: string;
   url: string;
   getUser: () => Promise<User>;
+  getToken: () => Promise<string>;
 }
 
 export interface RangrClient {

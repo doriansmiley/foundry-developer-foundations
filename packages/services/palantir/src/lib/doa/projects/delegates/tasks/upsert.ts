@@ -13,8 +13,7 @@ export async function upsertTicket(
 ): Promise<Tickets> {
   console.log(`upsertTicket machineId: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-ticket/apply`;
 

@@ -3,8 +3,7 @@ import { getFoundryClient } from "./foundryClient";
 export async function embeddingsService(input: string): Promise<[number[]]> {
   const client = getFoundryClient();
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/queries/textEmeddingSmall/execute`;
 

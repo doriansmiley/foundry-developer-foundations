@@ -29,6 +29,7 @@ declare global {
             SLACK_BOT_TOKEN: string;
             SLACK_APP_TOKEN: string;
             SLACK_BASE_URL: string;
+            REDIRECT_URL: string;
         }
     }
 }

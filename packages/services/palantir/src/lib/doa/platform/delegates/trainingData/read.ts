@@ -9,8 +9,7 @@ export async function readTrainingData(
 ): Promise<TrainingData> {
   console.log(`readTrainingData id: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,

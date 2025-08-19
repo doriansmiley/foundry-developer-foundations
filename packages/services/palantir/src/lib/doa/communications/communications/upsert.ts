@@ -22,8 +22,7 @@ export async function upsertCommunications(
 
   console.log(`upsertCommunications id: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-communication/apply`;
 
