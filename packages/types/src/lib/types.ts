@@ -371,6 +371,7 @@ export interface RangrClient {
   ontologyRid: string;
   url: string;
   getUser: () => Promise<User>;
+  getToken: () => Promise<string>;
 }
 
 export interface GasScenarioResult {

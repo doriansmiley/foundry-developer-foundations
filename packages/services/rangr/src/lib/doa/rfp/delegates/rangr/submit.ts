@@ -11,8 +11,7 @@ export async function submitRangrRfp(
 ): Promise<RfpRequestResponse> {
   console.log(`upsertRfpRequest machineExecutionId: ${machineExecutionId}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/submit-rfp-request/apply`;
 
