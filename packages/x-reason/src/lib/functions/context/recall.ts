@@ -192,7 +192,6 @@ export async function recall(
 
   const response = await geminiService(user, system);
 
-  // eslint-disable-next-line no-useless-escape
   const result = extractJsonFromBackticks(response);
   const clean = cleanJsonString(result);
 

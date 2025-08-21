@@ -1,5 +1,6 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import {
+  cleanJsonString,
   extractJsonFromBackticks,
   uuidv4,
 } from '@codestrap/developer-foundations-utils';
@@ -102,11 +103,11 @@ export async function createTask(
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
   const response = await geminiService(user, system);
-  // eslint-disable-next-line no-useless-escape
-  const result = extractJsonFromBackticks(
-    response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, '') ?? '{}'
-  );
-  const parsedResult = JSON.parse(result);
+
+  const result = extractJsonFromBackticks(response);
+  const clean = cleanJsonString(result);
+
+  const parsedResult = JSON.parse(clean);
   // TODO handle retried if we fail to parse the result
 
   const description = parsedResult.description;

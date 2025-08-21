@@ -1,12 +1,13 @@
-import type {
-  TrainingDataDao,
+import {
+  SupportedFoundryClients,
+  type TrainingDataDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { readTrainingData } from './delegates/trainingData/read';
 import { searchTrainingData } from './delegates/trainingData/search';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeTrainingDataDao(): TrainingDataDao {
-  const client = getFoundryClient();
+  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return {
     // TODO code out all methods using OSDK API calls

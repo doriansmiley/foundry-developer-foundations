@@ -1,7 +1,7 @@
 import { createClient } from '@osdk/client';
 import { User, Users } from '@osdk/foundry.admin';
 import { createConfidentialOauthClient } from '@osdk/oauth';
-import { RangrClient } from '@codestrap/developer-foundations-types';
+import { RangrClient, Token } from '@codestrap/developer-foundations-types';
 
 let client: RangrClient | undefined = undefined;
 
@@ -54,11 +54,55 @@ function createRangrClient(): RangrClient {
     scopes
   );
   const client = createClient(url, ontologyRid, auth);
+
   const getUser = async () => {
     const user: User = await Users.getCurrent(client);
 
     return user;
   };
 
-  return { auth, ontologyRid, url, client, getUser };
+  let token: Token | undefined;
+  let tokenExpire: Date | undefined;
+  let pendingRequest: Promise<Token> | undefined;
+
+  auth.addEventListener('signIn', (evt) => {
+    token = evt.detail; // Token
+    tokenExpire = new Date(token.expires_at);
+  });
+
+  auth.addEventListener('signOut', (evt) => {
+    token = undefined;
+    tokenExpire = undefined;
+  });
+
+  const getToken = async function () {
+
+    if (token && tokenExpire) {
+      // add 60 seconds to account for processing time
+      const skew = tokenExpire.getTime() + 60000;
+
+      if (skew > new Date().getTime()) {
+        return token.access_token;
+      }
+    }
+    // avoid duplicate signin requests
+    if (!pendingRequest) {
+      pendingRequest = auth.signIn();
+    }
+
+    try {
+      token = await pendingRequest;
+
+      return token.access_token;
+    } catch (e) {
+      console.log(e);
+
+      throw (e);
+    } finally {
+      pendingRequest = undefined;
+    }
+
+  }
+
+  return { auth, ontologyRid, url, client, getUser, getToken };
 }

@@ -1,12 +1,13 @@
-import type {
-  ThreadsDao,
+import {
+  SupportedFoundryClients,
+  type ThreadsDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { upsertThread } from './threads/upsert';
 import { readThread } from './threads/read';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeThreadsDao(): ThreadsDao {
-  const client = getFoundryClient();
+  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
   // TODO remove once Foundry client is used
   console.log(client.ontologyRid);
 

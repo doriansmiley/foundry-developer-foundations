@@ -1,5 +1,5 @@
 import { Context, MachineEvent } from "@codestrap/developer-foundations-types";
-import { extractJsonFromBackticks } from "@codestrap/developer-foundations-utils";
+import { cleanJsonString, extractJsonFromBackticks } from "@codestrap/developer-foundations-utils";
 import { container } from "@codestrap/developer-foundations-di";
 import { GeminiService, TYPES } from "@codestrap/developer-foundations-types";
 import FirecrawlApp from "@mendable/firecrawl-js";
@@ -47,9 +47,11 @@ export async function readWebPage(context: Context, event?: MachineEvent, task?:
     const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
     const response = await geminiService(userPrompt, system);
-    // eslint-disable-next-line no-useless-escape
-    const extractedResponse = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
-    let { url } = JSON.parse(extractedResponse) as { url: string };
+
+    const result = extractJsonFromBackticks(response);
+    const clean = cleanJsonString(result);
+
+    let { url } = JSON.parse(clean) as { url: string };
 
     if (!isValidWebUrl(url)) {
         // ask Gemini to fix the bad URL
@@ -66,10 +68,11 @@ ${task}
 `;
 
         const retryRaw = await geminiService(retryPrompt, system);
-        // eslint-disable-next-line no-useless-escape
-        const extractedResponse = extractJsonFromBackticks(retryRaw.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
 
-        url = (JSON.parse(extractedResponse) as { url: string }).url;
+        const result = extractJsonFromBackticks(retryRaw);
+        const clean = cleanJsonString(result);
+
+        url = (JSON.parse(clean) as { url: string }).url;
 
         if (!isValidWebUrl(url)) {
             throw new Error(`Invalid URL after retry: “${url}”`);

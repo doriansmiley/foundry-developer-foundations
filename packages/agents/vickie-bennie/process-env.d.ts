@@ -1,3 +1,5 @@
+import { SupportedFoundryClients } from "@codestrap/developer-foundations-types";
+
 // process-env.d.ts
 declare global {
     namespace NodeJS {
@@ -32,6 +34,8 @@ declare global {
             EIA_BASE_URL: string;
             EIA_API_KEY: string;
             CA_SERIES_ID: string;
+            REDIRECT_URL: string;
+            FOUNDRY_CLIENT_TYPE: SupportedFoundryClients;
         }
     }
 }

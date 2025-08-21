@@ -1,16 +1,16 @@
-import type {
-  WorldDao,
+import {
+  SupportedFoundryClients,
+  type WorldDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeWorldDao(): WorldDao {
-  const client = getFoundryClient();
+  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return async ({ message, userId }) => {
     console.log(`makeWorldDao userId: ${userId}`);
 
-    const token = await client.auth.signIn();
-    const apiKey = token.access_token;
+    const apiKey = await client.getToken();
 
     const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/say-hello/apply`;
 

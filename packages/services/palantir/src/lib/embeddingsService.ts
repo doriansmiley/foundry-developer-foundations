@@ -1,10 +1,10 @@
-import { getFoundryClient } from "./foundryClient";
+import { SupportedFoundryClients } from "@codestrap/developer-foundations-types";
+import { foundryClientFactory } from "./factory/foundryClientFactory";
 
 export async function embeddingsService(input: string): Promise<[number[]]> {
-  const client = getFoundryClient();
+  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/queries/textEmeddingSmall/execute`;
 

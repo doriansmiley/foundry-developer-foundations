@@ -1,12 +1,13 @@
-import type {
-  MachineDao,
+import {
+  SupportedFoundryClients,
+  type MachineDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { upsertMachineExecution } from './delegates/machine/upsert';
 import { readMachineExecution } from './delegates/machine/read';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeMachineDao(): MachineDao {
-  const client = getFoundryClient();
+  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
   // TODO remove once Foundry client is used
   console.log(client.ontologyRid);
 

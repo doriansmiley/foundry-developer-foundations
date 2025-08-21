@@ -6,8 +6,7 @@ export async function readThread(
 ): Promise<Threads> {
   console.log(`readThread id: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,

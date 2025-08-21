@@ -8,8 +8,7 @@ export async function upsertThread(
 ): Promise<Threads> {
   console.log(`upsertThread threadId: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-thread/apply`;
 

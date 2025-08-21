@@ -1,12 +1,13 @@
-import type {
-  ContactsDao,
+import {
+  SupportedFoundryClients,
+  type ContactsDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { readContact } from './delegates/contacts/read';
 import { searchContacts } from './delegates/contacts/search';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeContactsDao(): ContactsDao {
-  const client = getFoundryClient();
+  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return {
     // TODO code out all methods using OSDK API calls
