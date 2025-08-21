@@ -1,14 +1,15 @@
-import type {
-  GeminiParameters,
+import {
+  SupportedFoundryClients,
+  type GeminiParameters,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from './foundryClient';
+import { foundryClientFactory } from "./factory/foundryClientFactory";
 
 export async function geminiService(
   user: string,
   system: string,
   params?: GeminiParameters
 ): Promise<string> {
-  const client = getFoundryClient();
+  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   const apiKey = await client.getToken();
 

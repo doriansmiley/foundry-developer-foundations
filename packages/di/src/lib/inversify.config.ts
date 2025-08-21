@@ -1,10 +1,10 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
 
-import { TYPES } from '@codestrap/developer-foundations-types';
+import { SupportedFoundryClients, TYPES } from '@codestrap/developer-foundations-types';
 import { openWeatherService } from '@codestrap/developer-foundations-services-weather';
 import {
-  getFoundryClient,
+  foundryClientFactory,
   geminiService,
   gpt4oService,
   embeddingsService,
@@ -46,8 +46,7 @@ const container = new Container();
 
 container
   .bind(TYPES.FoundryClient)
-  .toDynamicValue(getFoundryClient)
-  .inSingletonScope();
+  .toConstantValue(foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined))
 
 container
   .bind(TYPES.RangrClient)

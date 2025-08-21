@@ -920,3 +920,8 @@ export type GetNextStateResult = {
   }[];
   orderTheTasksWereExecutedIn: string[];
 };
+
+export enum SupportedFoundryClients {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+}

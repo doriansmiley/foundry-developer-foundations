@@ -1,12 +1,13 @@
-import type {
-  CommsDao,
+import {
+  SupportedFoundryClients,
+  type CommsDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { readCommunications } from './communications/read';
 import { upsertCommunications } from './communications/upsert';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeCommsDao(): CommsDao {
-  const client = getFoundryClient();
+  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
   // TODO remove once Foundry client is used
   console.log(client.ontologyRid);
 

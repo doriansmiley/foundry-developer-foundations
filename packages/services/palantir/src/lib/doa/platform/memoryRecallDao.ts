@@ -1,12 +1,13 @@
-import type {
-  MemoryRecallDao,
+import {
+  SupportedFoundryClients,
+  type MemoryRecallDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { searchMemoryRecall } from './delegates/memoryRecall/search';
 import { readMemoryRecall } from './delegates/memoryRecall/read';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeMemoryRecallDao(): MemoryRecallDao {
-  const client = getFoundryClient();
+  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return {
     // TODO code out all methods using OSDK API calls

@@ -1,12 +1,13 @@
-import type {
-  TicketsDao,
+import {
+  SupportedFoundryClients,
+  type TicketsDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { upsertTicket } from './delegates/tasks/upsert';
 import { readTicket } from './delegates/tasks/read';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeTicketsDao(): TicketsDao {
-  const client = getFoundryClient();
+  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
   // TODO remove once Foundry client is used
   console.log(client.ontologyRid);
 

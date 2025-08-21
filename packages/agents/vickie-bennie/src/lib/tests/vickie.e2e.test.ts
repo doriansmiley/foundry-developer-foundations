@@ -57,7 +57,7 @@ Vickie, read me the page contents of https://docs.google.com/document/d/12Osa66i
 
       const result = await vickie.askVickie(
         `
-Schedule a meeting with me for today to discuss Vickie
+Schedule a meeting with me for today to discuss progression of Foundry Developer Foundations
                 `,
         process.env.FOUNDRY_TEST_USER
       );
@@ -71,7 +71,7 @@ Schedule a meeting with me for today to discuss Vickie
 
       const result = await vickie.askVickie(
         `
-Schedule a meeting with me for today at 12 PM to discuss Vickie
+Schedule a meeting with me for today at 12 PM to discuss progression of Foundry Developer Foundations
                 `,
         process.env.FOUNDRY_TEST_USER
       );
@@ -85,7 +85,7 @@ Schedule a meeting with me for today at 12 PM to discuss Vickie
 
       const result = await vickie.askVickie(
         `
-Schedule a meeting with me and Connor Deeks for today at 3 PM to discuss Vickie
+Schedule a meeting with me and Connor Deeks for today at 3 PM to discuss progression of Foundry Developer Foundations
                 `,
         process.env.FOUNDRY_TEST_USER
       );
