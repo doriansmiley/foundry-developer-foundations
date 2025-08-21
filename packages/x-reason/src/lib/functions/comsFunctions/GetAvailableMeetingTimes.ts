@@ -1,5 +1,6 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import {
+    cleanJsonString,
     extractJsonFromBackticks,
     uuidv4,
 } from '@codestrap/developer-foundations-utils';
@@ -147,10 +148,11 @@ Your response is:
         const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
         const response = await geminiService(user, system);
-        // eslint-disable-next-line no-useless-escape
-        const result = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
 
-        const parsedResult = JSON.parse(result) as MeetingRequest;
+        const result = extractJsonFromBackticks(response);
+        const clean = cleanJsonString(result);
+
+        const parsedResult = JSON.parse(clean) as MeetingRequest;
         console.log(`the model returned the following meeting time proposal:\n${result}`);
         const timeFrame = (parsedResult.timeframe_context === 'user defined exact date/time') ? parsedResult.localDateString! : parsedResult.timeframe_context;
         const participants = Array.from(new Set(parsedResult.participants));

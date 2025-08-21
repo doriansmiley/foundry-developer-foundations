@@ -4,7 +4,7 @@ import {
   OfficeServiceV2,
   Summaries,
 } from '@codestrap/developer-foundations-types';
-import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
+import { cleanJsonString, extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 import { GeminiService, TYPES } from '@codestrap/developer-foundations-types';
 
@@ -97,11 +97,11 @@ export async function summarizeCalendars(
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
   const response = await geminiService(userPrompt, system);
-  // eslint-disable-next-line no-useless-escape
-  const extractedResponse = extractJsonFromBackticks(
-    response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, '') ?? '{}'
-  );
-  const { timeframe, emails } = JSON.parse(extractedResponse) as {
+
+  const result2 = extractJsonFromBackticks(response);
+  const clean = cleanJsonString(result2);
+
+  const { timeframe, emails } = JSON.parse(clean) as {
     timeframe: string;
     emails: string[];
   };

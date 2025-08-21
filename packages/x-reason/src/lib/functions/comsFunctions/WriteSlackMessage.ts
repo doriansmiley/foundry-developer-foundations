@@ -1,6 +1,6 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import { TYPES, GeminiService } from '@codestrap/developer-foundations-types';
-import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
+import { cleanJsonString, extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 
 export type DraftMessageResponse = {
@@ -51,11 +51,10 @@ export async function writeSlackMessage(
 
   const response = await geminiService(user, system);
 
-  // eslint-disable-next-line no-useless-escape
-  const result = extractJsonFromBackticks(
-    response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, '') ?? '{}'
-  );
-  const parsedResult = JSON.parse(result);
+  const result = extractJsonFromBackticks(response);
+  const clean = cleanJsonString(result);
+
+  const parsedResult = JSON.parse(clean);
   const message = parsedResult.message;
   const modelDialog = parsedResult.message;
   const channelId = parsedResult.channelId;
