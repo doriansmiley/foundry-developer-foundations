@@ -200,13 +200,13 @@ describe('searchDriveFiles', () => {
 
       const call = (mockDriveClient.files.list as jest.Mock).mock.calls[0][0];
 
-      // Static flags
+      // Test with default values for user Drive search
       expect(call).toEqual(
         expect.objectContaining({
-          fields: 'files(id,name,owners(displayName,emailAddress))',
-          includeItemsFromAllDrives: true,
-          supportsAllDrives: true,
-          corpora: 'allDrives',
+          fields: 'nextPageToken,files(id,name,mimeType,owners(displayName,emailAddress))',
+          includeItemsFromAllDrives: false,
+          supportsAllDrives: false,
+          corpora: 'user',
           orderBy: 'modifiedTime desc',
           pageSize: 50,
         })
@@ -222,6 +222,43 @@ describe('searchDriveFiles', () => {
       // Exact UTC instants expected
       expect(q).toContain("modifiedTime >= '2025-08-01T05:00:00.000Z'");
       expect(q).toContain("modifiedTime <= '2025-09-01T04:59:59.000Z'");
+    });
+
+    it('should support configurable parameters for shared drives', async () => {
+      (mockDriveClient.files.list as jest.Mock).mockResolvedValue({
+        data: { files: [] },
+      });
+
+      await searchDriveFiles(mockDriveClient, {
+        name: 'Team Documents',
+        windowStartLocal: new Date('2025-08-01T00:00:00'),
+        windowEndLocal: new Date('2025-08-31T23:59:59'),
+        timezone: tz,
+        corpora: 'allDrives',
+        includeItemsFromAllDrives: true,
+        supportsAllDrives: true,
+        pageSize: 100,
+        orderBy: 'name',
+        includeTrashed: true,
+        joinOperator: 'or',
+      });
+
+      const call = (mockDriveClient.files.list as jest.Mock).mock.calls[0][0];
+
+      expect(call).toEqual(
+        expect.objectContaining({
+          corpora: 'allDrives',
+          includeItemsFromAllDrives: true,
+          supportsAllDrives: true,
+          pageSize: 100,
+          orderBy: 'name',
+        })
+      );
+
+      // Test that trash filter and OR operator work
+      const q: string = call.q;
+      expect(q).not.toContain("trashed = false"); // should be included when includeTrashed: true
+      expect(q).toContain("name contains 'Team Documents'");
     });
 
     it('should escape single quotes in file names', async () => {

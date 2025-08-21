@@ -735,14 +735,32 @@ export type OfficeServiceV2 = {
   }) => Promise<Summaries>;
 } & OfficeService;
 
+export type SearchDriveFilesArgs = {
+  name?: string;
+  contains?: string;
+
+  windowStartLocal?: Date;
+  windowEndLocal?: Date;
+  timezone?: string;
+  fallbackOffsetMinutes?: number;
+
+  includeTrashed?: boolean;
+  joinOperator?: 'and' | 'or';
+  pageSize?: number;
+
+  includeItemsFromAllDrives?: boolean;
+  supportsAllDrives?: boolean;
+  corpora?: 'user' | 'domain' | 'drive' | 'allDrives';
+  driveId?: string;
+  orderBy?: string;
+  pageToken?: string;
+  fields?: string;
+};
+
 export type OfficeServiceV3 = {
-  searchDriveFiles: (args: {
-    name: string;
-    windowStartLocal: Date;
-    windowEndLocal: Date;
-    owner?: string;
-  }) => Promise<DriveFile[]>;
+  searchDriveFiles: (args: SearchDriveFilesArgs) => Promise<DriveFile[]>;
 } & OfficeServiceV2;
+
 
 export type GSuiteCalendarService = {
   getCalendarClient: () => calendar_v3.Calendar;
