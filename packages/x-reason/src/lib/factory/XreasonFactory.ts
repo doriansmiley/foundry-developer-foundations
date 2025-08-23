@@ -16,6 +16,11 @@ import {
   salesEvaluate,
   salesFunctionCatalog,
   salesSolver,
+  googleServiceExpertProgrammer,
+  googleServiceExpertAiTrasition,
+  googleServiceExpertEvaluate,
+  googleServiceExpertFunctionCatalog,
+  googleServiceExpertSolver,
 } from '../reasoning';
 
 // Define the shape of the clients map
@@ -31,6 +36,7 @@ export enum SupportedEngines {
   COMS = 'coms',
   CONTEXT = 'context',
   SALES = 'sales',
+  GOOGLE_SERVICE_EXPERT = 'google_service_expert',
 }
 
 export enum SupportTrainingDataTypes {
@@ -84,6 +90,15 @@ const clients = {
       evaluate: salesEvaluate,
       functionCatalog: salesFunctionCatalog,
       solver: salesSolver,
+    };
+  },
+  google_service_expert: (config: Record<string, any>) => {
+    return {
+      programmer: googleServiceExpertProgrammer,
+      aiTransition: googleServiceExpertAiTrasition,
+      evaluate: googleServiceExpertEvaluate,
+      functionCatalog: googleServiceExpertFunctionCatalog,
+      solver: googleServiceExpertSolver,
     };
   },
   // TODO add more implementations
