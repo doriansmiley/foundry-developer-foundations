@@ -1,4 +1,3 @@
-// traceDecorators.ts
 import { randomBytes } from 'crypto';
 import type { ResourceModel, SpanModel, TelemetryPayload } from './Tracing';
 import { collectTelemetryFetchWrapper } from './Tracing';

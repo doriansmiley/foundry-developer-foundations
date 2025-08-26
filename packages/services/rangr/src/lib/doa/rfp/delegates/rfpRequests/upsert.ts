@@ -1,5 +1,5 @@
 import {
-  FoundryClient,
+  RangrClient,
   RfpRequests,
 } from '@codestrap/developer-foundations-types';
 
@@ -8,7 +8,7 @@ export async function upsertRfpRequest(
   rfpVendorResponse: string,
   vendorId: string,
   machineExecutionId: string,
-  client: FoundryClient,
+  client: RangrClient,
   id?: string,
   rfpResponseStatus?: number
 ): Promise<RfpRequests> {

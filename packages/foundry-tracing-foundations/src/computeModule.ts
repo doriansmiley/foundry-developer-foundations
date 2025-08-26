@@ -6,7 +6,7 @@ import { Type } from '@sinclair/typebox';
 import dotenv from 'dotenv';
 
 import { collectTelemetryFetchWrapper } from './Tracing';
-import { ComputeModuleType, ModuleConfig } from './types';
+import { ComputeModuleType, ModuleConfig } from '@codestrap/developer-foundations-types';
 
 dotenv.config();
 

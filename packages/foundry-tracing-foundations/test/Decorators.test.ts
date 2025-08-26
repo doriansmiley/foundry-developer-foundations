@@ -82,8 +82,7 @@ describe('Tracing', () => {
     const result = await dt.testDecorator();
     expect(result).toBe('segments traces');
 
-    // now is 3 because we do not await the response from the collectTelemetryFetchWrapper
-    expect(global.fetch).toHaveBeenCalledTimes(3); // 2 auth calls in addition to our two
+    expect(global.fetch).toHaveBeenCalledTimes(2);
     const calls = (global.fetch as jest.Mock).mock.calls as Array<
       [string, any]
     >;

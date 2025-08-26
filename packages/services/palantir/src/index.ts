@@ -11,4 +11,5 @@ export * from './lib/doa/platform/machineDao';
 export * from './lib/doa/platform/memoryRecallDao';
 export * from './lib/doa/platform/trainingDataDao';
 export * from './lib/doa/projects/ticketsDao';
+export * from './lib/doa/telemetry/telemetryDao';
 export * from './lib/factory/foundryClientFactory';

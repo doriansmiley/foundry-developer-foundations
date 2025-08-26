@@ -5,7 +5,7 @@ import { mockPayload } from './__fixtures__/telemetryPayload';
 // Load environment variables
 dotenv.config();
 // Mock setup must be before imports
-import { TestModule } from '../src/types';
+import { TestModule } from '@codestrap/developer-foundations-types';
 import { computeModule } from '../src/computeModule';
 
 // Cast computeModule to TestModule since we're in test environment

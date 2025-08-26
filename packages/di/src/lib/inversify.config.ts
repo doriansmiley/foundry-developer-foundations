@@ -8,6 +8,7 @@ import {
   geminiService,
   gpt4oService,
   embeddingsService,
+  makeTelemetryDao,
 } from '@codestrap/developer-foundations-services-palantir';
 import { getRangrClient } from '@codestrap/developer-foundations-services-rangr';
 import { makeWorldDao } from '@codestrap/developer-foundations-services-palantir';
@@ -62,6 +63,8 @@ container.bind(TYPES.MachineDao).toConstantValue(makeMachineDao());
 container.bind(TYPES.TicketDao).toConstantValue(makeTicketsDao());
 
 container.bind(TYPES.CommsDao).toConstantValue(makeCommsDao());
+
+container.bind(TYPES.TelemetryDao).toConstantValue(makeTelemetryDao());
 
 container.bind(TYPES.ThreadsDao).toConstantValue(makeThreadsDao());
 

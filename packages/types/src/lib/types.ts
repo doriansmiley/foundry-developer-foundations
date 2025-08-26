@@ -15,6 +15,7 @@ export const TYPES = {
   MachineDao: Symbol.for('MachineDao'),
   TicketDao: Symbol.for('TicketDao'),
   CommsDao: Symbol.for('CommsDao'),
+  TelemetryDao: Symbol.for('TelemetryDao'),
   ThreadsDao: Symbol.for('ThreadsDao'),
   RfpRequestsDao: Symbol.for('RfpRequestsDao'),
   RangrRfpRequestsDao: Symbol.for('RangrRfpRequestsDao'),
@@ -809,6 +810,8 @@ export type MachineDao = {
   delete: (machineExecutionId: string) => Promise<void>;
   read: (machineExecutionId: string) => Promise<MachineExecutions>;
 };
+
+export type TelemetryDao = (inputJSON: string) => Promise<string>;
 
 export type CommsDao = {
   upsert: (
