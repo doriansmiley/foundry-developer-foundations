@@ -1,10 +1,10 @@
 import Layout from "../layout";
-import Vickie from "../components/agents/Vickie";
+import VickieClient from "../components/agents/VickieClient";
 
 function Text2ActionVickie() {
     return (
         <Layout>
-            <Vickie />
+            <VickieClient />
         </Layout>
     );
 }

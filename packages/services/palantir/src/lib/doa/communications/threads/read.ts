@@ -2,19 +2,21 @@ import { FoundryClient, Threads } from '@codestrap/developer-foundations-types';
 
 export async function readThread(
   id: string,
-  client: FoundryClient
+  token: string,
+  ontologyRid: string,
+  url: string,
 ): Promise<Threads> {
   console.log(`readThread id: ${id}`);
 
-  const apiKey = await client.getToken();
+  const apiKey = token;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
   };
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/Threads/${id}`;
-  const threadFetchResults = await fetch(url, {
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/Threads/${id}`;
+  const threadFetchResults = await fetch(fullUrl, {
     method: 'GET',
     headers: headers,
   });

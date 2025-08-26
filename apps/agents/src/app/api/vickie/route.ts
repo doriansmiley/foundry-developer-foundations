@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Vickie } from '@codestrap/developer-foundations-agents-vickie-bennie';
+import { User } from '@osdk/foundry.admin';
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -9,17 +10,21 @@ export async function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-foundry-access-token',
     },
   });
 }
 
 export async function POST(req: NextRequest) {
   const bodyText = await req.text();
+  const token = req.headers.get('x-foundry-access-token');
+  // set the global used by our auth client
+  (globalThis as any).foundryAccessToken = token;
 
   const params = new URLSearchParams(bodyText);
   const threadId = params.get('threadId') || undefined;
-  const userId = params.get('userId') || undefined;
+  const user = (params.get('user')) ? JSON.parse(params.get('user')!) as User : undefined;
+  const userId = user?.id;
   const text = params.get('query') || undefined;
   const action = params.get('action');
   const plan = params.get('plan') || undefined;
@@ -27,6 +32,13 @@ export async function POST(req: NextRequest) {
   const forward: boolean =
     params.get('forward') === null ? true : params.get('forward') === 'true';
   const inputs = params.get('inputs') || undefined;
+
+  // set globals to our server side code can retrieve the active user and token
+  (globalThis as any).foundryAccessToken = token;
+  (globalThis as any).foundryUser = user;
+
+  console.log(`vickie route received user: ${JSON.stringify((globalThis as any).foundryUser || {})}`);
+  console.log(`vickie route received token of length: ${(globalThis as any).foundryAccessToken?.length}`);
 
   if (!action) {
     return NextResponse.json({

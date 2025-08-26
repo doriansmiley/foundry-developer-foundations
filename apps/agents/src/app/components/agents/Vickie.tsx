@@ -11,6 +11,13 @@ import { callAskVickie } from "../../services/vickie.service";
 import { uuidv4 } from "@codestrap/developer-foundations-utils";
 import { callGetCommunications, callGetMachines } from "../../services/executions.service";
 import { PlayCircle, Square, Mic, MicOff } from "lucide-react";
+import { createUserResource } from "./UserResource";
+import { createTokenResource } from "./TokenResource";
+import { getFoundryClient } from "./foundryClientPublic";
+
+const { client, getUser, getToken } = getFoundryClient();
+const userResource = createUserResource(getUser);
+const tokenResource = createTokenResource(getToken);
 
 
 type GetNextStateResult = {
@@ -37,6 +44,10 @@ function VickieInner() {
     const taskListRef = useRef<string | undefined>(undefined);
     const scrollRef = useRef<HTMLDivElement>(null);
 
+    const user = userResource.read();
+    const token = tokenResource.read();
+
+
     useEffect(() => {
         const el = scrollRef.current;
         if (el) {
@@ -49,8 +60,8 @@ function VickieInner() {
         dynamicVariables: {
             localDay: new Date().getDay(),
             locatDateTime: new Date().toString(),
-            userId: 'cadf16c6-76c8-4ff2-8716-889f8797d547',
-            userName: 'CodeStrap',
+            userId: user?.id || 'undefined',
+            userName: user?.givenName || 'undefined',
             threadId: '',
         },
         clientTools: {
@@ -70,7 +81,8 @@ function VickieInner() {
 
                 // fire and forget to avoid timeouts
                 callAskVickie({
-                    userId,
+                    user,
+                    token,
                     action: 'getTaskList',
                     query,
                     threadId,
@@ -99,6 +111,8 @@ function VickieInner() {
                 // fire and forget to avoid timeouts
                 callAskVickie({
                     action: 'executeTaskList',
+                    token,
+                    user,
                     executionId: threadId,
                     plan: taskListRef.current,
                 }) as unknown as GetNextStateResult;
@@ -161,7 +175,7 @@ ${message.message}`
                 switch (action) {
                     case 'getTaskListTool':
                         // eslint-disable-next-line no-case-declarations
-                        const result = await callGetCommunications(executionId);
+                        const result = await callGetCommunications(executionId, token);
                         if (result?.taskList) {
                             setTaskList(result.taskList);
                             taskListRef.current = result.taskList;
@@ -177,7 +191,7 @@ ${message.message}`
                         break;
                     case 'executeTaskList':
                         // eslint-disable-next-line no-case-declarations
-                        const machine = await callGetMachines(executionId);
+                        const machine = await callGetMachines(executionId, token);
                         if (machine?.state) {
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             const state = JSON.parse(machine.state) as any;

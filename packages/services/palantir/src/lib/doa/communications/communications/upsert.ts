@@ -11,7 +11,9 @@ export async function upsertCommunications(
   taskList: string,
   comType: string,
   owner: string,
-  client: FoundryClient,
+  token: string,
+  ontologyRid: string,
+  url: string,
   questionPrompt?: string,
   tokens?: number,
   id: string = uuidv4()
@@ -22,9 +24,9 @@ export async function upsertCommunications(
 
   console.log(`upsertCommunications id: ${id}`);
 
-  const apiKey = await client.getToken();
+  const apiKey = token;
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-communication/apply`;
+  const fullURl = `${url}/api/v2/ontologies/${ontologyRid}/actions/upsert-communication/apply`;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
@@ -48,7 +50,7 @@ export async function upsertCommunications(
     },
   });
 
-  const apiResult = await fetch(url, {
+  const apiResult = await fetch(fullURl, {
     method: 'POST',
     headers,
     body,
@@ -66,7 +68,7 @@ export async function upsertCommunications(
 
   const commsId = result.edits.edits[0].primaryKey as string;
 
-  const getUrl = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/Communications/${commsId}`;
+  const getUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/Communications/${commsId}`;
   const fetchResults = await fetch(getUrl, {
     method: 'GET',
     headers: headers,

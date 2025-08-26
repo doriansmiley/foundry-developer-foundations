@@ -12,6 +12,13 @@ testGitWorklows.sh
 .nx/workspace-data
 /packages/**/.env
 
+# dev TLS certs/keys
+apps/**/certificates/*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 /dist

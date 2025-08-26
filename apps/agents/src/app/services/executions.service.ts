@@ -3,10 +3,13 @@ import {
   MachineExecutions,
 } from '@codestrap/developer-foundations-types';
 
-export async function callGetCommunications(id: string) {
+export async function callGetCommunications(id: string, token: string) {
   // fire and forget as there is a timeout we have to deal with
   const res = await fetch(`/api/communications?id=${id}`, {
     method: 'GET',
+    headers: {
+      'x-foundry-access-token': token,
+    },
   });
 
   if (!res.ok) {
@@ -23,10 +26,13 @@ export async function callGetCommunications(id: string) {
   return result as Communications;
 }
 
-export async function callGetMachines(id: string) {
+export async function callGetMachines(id: string, token: string) {
   // fire and forget as there is a timeout we have to deal with
   const res = await fetch(`/api/machines?id=${id}`, {
     method: 'GET',
+    headers: {
+      'x-foundry-access-token': token,
+    },
   });
 
   if (!res.ok) {

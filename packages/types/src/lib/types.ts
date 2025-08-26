@@ -3,6 +3,7 @@ import type { Client } from '@osdk/client';
 import { Type, Static } from '@sinclair/typebox';
 import { StateValue } from 'xstate';
 import { calendar_v3, gmail_v1 } from 'googleapis';
+import { User as FoundryUser } from '@osdk/foundry.admin';
 
 export const TYPES = {
   FoundryClient: Symbol.for('FoundryClient'),
@@ -361,7 +362,7 @@ export interface FoundryClient {
   auth: BaseOauthClient;
   ontologyRid: string;
   url: string;
-  getUser: () => Promise<User>;
+  getUser: () => Promise<FoundryUser>;
   getToken: () => Promise<string>;
 }
 

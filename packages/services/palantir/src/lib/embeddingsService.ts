@@ -2,11 +2,11 @@ import { SupportedFoundryClients } from "@codestrap/developer-foundations-types"
 import { foundryClientFactory } from "./factory/foundryClientFactory";
 
 export async function embeddingsService(input: string): Promise<[number[]]> {
-  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
+  const { getToken, url, ontologyRid } = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
-  const apiKey = await client.getToken();
+  const apiKey = await getToken();
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/queries/textEmeddingSmall/execute`;
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/queries/textEmeddingSmall/execute`;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
@@ -19,7 +19,7 @@ export async function embeddingsService(input: string): Promise<[number[]]> {
     },
   });
 
-  const apiResult = await fetch(url, {
+  const apiResult = await fetch(fullUrl, {
     method: 'POST',
     headers: headers,
     body: body,

@@ -10,13 +10,18 @@ export async function OPTIONS() {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-foundry-access-token',
     },
   });
 }
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
+  const token = req.headers.get('x-foundry-access-token');
+
+  // set globals to our server side code can retrieve the active user and token
+  (globalThis as any).foundryAccessToken = token;
+
   const id = searchParams.get('id');
 
   if (!id) {

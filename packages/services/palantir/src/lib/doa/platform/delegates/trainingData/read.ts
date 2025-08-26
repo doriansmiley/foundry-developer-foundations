@@ -5,19 +5,21 @@ import {
 
 export async function readTrainingData(
   id: string,
-  client: FoundryClient
+  token: string,
+  ontologyRid: string,
+  url: string,
 ): Promise<TrainingData> {
   console.log(`readTrainingData id: ${id}`);
 
-  const apiKey = await client.getToken();
+  const apiKey = token;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
   };
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/XReasonTrainingData/${id}`;
-  const fetchResult = await fetch(url, {
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/XReasonTrainingData/${id}`;
+  const fetchResult = await fetch(fullUrl, {
     method: 'GET',
     headers: headers,
   });

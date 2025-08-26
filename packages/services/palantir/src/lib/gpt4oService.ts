@@ -9,11 +9,11 @@ export async function gpt4oService(
   system: string,
   gptParams?: Gpt40Parameters
 ): Promise<string> {
-  const client = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
+  const { getToken, url, ontologyRid } = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
-  const apiKey = await client.getToken();
+  const apiKey = await getToken();
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/queries/gpt4oProxy/execute`;
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/queries/gpt4oProxy/execute`;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
@@ -28,7 +28,7 @@ export async function gpt4oService(
     },
   });
 
-  const apiResult = await fetch(url, {
+  const apiResult = await fetch(fullUrl, {
     method: 'POST',
     headers: headers,
     body: body,
