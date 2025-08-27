@@ -3,51 +3,6 @@ import { User, Users } from '@osdk/foundry.admin';
 import { createPublicOauthClient } from '@osdk/oauth';
 import { FoundryClient, Token } from '@codestrap/developer-foundations-types';
 
-(() => {
-  const log = (label: any, ...args: any) => {
-    const stack = new Error().stack?.split("\n").slice(2, 10).join("\n");
-    console.warn("[NAV]", label, ...args, "\n", stack);
-  };
-
-  // 1) History API (SPA navigations, Next.js router under the hood)
-  const _ps = history.pushState;
-  const _rs = history.replaceState;
-  // @ts-expect-error
-  history.pushState = function (state, title, url) { log("history.pushState", url, state); return _ps.apply(this, arguments); };
-  // @ts-expect-error
-  history.replaceState = function (state, title, url) { log("history.replaceState", url, state); return _rs.apply(this, arguments); };
-  window.addEventListener("popstate", e => log("popstate", location.href, e.state));
-
-  // 2) Location methods
-  try {
-    const _assign = Location.prototype.assign;
-    Location.prototype.assign = function (url) { log("location.assign", url); return _assign.call(this, url); };
-  } catch { }
-  try {
-    const _replace = Location.prototype.replace;
-    Location.prototype.replace = function (url) { log("location.replace", url); return _replace.call(this, url); };
-  } catch { }
-
-  // 3) Direct href assignment (location.href = ...)
-  try {
-    const desc = Object.getOwnPropertyDescriptor(Location.prototype, "href");
-    if (desc?.set) {
-      const origSet = desc.set;
-      Object.defineProperty(Location.prototype, "href", {
-        configurable: true,
-        enumerable: desc.enumerable,
-        get: desc.get,
-        set: function (v) { log("location.href(set)", v); return origSet.call(this, v); },
-      });
-    }
-  } catch { }
-
-  // 5) Last-chance breadcrumbs
-  window.addEventListener("beforeunload", () => log("beforeunload →", location.href));
-  window.addEventListener("hashchange", () => log("hashchange", location.href));
-})();
-
-
 // this is a utility method to manage usage of the Foundry Client and ensure we only get a singleton
 // files in the palantir services package can't use the container to get the foundry client, nor should they really
 // They are in the same package
@@ -81,10 +36,10 @@ function createFoundryClient(): FoundryClient {
   }
 
   // setup the OSDK
-  const clientId: string = process.env['NEXT_PUBLIC_OSDK_CLIENT_ID']!;
-  const url: string = process.env['NEXT_PUBLIC_FOUNDRY_STACK_URL']!;
-  const ontologyRid: string = process.env['NEXT_PUBLIC_ONTOLOGY_RID']!;
-  const redirectUrl: string = process.env['NEXT_PUBLIC_REDIRECT_URL']!;
+  const clientId: string = process.env['NEXT_PUBLIC_OSDK_CLIENT_ID'];
+  const url: string = process.env['NEXT_PUBLIC_FOUNDRY_STACK_URL'];
+  const ontologyRid: string = process.env['NEXT_PUBLIC_ONTOLOGY_RID'];
+  const redirectUrl: string = window.location.href;
   const scopes: string[] = [
     'api:use-ontologies-read',
     'api:use-ontologies-write',
