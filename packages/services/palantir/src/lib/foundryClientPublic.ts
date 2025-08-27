@@ -1,5 +1,5 @@
 import { FoundryClient } from '@codestrap/developer-foundations-types';
-import { User } from '@osdk/foundry.admin';
+import { getRequestContext } from '@codestrap/developer-foundations-utils/src/lib/asyncLocalStorage';
 
 // this is a utility method to manage usage of the Foundry Client and ensure we only get a singleton
 // files in the palantir services package can't use the container to get the foundry client, nor should they really
@@ -35,9 +35,12 @@ function createFoundryClient(): FoundryClient {
 
 
   const getUser = async () => {
-    console.log(`public getUser called, returning: ${(globalThis as any).foundryUser}`);
+    const context = getRequestContext();
 
-    return (globalThis as any).foundryUser as User;
+    console.log(`public getUser called, returning: ${context?.user?.username}`);
+
+
+    return context?.user;
   };
 
   // IMPORTANT: the createPublicOauthClient method requires running client side
@@ -45,9 +48,11 @@ function createFoundryClient(): FoundryClient {
   // This global will get overwritten upon every API request and is managed client side
   // so we "assume" it's valid and that the client is using the OSDK client to get refresh tokens
   const getToken = async function () {
-    console.log(`public getToken called, returning length: ${(globalThis as any).foundryAccessToken?.length}`);
+    const context = getRequestContext();
 
-    return (globalThis as any).foundryAccessToken;
+    console.log(`public getToken called, returning length: ${context?.token?.length}`);
+
+    return context?.token;
 
   }
 
@@ -59,6 +64,6 @@ function createFoundryClient(): FoundryClient {
     getUser: () => 'undefined',
     getToken: () => 'undefined',
   }
-  // @ts-expect-error
+  // @ts-expect-error we return a mock client since the actual auth is managed client side
   return { auth, ontologyRid: process.env['NEXT_PUBLIC_ONTOLOGY_RID'], url: process.env['NEXT_PUBLIC_FOUNDRY_STACK_URL'], client, getUser, getToken };
 }

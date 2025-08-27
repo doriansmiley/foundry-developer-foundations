@@ -929,3 +929,9 @@ export enum SupportedFoundryClients {
   PUBLIC = 'public',
   PRIVATE = 'private',
 }
+
+export type RequestContext = {
+  token?: string | null | undefined;
+  user?: User | null | undefined;
+  requestId?: string | null | undefined;
+};

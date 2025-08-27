@@ -3,6 +3,8 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { TYPES, CommsDao } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
+import { uuidv4 } from '@codestrap/developer-foundations-utils';
+import { withRequestContext } from '@codestrap/developer-foundations-utils/src/lib/asyncLocalStorage';
 
 export async function OPTIONS() {
   return new NextResponse(null, {
@@ -16,26 +18,25 @@ export async function OPTIONS() {
 }
 
 export async function GET(req: NextRequest) {
-  const searchParams = req.nextUrl.searchParams;
-  const token = req.headers.get('x-foundry-access-token');
-
-  // set globals to our server side code can retrieve the active user and token
-  (globalThis as any).foundryAccessToken = token;
-
-  const id = searchParams.get('id');
-
-  if (!id) {
-    return NextResponse.json({
-      response_type: 'ephemeral',
-      text: '⚠️ Missing required id param.',
-    });
-  }
-
   try {
-    const commsDao = container.get<CommsDao>(TYPES.CommsDao);
-    const result = await commsDao.read(id);
+    const searchParams = req.nextUrl.searchParams;
+    const token = req.headers.get('x-foundry-access-token');
 
-    return NextResponse.json(result);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({
+        response_type: 'ephemeral',
+        text: '⚠️ Missing required id param.',
+      });
+    }
+
+    return withRequestContext({ token, requestId: uuidv4() }, async () => {
+      const commsDao = container.get<CommsDao>(TYPES.CommsDao);
+      const result = await commsDao.read(id);
+
+      return NextResponse.json(result);
+    });
   } catch (err) {
     console.error('Error reading communications object:', err);
     return new NextResponse('Internal error', { status: 500 });
