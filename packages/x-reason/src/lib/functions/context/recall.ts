@@ -193,9 +193,8 @@ export async function recall(
   const response = await geminiService(user, system);
 
   const result = extractJsonFromBackticks(response);
-  const clean = cleanJsonString(result);
 
-  const parsedResult = JSON.parse(clean) as ModelMemory;
+  const parsedResult = JSON.parse(result) as ModelMemory;
 
   return parsedResult;
 }
