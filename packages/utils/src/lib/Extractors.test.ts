@@ -1,7 +1,107 @@
-import { cleanJsonString, extractJsonFromBackticks } from './Extractors';
+import { extractJsonFromBackticks } from './Extractors';
 describe('Testing JSON extraction and clearning', () => {
-    test('Should extract and clean JSON from a FUBAR string', () => {
-        const inputJSON = `\`\`\`json
+  test('extracts JSON from a normal ```json fenced block (baseline)', () => {
+    const input = "```json\n{\n  \"a\": 1\n}\n```";
+    const result = extractJsonFromBackticks(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.a).toBe(1);
+  });
+
+  test('works when language tag is absent', () => {
+    const input = "```\n{\n  \"ok\": true\n}\n```";
+    const result = extractJsonFromBackticks(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.ok).toBe(true);
+  });
+
+  test('handles nested backticks inside JSON string (escaped), does not terminate early', () => {
+    const input = "```json\n{\n  \"msg\": \"Here are backticks: \\`\\`\\` inside a string\"\n}\n```";
+    const result = extractJsonFromBackticks(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.msg).toContain("`");
+    expect(parsed.msg).toContain("```");
+  });
+
+  test('handles nested backticks inside JSON string (escaped, multiline)', () => {
+    const input =
+      "```json\r\n" +
+      "{\r\n" +
+      "  \"body\": \"Start line\\n\\`\\`\\`\\nEnd line\"\r\n" +
+      "}\r\n" +
+      "```";
+    const result = extractJsonFromBackticks(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.body).toMatch(/Start line/);
+    expect(parsed.body).toMatch(/```/);
+  });
+
+  test('extracts from the FIRST fenced block even if more blocks follow', () => {
+    const input =
+      "```json\n{\"first\": true}\n```\n" +
+      "Some text...\n" +
+      "```json\n{\"second\": true}\n```";
+    const result = extractJsonFromBackticks(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.first).toBe(true);
+    expect(() => JSON.parse(result)).not.toThrow();
+  });
+
+  test('ignores earlier non-JSON fences before the JSON one (extracts from the first fenced block overall)', () => {
+    const input =
+      "```txt\nthis is just text\n```\n" +
+      "```json\n{\"ok\": 1}\n```";
+    // NOTE: By design, extractor grabs the FIRST fenced block overall,
+    // so this should parse the *txt* block which is NOT JSON and should throw.
+    // This test documents current behavior.
+    expect(() => extractJsonFromBackticks(input)).toThrow();
+  });
+
+  test('array root is supported ([ ... ])', () => {
+    const input = "```json\n[1,2,3]\n```";
+    const result = extractJsonFromBackticks(input);
+    const parsed = JSON.parse(result);
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed).toEqual([1, 2, 3]);
+  });
+
+  test('CRLF line endings are handled', () => {
+    const input = "```json\r\n{\r\n  \"x\": 42\r\n}\r\n```";
+    const result = extractJsonFromBackticks(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.x).toBe(42);
+  });
+
+  test('leading/trailing noise outside fences is ignored', () => {
+    const input = "noise before\n```json\n{\"n\": 9}\n```\nnoise after";
+    const result = extractJsonFromBackticks(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.n).toBe(9);
+  });
+
+  test('throws when no fences exist', () => {
+    const input = "{ \"x\": 1 }";
+    expect(() => extractJsonFromBackticks(input)).toThrow(/No opening fence|No valid fences/i);
+  });
+
+  test('throws when opening fence exists but no closing fence', () => {
+    const input = "```json\n{\"x\":1}";
+    expect(() => extractJsonFromBackticks(input)).toThrow(/No valid closing fence/i);
+  });
+
+  test('throws when JSON start is not found between fences', () => {
+    const input = "```json\nnot json\n```";
+    expect(() => extractJsonFromBackticks(input)).toThrow(/JSON must start with either \{ or \[/i);
+  });
+
+  test('Fixes malformed JSON between fences', () => {
+    const input = "```json\n{ \"x\": 1, }\n```"; // trailing comma
+    const result = extractJsonFromBackticks(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.x).toBe(1);
+  });
+
+  test('Should extract and clean JSON from a FUBAR string', () => {
+    const inputJSON = `\`\`\`json
 {
   "contacts": [],
   "currentUser": {
@@ -17,12 +117,36 @@ describe('Testing JSON extraction and clearning', () => {
 }
 \`\`\``;
 
-        const result = extractJsonFromBackticks(inputJSON);
-        const clean = cleanJsonString(result);
-        const parsed = JSON.parse(clean);
+    const result = extractJsonFromBackticks(inputJSON);
+    const parsed = JSON.parse(result);
 
-        expect(parsed).toBeDefined();
-        expect(parsed.contacts.length).toBe(0);
-        expect(parsed.currentUser.email).toBe('dsmiley@codestrap.me');
-    });
+    expect(parsed).toBeDefined();
+    expect(parsed.contacts.length).toBe(0);
+    expect(parsed.currentUser.email).toBe('dsmiley@codestrap.me');
+  });
+
+  test('Should extract and clean JSON from a FUBAR string with nested backticks', () => {
+    const inputJSON = '```json' +
+      '{' +
+      '"contacts": [],' +
+      '"currentUser": {' +
+      '"name": null,' +
+      '"email": "dsmiley@codestrap.me",' +
+      '"id": "cadf16c6-76c8-4ff2-8716-889f8797d547",' +
+      '"timezone": null' +
+      '},' +
+      '"messages": [' +
+      '"\\"---\\\\n\\\\n### **Daily Brief: Wednesday, August 27, 2025**\\\\n\\\\n#### **TL;DR**  \\\\n- **Business-Related:** Prepare for and follow up on a scheduled meeting with Kerry Sporkin regarding CodeStrap inquiries.  \\\\n- **No spam or irrelevant marketing emails detected.**\\\\n\\\\n---\\\\n\\\\n#### **Business-Related Emails**\\\\n\\\\n1. **Meeting Confirmation: CodeStrap Inquiries with Kerry Sporkin**  \\\\n   - **Details:**  \\\\n     - **Date & Time:** Today, 12:30 PM - 1:00 PM (Pacific Time)  \\\\n     - **Attendees:** Dorian Smiley (you) and Kerry Sporkin  \\\\n     - **Platform:** Google Meet ([Join Link](https://meet.google.com/omd-ugvf-shm?hs=224))  \\\\n     - **Background:** Kerry learned about CodeStrap via Medium and has confirmed attendance.  \\\\n\\\\n   - **Action Items:**  \\\\n     - Prepare meeting materials, including agenda and discussion points.  \\\\n     - Test Google Meet link for technical readiness.\\\\n\\\\n---\\\\n\\\\n2. **Follow-Up Email to Kerry Sporkin**  \\\\n   - **Details:**  \\\\n     - Send a follow-up email to reconfirm meeting details and encourage Kerry to test the Google Meet setup.  \\\\n     - Use the provided draft email:  \\\\n       ```\\\\n       Hi Kerry, \\\\n       Thank you for accepting the invitation to discuss CodeStrap inquiries.As a reminder, the meeting is scheduled for Wednesday, August 27, 2025, from 12: 30 PM to 1:00 PM(Pacific Time).Please feel free to test the Google Meet setup beforehand using the provided link.Looking forward to our discussion.\\\\n\\\\n       Best regards, \\\\n       Dorian Smiley\\\\n       ```\\\\n\\\\n   - **Action Items:**  \\\\n     - Send this email by the end of the day.\\\\n\\\\n---\\\\n\\\\n#### **Task List to Tackle Today**\\\\n\\\\n1. **Prepare for the Meeting:**  \\\\n   - Review any background information or inquiries from Kerry.  \\\\n   - Draft an agenda or key talking points.  \\\\n   - Test the Google Meet link to ensure smooth connectivity.\\\\n\\\\n2. **Send Follow-Up Email:**  \\\\n   - Use the draft provided above to confirm details and assist Kerry with the meeting setup.\\\\n\\\\n3. **Post-Meeting Follow-Up Plan:**  \\\\n   - After the meeting, summarize key points and outline next steps for Kerry.  \\\\n\\\\n---\\\\n\\\\nEnjoy your coffee and let’s make this Wednesday productive!  \\\\n\\\\nWarm regards,  \\\\nVicki\\""' +
+      '],' +
+      '"reasoning": "The message contains the details of a meeting scheduled for today with Kerry Sporkin."' +
+      '}' +
+      '```';
+
+    const result = extractJsonFromBackticks(inputJSON);
+    const parsed = JSON.parse(result);
+
+    expect(parsed).toBeDefined();
+    expect(parsed.contacts.length).toBe(0);
+    expect(parsed.currentUser.email).toBe('dsmiley@codestrap.me');
+  });
 })
