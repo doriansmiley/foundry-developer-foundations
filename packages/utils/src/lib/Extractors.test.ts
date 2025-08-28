@@ -78,9 +78,11 @@ describe('Testing JSON extraction and clearning', () => {
     expect(parsed.n).toBe(9);
   });
 
-  test('throws when no fences exist', () => {
+  test('parses when no fences exist', () => {
     const input = "{ \"x\": 1 }";
-    expect(() => extractJsonFromBackticks(input)).toThrow(/No opening fence|No valid fences/i);
+    const result = extractJsonFromBackticks(input);
+    const parsed = JSON.parse(result);
+    expect(parsed.x).toBe(1);
   });
 
   test('throws when opening fence exists but no closing fence', () => {

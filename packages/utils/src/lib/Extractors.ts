@@ -2,7 +2,9 @@ export function extractJsonFromBackticks(text: string): string {
   text = cleanJsonString(text);
 
   const open = text.indexOf("```");
-  if (open === -1) throw new Error("No opening fence (```) found");
+  if (open === -1) {
+    return text;
+  }
 
   const close = text.indexOf("```", open + 3);
   if (close === -1 || close <= open + 2) {
