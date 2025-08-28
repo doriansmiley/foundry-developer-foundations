@@ -1,6 +1,5 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import {
-  cleanJsonString,
   extractJsonFromBackticks,
   uuidv4,
 } from '@codestrap/developer-foundations-utils';
@@ -104,8 +103,7 @@ export async function createTask(
 
   const response = await geminiService(user, system);
 
-  const result = extractJsonFromBackticks(response);
-  const clean = cleanJsonString(result);
+  const clean = extractJsonFromBackticks(response);
 
   const parsedResult = JSON.parse(clean);
   // TODO handle retried if we fail to parse the result

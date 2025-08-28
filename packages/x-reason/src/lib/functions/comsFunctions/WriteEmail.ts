@@ -1,5 +1,5 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
-import { cleanJsonString, extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
+import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 import { GeminiService, TYPES } from '@codestrap/developer-foundations-types';
 
@@ -64,8 +64,7 @@ export async function writeEmail(
 
   const response = await geminiService(user, system);
 
-  const result = extractJsonFromBackticks(response);
-  const clean = cleanJsonString(result);
+  const clean = extractJsonFromBackticks(response);
 
   const parsedResult = JSON.parse(clean);
   const message = parsedResult.message;

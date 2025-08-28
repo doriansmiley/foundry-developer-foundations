@@ -1,8 +1,6 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import {
-    cleanJsonString,
     extractJsonFromBackticks,
-    uuidv4,
 } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 import {
@@ -54,8 +52,7 @@ export async function readEmails(context: Context, event?: MachineEvent, task?: 
 
     const response = await geminiService(userPrompt, system);
 
-    const result2 = extractJsonFromBackticks(response);
-    const clean = cleanJsonString(result2);
+    const clean = extractJsonFromBackticks(response);
 
     const { timeframe, email } = JSON.parse(clean) as { timeframe: string, email: string };
 

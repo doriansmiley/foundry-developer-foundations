@@ -8,7 +8,7 @@ import {
   UserDao,
   UserProfile,
 } from '@codestrap/developer-foundations-types';
-import { cleanJsonString, extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
+import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 
 export type ModelMemory = {

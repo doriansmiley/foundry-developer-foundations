@@ -1,5 +1,5 @@
 import { Context, MachineEvent } from "@codestrap/developer-foundations-types";
-import { cleanJsonString, extractJsonFromBackticks } from "@codestrap/developer-foundations-utils";
+import { extractJsonFromBackticks } from "@codestrap/developer-foundations-utils";
 import { container } from "@codestrap/developer-foundations-di";
 import { GeminiService, TYPES } from "@codestrap/developer-foundations-types";
 import FirecrawlApp from "@mendable/firecrawl-js";
@@ -48,8 +48,7 @@ export async function readWebPage(context: Context, event?: MachineEvent, task?:
 
     const response = await geminiService(userPrompt, system);
 
-    const result = extractJsonFromBackticks(response);
-    const clean = cleanJsonString(result);
+    const clean = extractJsonFromBackticks(response);
 
     let { url } = JSON.parse(clean) as { url: string };
 
@@ -69,8 +68,7 @@ ${task}
 
         const retryRaw = await geminiService(retryPrompt, system);
 
-        const result = extractJsonFromBackticks(retryRaw);
-        const clean = cleanJsonString(result);
+        const clean = extractJsonFromBackticks(retryRaw);
 
         url = (JSON.parse(clean) as { url: string }).url;
 

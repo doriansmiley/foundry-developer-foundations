@@ -1,8 +1,6 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import {
-    cleanJsonString,
     extractJsonFromBackticks,
-    uuidv4,
 } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 import {
@@ -149,11 +147,10 @@ Your response is:
 
         const response = await geminiService(user, system);
 
-        const result = extractJsonFromBackticks(response);
-        const clean = cleanJsonString(result);
+        const clean = extractJsonFromBackticks(response);
 
         const parsedResult = JSON.parse(clean) as MeetingRequest;
-        console.log(`the model returned the following meeting time proposal:\n${result}`);
+        console.log(`the model returned the following meeting time proposal:\n${clean}`);
         const timeFrame = (parsedResult.timeframe_context === 'user defined exact date/time') ? parsedResult.localDateString! : parsedResult.timeframe_context;
         const participants = Array.from(new Set(parsedResult.participants));
         //remove external email addresses since we can't check them

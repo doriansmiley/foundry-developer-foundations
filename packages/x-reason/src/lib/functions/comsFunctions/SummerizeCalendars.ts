@@ -4,7 +4,7 @@ import {
   OfficeServiceV2,
   Summaries,
 } from '@codestrap/developer-foundations-types';
-import { cleanJsonString, extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
+import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 import { GeminiService, TYPES } from '@codestrap/developer-foundations-types';
 
@@ -98,8 +98,7 @@ export async function summarizeCalendars(
 
   const response = await geminiService(userPrompt, system);
 
-  const result2 = extractJsonFromBackticks(response);
-  const clean = cleanJsonString(result2);
+  const clean = extractJsonFromBackticks(response);
 
   const { timeframe, emails } = JSON.parse(clean) as {
     timeframe: string;
