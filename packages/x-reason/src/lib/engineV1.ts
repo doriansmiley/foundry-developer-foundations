@@ -101,8 +101,8 @@ Only respond with the updated JSON! Your response will be sent to JSON.parse
     const notFoundTransitionsMessage =
       notFoundTransitions.length > 0
         ? `The following transitions triggered an unknown state ID error: ${notFoundTransitions.join(
-            ','
-          )}. Please ensure all targets are referencing a valid state node. If these state nodes are invalid replace them with valid ones.`
+          ','
+        )}. Please ensure all targets are referencing a valid state node. If these state nodes are invalid replace them with valid ones.`
         : undefined;
     console.log(
       `Unknown transition target encountered: ${notFoundTransitionsMessage}. Calling GPT4o to fix.`
@@ -223,7 +223,7 @@ async function transition(
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);
   const response = await geminiService(user, system);
 
-  let value = extractJsonFromBackticks(response).trim() ?? '';
+  let value = response.trim() ?? '';
 
   console.log(`engine.v2.ts.transition result is: ${value}`);
   log(executionId, value);
@@ -237,7 +237,7 @@ Do not be chatty!
   const coercedResponse = await geminiService(updatedUserMessage, system);
 
   value = coercedResponse ?? '';
-  value = extractJsonFromBackticks(value).trim();
+  value = value.trim();
 
   // TODO improve retry mechanism
   if (currentState.indexOf(value) < 0) {
@@ -250,7 +250,7 @@ Do not be chatty!
     const result = await geminiService(updatedUserMessage, system);
 
     value = result ?? '';
-    value = extractJsonFromBackticks(value);
+    value = value.trim();
     if (
       currentState.indexOf(value) < 0 &&
       value !== 'CONTINUE' &&
