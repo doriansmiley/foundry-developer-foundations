@@ -190,11 +190,40 @@ export async function recall(
 
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
-  const response = await geminiService(user, system);
+  let parsedResult;
+  let response;
+  let result
 
-  const result = extractJsonFromBackticks(response);
+  try {
+    response = await geminiService(user, system);
 
-  const parsedResult = JSON.parse(result) as ModelMemory;
+    result = extractJsonFromBackticks(response);
+
+    parsedResult = JSON.parse(result) as ModelMemory;
+  } catch (e) {
+    console.log(e);
+    console.log(`the model returned the following invalid JSON: ${response}`);
+    // god I hate my life
+    response = await geminiService(`
+      ${user} 
+      
+      Your response of:
+      ${response}
+      
+      Is not fucking valid JSON!!! It produce the following error:
+      ${(e as Error).message}
+      Stop sending me dog shit responses and send me valid fucking JSON!!!!!!!
+      `, system);
+
+    result = extractJsonFromBackticks(response);
+
+    parsedResult = {
+      contacts: [],
+      currentUser: userDetails,
+      messages: [],
+      reasoning: 'this model returned an empty response for the grounding context',
+    } as ModelMemory;
+  }
 
   return parsedResult;
 }
