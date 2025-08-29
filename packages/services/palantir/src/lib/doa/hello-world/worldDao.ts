@@ -1,18 +1,18 @@
-import type {
-  WorldDao,
+import {
+  SupportedFoundryClients,
+  type WorldDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeWorldDao(): WorldDao {
-  const client = getFoundryClient();
+  const { getToken, url, ontologyRid } = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return async ({ message, userId }) => {
     console.log(`makeWorldDao userId: ${userId}`);
 
-    const token = await client.auth.signIn();
-    const apiKey = token.access_token;
+    const apiKey = await getToken();
 
-    const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/say-hello/apply`;
+    const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/actions/say-hello/apply`;
 
     const headers = {
       Authorization: `Bearer ${apiKey}`,
@@ -28,7 +28,7 @@ export function makeWorldDao(): WorldDao {
       },
     });
 
-    const apiResult = await fetch(url, {
+    const apiResult = await fetch(fullUrl, {
       method: 'POST',
       headers: headers,
       body: body,
@@ -37,14 +37,14 @@ export function makeWorldDao(): WorldDao {
     const result = (await apiResult.json()) as any;
 
     if (!result.edits || result.edits.edits.length === 0) {
-      throw new Error('Failed to add hello message to the ontolgoy.');
+      throw new Error('Failed to add hello message to the ontology.');
     }
 
     console.log(`create world action returned: ${result?.edits?.edits?.[0]}`);
 
     const worldId = result.edits.edits[0].primaryKey as string;
 
-    const getUrl = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/World/${worldId}`;
+    const getUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/World/${worldId}`;
     const worldFetchResults = await fetch(getUrl, {
       method: 'GET',
       headers: headers,

@@ -3,6 +3,7 @@ import type { Client } from '@osdk/client';
 import { Type, Static } from '@sinclair/typebox';
 import { StateValue } from 'xstate';
 import { calendar_v3, gmail_v1 } from 'googleapis';
+import { User as FoundryUser } from '@osdk/foundry.admin';
 
 export const TYPES = {
   FoundryClient: Symbol.for('FoundryClient'),
@@ -14,6 +15,7 @@ export const TYPES = {
   MachineDao: Symbol.for('MachineDao'),
   TicketDao: Symbol.for('TicketDao'),
   CommsDao: Symbol.for('CommsDao'),
+  TelemetryDao: Symbol.for('TelemetryDao'),
   ThreadsDao: Symbol.for('ThreadsDao'),
   RfpRequestsDao: Symbol.for('RfpRequestsDao'),
   RangrRfpRequestsDao: Symbol.for('RangrRfpRequestsDao'),
@@ -256,10 +258,10 @@ export type MeetingRequest = {
   participants: Array<string>;
   subject: string;
   timeframe_context:
-    | 'user defined exact date/time'
-    | 'as soon as possible'
-    | 'this week'
-    | 'next week';
+  | 'user defined exact date/time'
+  | 'as soon as possible'
+  | 'this week'
+  | 'next week';
   localDateString?: string;
   duration_minutes: number;
   working_hours: {
@@ -298,13 +300,13 @@ type GptSpecificToolChoice = {
 
 type GptTool = {
   function?:
-    | {
-        name: string;
-        description?: string | undefined;
-        strict?: boolean | undefined;
-        parameters: Map<string, string>;
-      }
-    | undefined;
+  | {
+    name: string;
+    description?: string | undefined;
+    strict?: boolean | undefined;
+    parameters: Map<string, string>;
+  }
+  | undefined;
 };
 
 type GptToolChoice = {
@@ -361,7 +363,8 @@ export interface FoundryClient {
   auth: BaseOauthClient;
   ontologyRid: string;
   url: string;
-  getUser: () => Promise<User>;
+  getUser: () => Promise<FoundryUser>;
+  getToken: () => Promise<string>;
 }
 
 export interface RangrClient {
@@ -370,6 +373,7 @@ export interface RangrClient {
   ontologyRid: string;
   url: string;
   getUser: () => Promise<User>;
+  getToken: () => Promise<string>;
 }
 
 export interface GasScenarioResult {
@@ -807,6 +811,8 @@ export type MachineDao = {
   read: (machineExecutionId: string) => Promise<MachineExecutions>;
 };
 
+export type TelemetryDao = (inputJSON: string) => Promise<string>;
+
 export type CommsDao = {
   upsert: (
     channel: string,
@@ -917,4 +923,15 @@ export type GetNextStateResult = {
     taskOutput: any;
   }[];
   orderTheTasksWereExecutedIn: string[];
+};
+
+export enum SupportedFoundryClients {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+}
+
+export type RequestContext = {
+  token?: string | null | undefined;
+  user?: User | null | undefined;
+  requestId?: string | null | undefined;
 };

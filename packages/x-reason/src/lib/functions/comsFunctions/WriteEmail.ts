@@ -64,11 +64,9 @@ export async function writeEmail(
 
   const response = await geminiService(user, system);
 
-  // eslint-disable-next-line no-useless-escape
-  const result = extractJsonFromBackticks(
-    response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, '') ?? '{}'
-  );
-  const parsedResult = JSON.parse(result);
+  const clean = extractJsonFromBackticks(response);
+
+  const parsedResult = JSON.parse(clean);
   const message = parsedResult.message;
   const subject = parsedResult.subject;
   const recipients = parsedResult.recipients;

@@ -6,20 +6,21 @@ import {
 export async function searchContacts(
   fullName: string,
   company: string,
-  client: FoundryClient,
+  token: string,
+  ontologyRid: string,
+  url: string,
   pageSize = 10
 ): Promise<Contacts[]> {
   console.log(`searchContacts fullName: ${fullName} company: ${company}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = token;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
   };
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/Contacts/search`;
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/Contacts/search`;
 
   const body = JSON.stringify({
     pageSize,
@@ -42,7 +43,7 @@ export async function searchContacts(
     },
   });
 
-  const apiResult = await fetch(url, {
+  const apiResult = await fetch(fullUrl, {
     method: 'POST',
     headers: headers,
     body: body,

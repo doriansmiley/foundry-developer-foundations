@@ -10,6 +10,7 @@ import {
 } from './__fixtures__/MachineExecutions';
 
 jest.mock('@codestrap/developer-foundations-services-palantir', () => ({
+  ...jest.requireActual('@codestrap/developer-foundations-services-palantir'),
   makeMemoryRecallDao: jest.fn(() => ({
     search: jest.fn(),
     read: jest.fn(),

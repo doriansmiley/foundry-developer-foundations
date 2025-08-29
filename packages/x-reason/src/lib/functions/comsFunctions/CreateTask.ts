@@ -102,11 +102,10 @@ export async function createTask(
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
   const response = await geminiService(user, system);
-  // eslint-disable-next-line no-useless-escape
-  const result = extractJsonFromBackticks(
-    response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, '') ?? '{}'
-  );
-  const parsedResult = JSON.parse(result);
+
+  const clean = extractJsonFromBackticks(response);
+
+  const parsedResult = JSON.parse(clean);
   // TODO handle retried if we fail to parse the result
 
   const description = parsedResult.description;

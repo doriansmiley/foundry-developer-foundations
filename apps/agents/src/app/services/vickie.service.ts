@@ -1,6 +1,9 @@
+import { User } from "@osdk/foundry.admin";
+
 export async function callAskVickie({
   action,
-  userId,
+  token,
+  user,
   text,
   query,
   threadId,
@@ -10,7 +13,8 @@ export async function callAskVickie({
   inputs,
 }: {
   action: string;
-  userId?: string;
+  token: string,
+  user: User;
   text?: string;
   query?: string;
   threadId?: string;
@@ -22,7 +26,7 @@ export async function callAskVickie({
   const body = new URLSearchParams({
     action,
     ...(query ? { query } : {}),
-    ...(userId ? { userId } : {}),
+    ...(user ? { user: JSON.stringify(user) } : {}),
     ...(text ? { text } : {}),
     ...(threadId ? { threadId } : {}),
     ...(plan ? { plan } : {}),
@@ -36,6 +40,7 @@ export async function callAskVickie({
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
+      'x-foundry-access-token': token,
     },
     body: body.toString(),
   });

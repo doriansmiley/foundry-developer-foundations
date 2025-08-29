@@ -1,5 +1,5 @@
 import {
-  FoundryClient,
+  RangrClient,
   RfpRequests,
 } from '@codestrap/developer-foundations-types';
 
@@ -8,14 +8,13 @@ export async function upsertRfpRequest(
   rfpVendorResponse: string,
   vendorId: string,
   machineExecutionId: string,
-  client: FoundryClient,
+  client: RangrClient,
   id?: string,
   rfpResponseStatus?: number
 ): Promise<RfpRequests> {
   console.log(`upsertThread threadId: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-rfp-requests/apply`;
 

@@ -2,20 +2,21 @@ import { FoundryClient, Tickets } from '@codestrap/developer-foundations-types';
 
 export async function readTicket(
   id: string,
-  client: FoundryClient
+  token: string,
+  ontologyRid: string,
+  url: string,
 ): Promise<Tickets> {
   console.log(`readTicket id: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = token;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
   };
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/Tickets/${id}`;
-  const machineFetchResults = await fetch(url, {
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/Tickets/${id}`;
+  const machineFetchResults = await fetch(fullUrl, {
     method: 'GET',
     headers: headers,
   });

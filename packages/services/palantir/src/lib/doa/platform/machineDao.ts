@@ -1,14 +1,13 @@
-import type {
-  MachineDao,
+import {
+  SupportedFoundryClients,
+  type MachineDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { upsertMachineExecution } from './delegates/machine/upsert';
 import { readMachineExecution } from './delegates/machine/read';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeMachineDao(): MachineDao {
-  const client = getFoundryClient();
-  // TODO remove once Foundry client is used
-  console.log(client.ontologyRid);
+  const { getToken, url, ontologyRid } = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return {
     // TODO code out all methods using OSDK API calls
@@ -20,12 +19,16 @@ export function makeMachineDao(): MachineDao {
       lockOwner?: string,
       lockUntil?: number
     ) => {
+      const token = await getToken();
+
       const machine = await upsertMachineExecution(
         id,
         stateMachine,
         state,
         logs,
-        client,
+        token,
+        ontologyRid,
+        url,
         lockOwner,
         lockUntil
       );
@@ -37,7 +40,9 @@ export function makeMachineDao(): MachineDao {
         `stub delete method called for: ${machineExecutionId}. We do not support deleting machines but include the method as it is part of the interface.`
       ),
     read: async (machineExecutionId: string) => {
-      const machine = await readMachineExecution(machineExecutionId, client);
+      const token = await getToken();
+
+      const machine = await readMachineExecution(machineExecutionId, token, ontologyRid, url);
 
       return machine;
     },

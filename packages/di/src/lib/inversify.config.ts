@@ -1,13 +1,14 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
 
-import { TYPES } from '@codestrap/developer-foundations-types';
+import { SupportedFoundryClients, TYPES } from '@codestrap/developer-foundations-types';
 import { openWeatherService } from '@codestrap/developer-foundations-services-weather';
 import {
-  getFoundryClient,
+  foundryClientFactory,
   geminiService,
   gpt4oService,
   embeddingsService,
+  makeTelemetryDao,
 } from '@codestrap/developer-foundations-services-palantir';
 import { getRangrClient } from '@codestrap/developer-foundations-services-rangr';
 import { makeWorldDao } from '@codestrap/developer-foundations-services-palantir';
@@ -46,8 +47,7 @@ const container = new Container();
 
 container
   .bind(TYPES.FoundryClient)
-  .toDynamicValue(getFoundryClient)
-  .inSingletonScope();
+  .toConstantValue(foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined))
 
 container
   .bind(TYPES.RangrClient)
@@ -63,6 +63,8 @@ container.bind(TYPES.MachineDao).toConstantValue(makeMachineDao());
 container.bind(TYPES.TicketDao).toConstantValue(makeTicketsDao());
 
 container.bind(TYPES.CommsDao).toConstantValue(makeCommsDao());
+
+container.bind(TYPES.TelemetryDao).toConstantValue(makeTelemetryDao());
 
 container.bind(TYPES.ThreadsDao).toConstantValue(makeThreadsDao());
 

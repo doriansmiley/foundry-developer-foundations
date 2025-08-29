@@ -64,6 +64,7 @@ export async function summarizeCalendars(
     1. today (default)
     2. tomorrow
     3. this week
+    4. next week
 
     The task from the end user:
     ${task}
@@ -92,16 +93,21 @@ export async function summarizeCalendars(
         "timeframe": "this week",
         "emails": ["bob@codestrap.me"]
     }
+
+    Q: "1. **Summarize Calendars** - Summarize calendars for Bob Jones <bob@codestrap.me> for next week"
+    A: {
+        "timeframe": "next week",
+        "emails": ["bob@codestrap.me"]
+    }
     `;
 
   const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
   const response = await geminiService(userPrompt, system);
-  // eslint-disable-next-line no-useless-escape
-  const extractedResponse = extractJsonFromBackticks(
-    response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, '') ?? '{}'
-  );
-  const { timeframe, emails } = JSON.parse(extractedResponse) as {
+
+  const clean = extractJsonFromBackticks(response);
+
+  const { timeframe, emails } = JSON.parse(clean) as {
     timeframe: string;
     emails: string[];
   };
@@ -123,6 +129,12 @@ export async function summarizeCalendars(
       windowStartLocal = startOfDay(nowPT); // today 00:00
       const nextMon = startOfWeekMonday(addDays(nowPT, 7)); // next week’s Monday 00:00
       windowEndLocal = nextMon;
+      break;
+    }
+    case 'next week': {
+      const nextMon = startOfWeekMonday(addDays(nowPT, 7)); // next Monday 00:00
+      windowStartLocal = nextMon;                           // start of next week
+      windowEndLocal = startOfDay(addDays(nextMon, 7));     // following Monday 00:00
       break;
     }
     case 'today':

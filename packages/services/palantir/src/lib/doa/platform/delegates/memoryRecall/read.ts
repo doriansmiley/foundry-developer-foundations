@@ -5,20 +5,21 @@ import {
 
 export async function readMemoryRecall(
   id: string,
-  client: FoundryClient
+  token: string,
+  ontologyRid: string,
+  url: string,
 ): Promise<MemoryRecall> {
   console.log(`readMemoryRecall id: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = token;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
   };
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/MemoryRecall/${id}`;
-  const memoryRecallFetchResults = await fetch(url, {
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/MemoryRecall/${id}`;
+  const memoryRecallFetchResults = await fetch(fullUrl, {
     method: 'GET',
     headers: headers,
   });

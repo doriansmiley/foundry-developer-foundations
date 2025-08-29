@@ -1,12 +1,13 @@
-import type {
-  MemoryRecallDao,
+import {
+  SupportedFoundryClients,
+  type MemoryRecallDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { searchMemoryRecall } from './delegates/memoryRecall/search';
 import { readMemoryRecall } from './delegates/memoryRecall/read';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeMemoryRecallDao(): MemoryRecallDao {
-  const client = getFoundryClient();
+  const { getToken, url, ontologyRid } = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return {
     // TODO code out all methods using OSDK API calls
@@ -27,12 +28,16 @@ export function makeMemoryRecallDao(): MemoryRecallDao {
         `stub delete method called for: ${id}. We do not support deleting RfpRequests but include the method as it is part of the interface.`
       ),
     read: async (id: string) => {
-      const memoryRecall = await readMemoryRecall(id, client);
+      const token = await getToken();
+
+      const memoryRecall = await readMemoryRecall(id, token, ontologyRid, url);
 
       return memoryRecall;
     },
     search: async (task: string, kValue: number = 1) => {
-      const results = await searchMemoryRecall(task, kValue, client);
+      const token = await getToken();
+
+      const results = await searchMemoryRecall(task, kValue, token, ontologyRid, url);
       // there should be only one results based on the params
       return results;
     },

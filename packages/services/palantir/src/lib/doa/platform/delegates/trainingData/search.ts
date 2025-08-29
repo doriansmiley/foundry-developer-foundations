@@ -6,19 +6,20 @@ import {
 export async function searchTrainingData(
   xReason: string,
   type: string,
-  client: FoundryClient
+  token: string,
+  ontologyRid: string,
+  url: string,
 ): Promise<TrainingData[]> {
   console.log(`searchTrainingData xReason: ${xReason} type: ${type}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = token;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
   };
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/XReasonTrainingData/search`;
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/XReasonTrainingData/search`;
 
   const body = JSON.stringify({
     where: {
@@ -38,7 +39,7 @@ export async function searchTrainingData(
     },
   });
 
-  const apiResult = await fetch(url, {
+  const apiResult = await fetch(fullUrl, {
     method: 'POST',
     headers: headers,
     body: body,

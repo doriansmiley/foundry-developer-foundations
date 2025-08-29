@@ -508,7 +508,7 @@ If the user specifies a resolution that can not be resolved to a specific dat/ti
 
     const response = await geminiService(user, system);
 
-    let result = extractJsonFromBackticks(response);
+    let result = response;
     if (newThread) {
       // putting Execution Id in the thread is useful for debugging as users may need to supply it
       result = `# Execution Id: ${threadId}

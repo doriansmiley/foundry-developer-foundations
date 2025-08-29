@@ -1,4 +1,3 @@
-// traceDecorators.ts
 import { randomBytes } from 'crypto';
 import type { ResourceModel, SpanModel, TelemetryPayload } from './Tracing';
 import { collectTelemetryFetchWrapper } from './Tracing';
@@ -85,7 +84,7 @@ export function Trace(opts: TraceOptions) {
               trace_flags: 1 as any,
               kind: opts.kind ?? 'Internal',
               status_code: err ? 'ERROR' : 'OK',
-              status_message: err?.message,
+              status_message: `ERROR: ${err?.message} STACK: ${err?.stack}`,
               error_code: err?.code,
               sampling_decision: opts.samplingDecision ?? 'RECORD_AND_SAMPLE',
               sampling_rate: opts.samplingRate as any,
@@ -102,9 +101,6 @@ export function Trace(opts: TraceOptions) {
           // fire and forget, we do not want to hold up execution for this!
           // One day we should support background processing and batching
           collectTelemetryFetchWrapper(telemtryPayload);
-          console.log(
-            `collectTelemetryFetchWrapper called with: ${telemtryPayload}`
-          );
         } catch (e) {
           console.log(e);
         }

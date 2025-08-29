@@ -1,7 +1,9 @@
 import { FoundryClient, Tickets } from '@codestrap/developer-foundations-types';
 
 export async function upsertTicket(
-  client: FoundryClient,
+  token: string,
+  ontologyRid: string,
+  url: string,
   id: string,
   alertTitle: string,
   alertType: string,
@@ -13,10 +15,9 @@ export async function upsertTicket(
 ): Promise<Tickets> {
   console.log(`upsertTicket machineId: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = token;
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-ticket/apply`;
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/actions/upsert-ticket/apply`;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
@@ -39,7 +40,7 @@ export async function upsertTicket(
     },
   });
 
-  const apiResult = await fetch(url, {
+  const apiResult = await fetch(fullUrl, {
     method: 'POST',
     headers: headers,
     body: body,
@@ -55,7 +56,7 @@ export async function upsertTicket(
 
   const ticketId = result.edits.edits[0].primaryKey as string;
 
-  const getUrl = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/Tickets/${ticketId}`;
+  const getUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/Tickets/${ticketId}`;
   const ticketFetchResults = await fetch(getUrl, {
     method: 'GET',
     headers: headers,

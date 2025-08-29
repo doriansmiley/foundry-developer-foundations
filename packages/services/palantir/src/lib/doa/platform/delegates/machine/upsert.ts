@@ -8,16 +8,17 @@ export async function upsertMachineExecution(
   stateMachine: string,
   state: string,
   logs: string,
-  client: FoundryClient,
+  token: string,
+  ontologyRid: string,
+  url: string,
   lockOwner?: string,
   lockUntil?: number
 ): Promise<MachineExecutions> {
   console.log(`upsertMachineExecution machineId: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = token;
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/upsert-machine/apply`;
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/actions/upsert-machine/apply`;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
@@ -38,7 +39,7 @@ export async function upsertMachineExecution(
     },
   });
 
-  const apiResult = await fetch(url, {
+  const apiResult = await fetch(fullUrl, {
     method: 'POST',
     headers: headers,
     body: body,
@@ -56,7 +57,7 @@ export async function upsertMachineExecution(
 
   const machineId = result.edits.edits[0].primaryKey as string;
 
-  const getUrl = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/MachineExecutions/${machineId}`;
+  const getUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/MachineExecutions/${machineId}`;
   const machineFetchResults = await fetch(getUrl, {
     method: 'GET',
     headers: headers,

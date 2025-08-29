@@ -1,7 +1,6 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import {
     extractJsonFromBackticks,
-    uuidv4,
 } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 import {
@@ -147,11 +146,11 @@ Your response is:
         const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
         const response = await geminiService(user, system);
-        // eslint-disable-next-line no-useless-escape
-        const result = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
 
-        const parsedResult = JSON.parse(result) as MeetingRequest;
-        console.log(`the model returned the following meeting time proposal:\n${result}`);
+        const clean = extractJsonFromBackticks(response);
+
+        const parsedResult = JSON.parse(clean) as MeetingRequest;
+        console.log(`the model returned the following meeting time proposal:\n${clean}`);
         const timeFrame = (parsedResult.timeframe_context === 'user defined exact date/time') ? parsedResult.localDateString! : parsedResult.timeframe_context;
         const participants = Array.from(new Set(parsedResult.participants));
         //remove external email addresses since we can't check them

@@ -1,14 +1,13 @@
-import type {
-  CommsDao,
+import {
+  SupportedFoundryClients,
+  type CommsDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { readCommunications } from './communications/read';
 import { upsertCommunications } from './communications/upsert';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeCommsDao(): CommsDao {
-  const client = getFoundryClient();
-  // TODO remove once Foundry client is used
-  console.log(client.ontologyRid);
+  const { getToken, url, ontologyRid } = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return {
     // TODO code out all methods using OSDK API calls
@@ -23,6 +22,8 @@ export function makeCommsDao(): CommsDao {
       tokens?: number,
       id?: string
     ) => {
+      const token = await getToken();
+
       const comms = await upsertCommunications(
         channel,
         formattedMessage,
@@ -30,7 +31,9 @@ export function makeCommsDao(): CommsDao {
         taskList,
         comType,
         owner,
-        client,
+        token,
+        ontologyRid,
+        url,
         questionPrompt,
         tokens,
         id
@@ -43,7 +46,9 @@ export function makeCommsDao(): CommsDao {
         `stub delete method called for: ${id}. We do not support deleting machines but include the method as it is part of the interface.`
       ),
     read: async (id: string) => {
-      const comms = await readCommunications(id, client);
+      const token = await getToken();
+
+      const comms = await readCommunications(id, token, ontologyRid, url);
 
       return comms;
     },

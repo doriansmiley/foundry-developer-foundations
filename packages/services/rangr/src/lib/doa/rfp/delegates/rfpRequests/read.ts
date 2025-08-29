@@ -1,16 +1,15 @@
 import {
-  FoundryClient,
+  RangrClient,
   RfpRequests,
 } from '@codestrap/developer-foundations-types';
 
 export async function readRfpRequest(
   id: string,
-  client: FoundryClient
+  client: RangrClient
 ): Promise<RfpRequests> {
   console.log(`readRfpRequest id: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = await client.getToken();
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,

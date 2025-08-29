@@ -1,14 +1,13 @@
-import type {
-  TicketsDao,
+import {
+  SupportedFoundryClients,
+  type TicketsDao,
 } from '@codestrap/developer-foundations-types';
-import { getFoundryClient } from '../../foundryClient';
 import { upsertTicket } from './delegates/tasks/upsert';
 import { readTicket } from './delegates/tasks/read';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeTicketsDao(): TicketsDao {
-  const client = getFoundryClient();
-  // TODO remove once Foundry client is used
-  console.log(client.ontologyRid);
+  const { getToken, url, ontologyRid } = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return {
     // TODO code out all methods using OSDK API calls
@@ -22,8 +21,12 @@ export function makeTicketsDao(): TicketsDao {
       points?: number,
       assignees?: string
     ) => {
+      const token = await getToken();
+
       const ticket = await upsertTicket(
-        client,
+        token,
+        ontologyRid,
+        url,
         id,
         alertTitle,
         alertType,
@@ -41,7 +44,9 @@ export function makeTicketsDao(): TicketsDao {
         `stub delete method called for: ${id}. We do not support deleting tickets but include the method as it is part of the interface.`
       ),
     read: async (id: string) => {
-      const ticket = await readTicket(id, client);
+      const token = await getToken();
+
+      const ticket = await readTicket(id, token, ontologyRid, url);
 
       return ticket;
     },

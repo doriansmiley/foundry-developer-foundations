@@ -1,6 +1,6 @@
 // Payload interfaces
-import { container } from './inversify.config';
-import { TYPES, TelemtryDao } from './types';
+import { container } from '@codestrap/developer-foundations-di';
+import { TelemetryDao, TYPES } from '@codestrap/developer-foundations-types';
 
 export interface ResourceModel {
   resource_id: string;
@@ -84,7 +84,7 @@ export interface TelemetryPayload {
 export async function collectTelemetryFetchWrapper(
   inputJSON: string
 ): Promise<string> {
-  const collectTelemetry = container.get<TelemtryDao>(TYPES.TelemtryDao);
+  const collectTelemetry = container.get<TelemetryDao>(TYPES.TelemetryDao);
   const result = await collectTelemetry(inputJSON);
 
   return result;

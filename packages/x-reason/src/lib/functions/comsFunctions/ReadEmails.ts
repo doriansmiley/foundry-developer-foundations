@@ -1,7 +1,6 @@
 import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
 import {
     extractJsonFromBackticks,
-    uuidv4,
 } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 import {
@@ -52,9 +51,10 @@ export async function readEmails(context: Context, event?: MachineEvent, task?: 
     const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
     const response = await geminiService(userPrompt, system);
-    // eslint-disable-next-line no-useless-escape
-    const extractedResponse = extractJsonFromBackticks(response.replace(/\,(?!\s*?[\{\[\"\'\w])/g, "") ?? "{}");
-    const { timeframe, email } = JSON.parse(extractedResponse) as { timeframe: string, email: string };
+
+    const clean = extractJsonFromBackticks(response);
+
+    const { timeframe, email } = JSON.parse(clean) as { timeframe: string, email: string };
 
     let parsedTime = 15;
 

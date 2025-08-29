@@ -1,11 +1,17 @@
-import { TelemtryDao, FoundryClient } from '../types';
+import {
+  SupportedFoundryClients,
+  type TelemetryDao,
+} from '@codestrap/developer-foundations-types';
+import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
-export function makeTelemetryDao(client: FoundryClient): TelemtryDao {
+export function makeTelemetryDao(): TelemetryDao {
+  const { getToken, url, ontologyRid } = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
+
   return async (inputJSON) => {
     console.log(`telemetryDao telemetryDao: ${inputJSON}`);
 
-    const token = await client.auth.signIn();
-    const apiKey = token.access_token;
+    const token = await getToken();
+    const apiKey = token;
 
     const headers = {
       'Content-Type': 'application/json',
@@ -22,7 +28,7 @@ export function makeTelemetryDao(client: FoundryClient): TelemtryDao {
     });
 
     const apiResults = await fetch(
-      `${client.url}/api/v2/ontologies/${client.ontologyRid}/actions/collect-telemetry/apply`,
+      `${url}/api/v2/ontologies/${ontologyRid}/actions/collect-telemetry/apply`,
       {
         method: 'POST',
         headers,

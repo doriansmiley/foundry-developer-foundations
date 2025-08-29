@@ -5,27 +5,29 @@ import {
 
 export async function readMachineExecution(
   id: string,
-  client: FoundryClient
+  token: string,
+  ontologyRid: string,
+  url: string,
 ): Promise<MachineExecutions> {
   console.log(`readMachineExecution id: ${id}`);
 
-  const token = await client.auth.signIn();
-  const apiKey = token.access_token;
+  const apiKey = token;
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
   };
 
-  const url = `${client.url}/api/v2/ontologies/${client.ontologyRid}/objects/MachineExecutions/${id}`;
-  const machineFetchResults = await fetch(url, {
+  const fullUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/MachineExecutions/${id}`;
+  const machineFetchResults = await fetch(fullUrl, {
     method: 'GET',
     headers: headers,
   });
 
   const apiResponse = (await machineFetchResults.json()) as any;
 
-  if (apiResponse.errorCode) {
+  // NOT_FOUND errors are expected during polling operations. They are cluttering the console so I turned logging them off
+  if (apiResponse.errorCode && apiResponse.errorCode !== 'NOT_FOUND') {
     console.log(
       `errorInstanceId: ${apiResponse.errorCode} errorName: ${apiResponse.errorName} errorCode: ${apiResponse.errorCode}`
     );
