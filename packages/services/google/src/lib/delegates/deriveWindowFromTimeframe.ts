@@ -21,34 +21,45 @@ export function deriveWindowFromTimeframe(
 
   switch (timeframe_context) {
     case 'user defined exact date/time': {
-      // Use localDateString when provided; fall back to timeframe_context if they passed a date there
       const candidateStr =
         localDateString && localDateString.trim()
           ? localDateString
           : req.timeframe_context;
-      const candidate = new Date(candidateStr);
-      if (isNaN(candidate.getTime())) {
-        throw new Error(
-          `Invalid localDateString for exact meeting time: "${candidateStr}"`
-        );
-      }
-      // Normalize seconds to 0 so we align to minute precision
-      candidate.setSeconds(0, 0);
 
-      // Build a narrow window around the exact desired start
+      // ISO without timezone (e.g., 2025-09-01T09:30 or 2025-09-01 09:30)
+      const isoNoTZ = /^\s*\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2})?\s*$/;
+
+      let candidate: Date;
+      if (isoNoTZ.test(candidateStr)) {
+        // Treat as wall-clock in target timezone
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const m = candidateStr.match(
+          /^\s*(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?\s*$/
+        )!;
+        candidate = new Date(
+          Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || '0'), 0)
+        );
+      } else {
+        // Let JS parse any other format (incl. "Wed Sep 03 2025 ... GMT-0700 (...)")
+        const parsed = new Date(candidateStr);
+        if (isNaN(parsed.getTime())) {
+          throw new Error(
+            `Invalid localDateString for exact meeting time: "${candidateStr}"`
+          );
+        }
+        candidate = parsed;
+      }
+
+      // Normalize seconds with UTC setters (host-agnostic)
+      candidate.setUTCSeconds(0, 0);
+
       const windowStartLocal = new Date(candidate);
       const windowEndLocal = new Date(
         candidate.getTime() + duration_minutes * 60_000
       );
-
-      // Force minute-level stepping so we can return the exact minute if it's free (no rounding surprises)
       const slotStepMinutes = 1;
 
-      // Clamp to business hours (if they gave a time outside hours, move to next valid business instant)
-      const clampedStart = clampToWorkingInstant(
-        windowStartLocal,
-        working_hours
-      );
+      const clampedStart = clampToWorkingInstant(windowStartLocal, working_hours);
       const clampedEnd = new Date(
         Math.max(
           clampedStart.getTime() + duration_minutes * 60_000,
@@ -62,6 +73,8 @@ export function deriveWindowFromTimeframe(
         slotStepMinutes,
       };
     }
+
+
 
     case 'as soon as possible': {
       const start = clampToWorkingInstant(localNow, working_hours);
@@ -134,7 +147,7 @@ function nowInTZ(tz: string, ref: Date): Date {
   const p = Object.fromEntries(
     dtf.formatToParts(ref).map((x) => [x.type, x.value])
   );
-  return new Date(
+  return new Date(Date.UTC(
     Number(p['year']),
     Number(p['month']) - 1,
     Number(p['day']),
@@ -142,23 +155,23 @@ function nowInTZ(tz: string, ref: Date): Date {
     Number(p['minute']),
     Number(p['second']),
     0
-  );
+  ));
 }
 
 function startOfDayLocal(d: Date): Date {
   const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
+  x.setUTCHours(0, 0, 0, 0);
   return x;
 }
 
 function addDays(d: Date, days: number): Date {
   const x = new Date(d);
-  x.setDate(x.getDate() + days);
+  x.setUTCDate(x.getUTCDate() + days);
   return x;
 }
 
 function isWeekend(d: Date): boolean {
-  const dow = d.getDay();
+  const dow = d.getUTCDay();
   return dow === 0 || dow === 6;
 }
 
@@ -173,9 +186,9 @@ function clampToWorkingInstant(
   }
   const within = new Date(x);
   const start = new Date(x);
-  start.setHours(hours.start_hour, 0, 0, 0);
+  start.setUTCHours(hours.start_hour, 0, 0, 0);
   const end = new Date(x);
-  end.setHours(hours.end_hour, 0, 0, 0);
+  end.setUTCHours(hours.end_hour, 0, 0, 0);
 
   if (within >= end) {
     // move to next business day start
@@ -183,25 +196,25 @@ function clampToWorkingInstant(
     while (isWeekend(y)) {
       y = startOfDayLocal(addDays(y, 1));
     }
-    y.setHours(hours.start_hour, 0, 0, 0);
+    y.setUTCHours(hours.start_hour, 0, 0, 0);
     return y;
   }
-  if (within < start) {
-    return new Date(start);
-  }
+
+  if (within < start) return new Date(start);
+
   return within;
 }
 
 function startOfWeekMonday(d: Date): Date {
   const x = startOfDayLocal(d);
-  const dow = x.getDay(); // 0 Sun .. 6 Sat
+  const dow = x.getUTCDay(); // 0 Sun .. 6 Sat
   const delta = dow === 0 ? -6 : 1 - dow; // move to Monday
   return startOfDayLocal(addDays(x, delta));
 }
 
 function startOfNextWeek(d: Date, hours: { start_hour: number }): Date {
   const nextMon = addDays(startOfWeekMonday(d), 7);
-  nextMon.setHours(hours.start_hour, 0, 0, 0);
+  nextMon.setUTCHours(hours.start_hour, 0, 0, 0);
   return nextMon;
 }
 
@@ -209,7 +222,7 @@ function endOfWorkWeek(d: Date, hours: { end_hour: number }): Date {
   // Friday of the week containing d
   const mon = startOfWeekMonday(d);
   const fri = addDays(mon, 4); // Mon + 4 = Fri
-  fri.setHours(hours.end_hour, 0, 0, 0);
+  fri.setUTCHours(hours.end_hour, 0, 0, 0);
   return fri;
 }
 
@@ -219,9 +232,6 @@ function endOfCurrentOrNextWorkWeek(
 ): Date {
   const end = endOfWorkWeek(start, hours);
   if (start.getTime() >= end.getTime()) {
-    const nextStart = startOfNextWeek(start, { start_hour: hours.end_hour }); // temporary holder; we’ll reset hours next line
-    const monNext = startOfNextWeek(start, { start_hour: hours.end_hour }); // get Monday
-    monNext.setHours(hours.end_hour, 0, 0, 0); // not actually used
     return endOfWorkWeek(addDays(start, 7), hours);
   }
   return end;
