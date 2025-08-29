@@ -1,4 +1,5 @@
 import { ComputeModule } from '@palantir/compute-module';
+import { withRequestContext } from '@codestrap/developer-foundations-utils/src/lib/asyncLocalStorage';
 // Schema Definitions for compute module
 // IMPORTANT:  @sinclair/typebox is required!!!
 // https://github.com/palantir/typescript-compute-module?tab=readme-ov-file#schema-registration
@@ -10,6 +11,7 @@ import {
   ModuleConfig,
 } from '@codestrap/developer-foundations-types';
 import { Bennie } from './Bennie';
+import { uuidv4 } from '@codestrap/developer-foundations-utils';
 
 dotenv.config();
 
@@ -210,12 +212,21 @@ function createComputeModule(): ComputeModuleType {
       'sendThreadMessage',
       async ({ message, userId, machineExecutionId }) => {
         try {
-          const result = await bennie.sendThreadMessage(
-            message,
-            userId,
-            machineExecutionId
-          );
-          return result;
+          const user = {
+            id: userId,
+            username: '',
+            realm: '',
+            attributes: {},
+          };
+          // sandbox the thread execution with the incoming userId so the app has context on who is who
+          return withRequestContext({ user, requestId: uuidv4() }, async () => {
+            const result = await bennie.sendThreadMessage(
+              message,
+              userId,
+              machineExecutionId
+            );
+            return result;
+          });
         } catch (e) {
           console.log((e as Error).stack);
           return {
@@ -295,12 +306,21 @@ function createComputeModule(): ComputeModuleType {
     )
     .register('createVickieTasks', async ({ query, userId, threadId }) => {
       try {
-        const result = await vickie.createComsTasksList(
-          query,
-          userId,
-          threadId
-        );
-        return result;
+        const user = {
+          id: userId,
+          username: '',
+          realm: '',
+          attributes: {},
+        };
+
+        return withRequestContext({ user, requestId: uuidv4() }, async () => {
+          const result = await vickie.createComsTasksList(
+            query,
+            userId,
+            threadId
+          );
+          return result;
+        });
       } catch (e) {
         console.log((e as Error).stack);
         return {
@@ -314,12 +334,21 @@ function createComputeModule(): ComputeModuleType {
     })
     .register('createBennieTasks', async ({ query, userId, threadId }) => {
       try {
-        const result = await bennie.createSalesTasksList(
-          query,
-          userId,
-          threadId
-        );
-        return result;
+        const user = {
+          id: userId,
+          username: '',
+          realm: '',
+          attributes: {},
+        };
+
+        return withRequestContext({ user, requestId: uuidv4() }, async () => {
+          const result = await bennie.createSalesTasksList(
+            query,
+            userId,
+            threadId
+          );
+          return result;
+        });
       } catch (e) {
         console.log((e as Error).stack);
         return {
@@ -333,8 +362,17 @@ function createComputeModule(): ComputeModuleType {
     })
     .register('askVickie', async ({ query, userId, threadId }) => {
       try {
-        const result = await vickie.askVickie(query, userId, threadId);
-        return result;
+        const user = {
+          id: userId,
+          username: '',
+          realm: '',
+          attributes: {},
+        };
+
+        return withRequestContext({ user, requestId: uuidv4() }, async () => {
+          const result = await vickie.askVickie(query, userId, threadId);
+          return result;
+        });
       } catch (e) {
         console.log((e as Error).stack);
         return {
@@ -348,8 +386,17 @@ function createComputeModule(): ComputeModuleType {
     })
     .register('askBennie', async ({ query, userId, threadId }) => {
       try {
-        const result = await bennie.askBennie(query, userId, threadId);
-        return result;
+        const user = {
+          id: userId,
+          username: '',
+          realm: '',
+          attributes: {},
+        };
+
+        return withRequestContext({ user, requestId: uuidv4() }, async () => {
+          const result = await bennie.askBennie(query, userId, threadId);
+          return result;
+        });
       } catch (e) {
         console.log((e as Error).stack);
         return {

@@ -2,6 +2,7 @@ import { createClient } from '@osdk/client';
 import { User, Users } from '@osdk/foundry.admin';
 import { createConfidentialOauthClient } from '@osdk/oauth';
 import { FoundryClient, Token } from '@codestrap/developer-foundations-types';
+import { getRequestContext } from '@codestrap/developer-foundations-utils/src/lib/asyncLocalStorage';
 
 // this is a utility method to manage usage of the Foundry Client and ensure we only get a singleton
 // files in the palantir services package can't use the container to get the foundry client, nor should they really
@@ -57,6 +58,13 @@ function createFoundryClient(): FoundryClient {
   const client = createClient(url, ontologyRid, auth);
 
   const getUser = async () => {
+    const context = getRequestContext();
+    // check if a request has supplied a userId that this request should be grounded on
+    if (context?.user?.id) {
+      const user: User = await Users.get(client, context.user.id);
+      return user;
+    }
+
     const user: User = await Users.getCurrent(client);
 
     return user;
