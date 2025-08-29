@@ -64,6 +64,7 @@ export async function summarizeCalendars(
     1. today (default)
     2. tomorrow
     3. this week
+    4. next week
 
     The task from the end user:
     ${task}
@@ -90,6 +91,12 @@ export async function summarizeCalendars(
     Q: "1. **Summarize Calendars** - Summarize calendars for Bob Jones <bob@codestrap.me> for the week"
     A: {
         "timeframe": "this week",
+        "emails": ["bob@codestrap.me"]
+    }
+
+    Q: "1. **Summarize Calendars** - Summarize calendars for Bob Jones <bob@codestrap.me> for next week"
+    A: {
+        "timeframe": "next week",
         "emails": ["bob@codestrap.me"]
     }
     `;
@@ -122,6 +129,12 @@ export async function summarizeCalendars(
       windowStartLocal = startOfDay(nowPT); // today 00:00
       const nextMon = startOfWeekMonday(addDays(nowPT, 7)); // next week’s Monday 00:00
       windowEndLocal = nextMon;
+      break;
+    }
+    case 'next week': {
+      const nextMon = startOfWeekMonday(addDays(nowPT, 7)); // next Monday 00:00
+      windowStartLocal = nextMon;                           // start of next week
+      windowEndLocal = startOfDay(addDays(nextMon, 7));     // following Monday 00:00
       break;
     }
     case 'today':
