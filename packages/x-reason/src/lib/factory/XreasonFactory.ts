@@ -47,7 +47,9 @@ export enum SupportTrainingDataTypes {
 // in your factor injectionb factory
 const factory = curry((map, key, config) => {
   const supportedKeys = Object.keys(SupportedEngines).map((item) =>
-    item.toLowerCase()
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    //@ts-expect-error
+    SupportedEngines[item]
   );
 
   if (!supportedKeys.includes(key)) {

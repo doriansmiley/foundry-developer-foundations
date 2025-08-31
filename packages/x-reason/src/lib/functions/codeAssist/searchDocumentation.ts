@@ -4,7 +4,7 @@ import {
     TYPES,
 } from '@codestrap/developer-foundations-types';
 
-export type ResearchReport = {
+export type SearchDocumentationResults = {
     searchResults: string;
 }
 
@@ -12,7 +12,7 @@ export async function searchDocumentation(
     context: Context,
     event?: MachineEvent,
     task?: string
-): Promise<ResearchReport> {
+): Promise<SearchDocumentationResults> {
 
     const researchAssistant = container.get<ResearchAssistant>(TYPES.ResearchAssistant);
 
