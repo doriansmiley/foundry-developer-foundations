@@ -31,14 +31,40 @@ export function deriveWindowFromTimeframe(
 
       let candidate: Date;
       if (isoNoTZ.test(candidateStr)) {
-        // Treat as wall-clock in target timezone
+        // Interpret as wall-clock in target timezone
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const m = candidateStr.match(
           /^\s*(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?\s*$/
         )!;
-        candidate = new Date(
-          Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || '0'), 0)
+        const [year, month, day, hour, minute, second] = [
+          +m[1], +m[2], +m[3], +m[4], +m[5], +(m[6] || '0'),
+        ];
+
+        // Use Intl with target timezone to get UTC instant
+        const dtf = new Intl.DateTimeFormat('en-US', {
+          timeZone: timezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
+
+        const parts = Object.fromEntries(
+          dtf.formatToParts(new Date(year, month - 1, day, hour, minute, second))
+            .map(x => [x.type, x.value])
         );
+
+        candidate = new Date(Date.UTC(
+          Number(parts['year']),
+          Number(parts['month']) - 1,
+          Number(parts['day']),
+          Number(parts['hour']),
+          Number(parts['minute']),
+          Number(parts['second'])
+        ));
       } else {
         // Let JS parse any other format (incl. "Wed Sep 03 2025 ... GMT-0700 (...)")
         const parsed = new Date(candidateStr);
@@ -73,8 +99,6 @@ export function deriveWindowFromTimeframe(
         slotStepMinutes,
       };
     }
-
-
 
     case 'as soon as possible': {
       const start = clampToWorkingInstant(localNow, working_hours);
