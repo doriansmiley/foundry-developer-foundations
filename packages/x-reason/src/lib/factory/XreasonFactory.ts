@@ -48,7 +48,7 @@ export enum SupportTrainingDataTypes {
 const factory = curry((map, key, config) => {
   const supportedKeys = Object.keys(SupportedEngines).map((item) =>
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-expect-error
+    // @ts-ignore
     SupportedEngines[item]
   );
 

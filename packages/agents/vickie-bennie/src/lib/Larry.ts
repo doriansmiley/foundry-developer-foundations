@@ -23,6 +23,7 @@ interface LarryResponse {
     executionId: string;
     taskList?: string;
     error?: string;
+    state?: string;
 }
 
 // use classes to take advantage of trace decorator
@@ -177,6 +178,7 @@ export class Larry extends Text2Action {
             // https://community.palantir.com/t/aip-logic-cant-recognize-optional-output-struct-fileds/4440/3
             error: '',
             taskList: generatedTaskList,
+            state: results.value as string,
         };
     }
 
