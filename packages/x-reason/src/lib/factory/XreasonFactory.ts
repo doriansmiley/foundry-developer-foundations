@@ -16,6 +16,11 @@ import {
   salesEvaluate,
   salesFunctionCatalog,
   salesSolver,
+  googleServicesSolver,
+  googleServicesProgrammer,
+  googleServicesAiTransition,
+  googleServicesEvaluate,
+  googleServicesFunctionCatalog,
 } from '../reasoning';
 
 // Define the shape of the clients map
@@ -31,6 +36,7 @@ export enum SupportedEngines {
   COMS = 'coms',
   CONTEXT = 'context',
   SALES = 'sales',
+  GOOGLE_SERVICES_CODE_ASSIST = 'googleServicesCodeAssist',
 }
 
 export enum SupportTrainingDataTypes {
@@ -53,6 +59,17 @@ const factory = curry((map, key, config) => {
 
 // in your config
 const clients = {
+  googleServicesCodeAssist: (config: Record<string, any>) => {
+    console.log(`config for comms xreason is: ${config}`);
+
+    return {
+      programmer: googleServicesProgrammer,
+      aiTransition: googleServicesAiTransition,
+      evaluate: googleServicesEvaluate,
+      functionCatalog: googleServicesFunctionCatalog,
+      solver: googleServicesSolver,
+    };
+  },
   coms: (config: Record<string, any>) => {
     console.log(`config for comms xreason is: ${config}`);
 
