@@ -4,11 +4,9 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: 'packages/x-reason/.env' });
 
 import { getState } from '../orchestratorV1';
-import { SupportedEngines, xReasonFactory } from '../factory';
-import engineV1 from '../engineV1';
-import headlessInterpreter from '../interpreterV1Headless';
-import { State } from 'xstate';
-import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
+import { SupportedEngines } from '../factory';
+import { gseArchitect } from './gseArchitect';
+import { colorize, printHeader } from './utils/cliPrintUtils';
 
 // Available X-Reason engines for CLI selection
 const AVAILABLE_ENGINES = [
@@ -33,37 +31,6 @@ const AVAILABLE_ENGINES = [
     description: '[In progress]',
   },
 ];
-
-// ANSI color codes for better CLI experience
-const colors = {
-  cyan: '\x1b[36m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  red: '\x1b[31m',
-  blue: '\x1b[34m',
-  magenta: '\x1b[35m',
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-};
-
-function colorize(color: keyof typeof colors, text: string) {
-  return `${colors[color]}${text}${colors.reset}`;
-}
-
-function printHeader() {
-  console.clear();
-  console.log(colorize('cyan', colorize('bold', '🤖 X-Reason AI Agent')));
-  console.log(colorize('blue', '━'.repeat(50)));
-  console.log();
-  console.log(colorize('green', "Hello! I'm your X-Reason AI Assistant."));
-  console.log();
-  console.log(colorize('yellow', '🚀 Available capabilities:'));
-  console.log('  • Google Services integration and development');
-  console.log('  • More engines coming soon...');
-  console.log();
-  console.log(colorize('blue', '━'.repeat(50)));
-  console.log();
-}
 
 async function promptEngineSelection() {
   const answers = await inquirer.prompt([
@@ -98,108 +65,40 @@ async function promptUser() {
         return true;
       },
     },
-    {
-      type: 'input',
-      name: 'docs_link',
-      message: colorize('magenta', 'What is the docs link?'),
-      validate: function (value: string) {
-        if (value.trim().length === 0) {
-          return 'Please enter a docs link.';
-        }
-        return true;
-      },
-    },
   ]);
 
-  return answers as { task: string; docs_link: string };
+  return answers as { task: string };
 }
 
-async function executeWorkflow(
-  task: string,
-  docs_link: string,
-  engine: SupportedEngines
-) {
+async function executeWorkflow(task: string, engine: SupportedEngines) {
   try {
-    console.log(colorize('blue', '\n🔄 Initializing X-Reason orchestrator...'));
+    switch (engine) {
+      case SupportedEngines.GOOGLE_SERVICE_EXPERT:
+        console.log(
+          colorize(
+            'blue',
+            "\nHi there 👋, Google Service Expert here, let's ground the task"
+          )
+        );
 
-    const { solver, programmer, functionCatalog, aiTransition } =
-      xReasonFactory(engine)({});
-    const taskQuery = `
-  I want to generate Google Service, specificaly: ${task}
-  Here is the docs link: ${docs_link}
-  `; // it should interactive before running the solver
-    const taskList = await engineV1.solver.solve(taskQuery, solver);
+        const { groundedPrompt, taskList } = await gseArchitect(task);
 
-    // Initialize the orchestrator
-    const solution = {
-      input: task,
-      id: `x-reason-cli-${Date.now()}`,
-      plan: taskList,
-    };
-    await getState(solution, true, {}, engine);
+        console.log(colorize('green', '✅ Task grounded!'));
+        console.log(colorize('blue', '━'.repeat(50)));
 
-    console.log(colorize('green', '✅ Orchestrator ready!'));
-    console.log(colorize('blue', `\n🚀 Starting workflow for: "${task}"`));
-    console.log(colorize('yellow', '\n📋 Execution log:'));
-    console.log(colorize('blue', '━'.repeat(50)));
+        const solution = {
+          input: groundedPrompt,
+          id: `x-reason-cli-${Date.now()}`,
+          plan: taskList || '',
+        };
+        await getState(solution, true, {}, engine);
 
-    // Execute the workflow - getState handles the execution internally
-    
-    return;
-    console.log('Generated task list:');
-    console.log(taskList);
+        break;
+      default:
+        throw new Error(`Engine ${engine} not supported`);
+    }
 
-    const states = await engineV1.programmer.program(
-      task,
-      taskList,
-      programmer
-    );
-
-    // todo evaluate the program
-
-    const functions = functionCatalog((action: any) =>
-      send(action, action.payload?.stateId as string)
-    );
-    const dispatch = (action: any) => {
-      // todo implement dispatch
-    };
-
-    const { done, start, send, getContext, serialize } = headlessInterpreter(
-      states,
-      functions,
-      dispatch,
-      {
-        requestId: '123',
-        status: 200,
-        machineExecutionId: '123',
-        stack: [],
-        userId: '123',
-        solution: taskList,
-      }
-    );
-
-    start();
-
-    send({
-      type: 'INVOKE',
-      stateId: states[0].id,
-    });
-    ///
-    engineV1.logic.transition(
-      taskList,
-      states[0].id,
-      '{}',
-      aiTransition,
-      '123'
-    );
-
-    // state architect
-
-    console.log(getContext());
-    console.log(colorize('green', '\n✅ Workflow completed successfully!'));
-    console.log(colorize('blue', '━'.repeat(50)));
-
-    return { success: true, result: 'success' };
+    return { success: true, error: null };
   } catch (error) {
     const err = error as Error;
     console.log(err);
@@ -243,10 +142,10 @@ async function main() {
 
     while (continueWorking) {
       // Get user input
-      const { task, docs_link } = await promptUser();
+      const { task } = await promptUser();
 
       // Execute the workflow
-      const result = await executeWorkflow(task, docs_link, selectedEngine);
+      const result = await executeWorkflow(task, selectedEngine);
 
       // Ask if user wants to continue
       continueWorking = await askContinue();

@@ -10,44 +10,41 @@ import {
 } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 
-async function getSolverTrainingData() {
+export async function getSolverTrainingData() {
   const data = `
 
-If the task list is:
-"Generate Google Drive listing service"
+If the query is:
+"Inside google-service package create new function named driveListFiles. Docs: https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list. Clients code sits in packages/services/google/src/lib/gsuiteClient.ts and packages/services/google/src/lib/gsuiteClient.v2.ts, README.md is in packages/services/google/README.md."
 
 Your response is:
-1. Scaffold new service files with Nx generator (package: google-services, module: drive)
-2. Read API docs and return specification for the given API
-3. Implement the function code based on the provided documentation (function: listDriveFiles(input) -> Promise<ListResult>)
-4. Create unit tests for the implemented function (happy path, pagination, missing scope)
-5. Attach the function to the gSuite client (export, DI wiring, required scopes)
-6. Summarize actions and next steps for the developer
-
-
-If the task list is:
-"Add findAvailableSlots function to Google Calendar"
-
-Your response is:
-1. Scaffold or reuse the calendar service files with Nx generator in the calendar module in the google-services package
-2. Read API docs and return specification for the given API
-3. Implement the function code based on the provided documentation (function: findAvailableSlots({ attendees, start, end, granularity }) -> Promise<SlotsResult>)
-4. Create unit tests for the implemented function (single attendee, multiple attendees intersection, invalid window, missing scope)
-5. Attach the function to the gSuite client (export, DI wiring, required scopes)
-6. Summarize actions and next steps for the developer
-
+1. Scaffold the google drive service files with Nx generator in the drive module in the google-services package under packages/services/google. Create or reuse a drive directory for the module and a delegates directory for API calls.
+2. Read the Google Drive Files API documentation from the https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list and return a normalized specification that lists the list endpoint, the required OAuth scopes for read-only listing, the request parameters including pageSize and q, and the response shape including files and nextPageToken.
+3. Implement an exported function named listDriveFiles in the drive module. The function accepts an input object with optional fields pageSize and q and returns a promise that resolves to a list result. Place the implementation in packages/services/google/src/lib/delegates/drive/listDriveFiles.ts and ensure it uses the official googleapis SDK client.
+4. Create unit tests for the implemented function that cover the happy path, pagination using nextPageToken, and the case where the required authorization scope is missing. Place the tests under packages/services/google/src/lib/delegates/drive/__tests__/listDriveFiles.spec.ts and run them with nx test google-services. Document how to run only the created test file by using nx test google-services --testFile=packages/services/google/src/lib/delegates/drive/__tests__/listDriveFiles.spec.ts.
+5. Attach the new function to the gSuite client by exporting it from packages/services/google/src/lib/gsuiteClient.ts. Update the makeGSuiteClient method to expose a getDriveClient or a drive namespace and add the Google Drive read-only scope to the service account scopes. Confirm that the scope set includes https://www.googleapis.com/auth/drive.readonly and that the google.auth.GoogleAuth instance for drive uses this scope. Provide a short note indicating where to wire the function into the returned client object so callers can invoke listDriveFiles.
+6. Summarize the actions performed and the next steps for the developer. Include a reminder to add or rotate the service account token so Google Drive access is authorized and include the exact Nx command to run the tests. Mention any required environment variables for service account loading.
 
 If the task list is:
-"Create Google Docs service with ability to create a new document"
+"Inside google-service package Function getAvailableMeetingTimes already exists. User wants to create new one. Docs: https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query. Clients code sits in packages/services/google/src/lib/gsuiteClient.ts and packages/services/google/src/lib/gsuiteClient.v2.ts, README.md is in packages/services/google/README.md."
 
 Your response is:
-1. Scaffold new service files with Nx generator (package: google-services, module: docs)
-2. Read API docs and return specification for the given API
-3. Implement the function code based on the provided documentation (function: createDocument(title, content) -> Promise<{ id: string }>)
-4. Create unit tests for the implemented function (happy path, missing scope, invalid input)
-5. Attach the function to the gSuite client (export, DI wiring, required scopes)
-6. Summarize actions and next steps for the developer
+1. Scaffold or reuse the google calendar service files with Nx generator in the calendar module in the google-services package under packages/services/google. Ensure there is a delegates directory and a file to house availability logic.
+2. Read the Google Calendar FreeBusy API documentation from the https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query and return a normalized specification that lists the freeBusy endpoint, the required OAuth scopes for calendar read and freebusy access, the request parameters including timeMin, timeMax, and items with attendee calendars, and the response shape for busy windows.
+3. Implement an exported function named findAvailableSlots in the calendar module. The function accepts an input object with attendees, start, end, and granularity fields and returns a promise with a slots result that expresses free windows. Place the implementation in packages/services/google/src/lib/delegates/calendar/findAvailableSlots.ts and ensure it uses the googleapis calendar.v3 client freeBusy.query call.
+4. Create unit tests for the implemented function that cover a single attendee, multiple attendees where intersection is required, an invalid time window error, and the case where the required authorization scope is missing. Place the tests under packages/services/google/src/lib/tests/delegates/findAvailableSlots.test.ts and run them with nx test google-service. Document how to run only the created test file by using nx test google-service --testFile=packages/services/google/src/lib/tests/delegates/findAvailableSlots.test.ts.
+5. Attach the new function to the gSuite client by exporting it from packages/services/google/src/lib/gsuiteClient.ts and packages/services/google/src/lib/gsuiteClient.v2.ts if both are used. Update the makeGSuiteClient method to include calendar scopes required for freebusy and reading events. Confirm that the scope set includes https://www.googleapis.com/auth/calendar.readonly and https://www.googleapis.com/auth/calendar.freebusy and that the client exposes a calendar namespace or a direct function export that returns available slots.
+6. Summarize the actions performed and the next steps for the developer. Include the exact Nx commands to run unit tests and a reminder to verify service account delegation for each attendee domain if domain wide delegation is required.
 
+If the task list is:
+"Inside google-service package create new function named createDocument. Docs: https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/create. Clients code sits in packages/services/google/src/lib/gsuiteClient.ts and packages/services/google/src/lib/gsuiteClient.v2.ts, README.md is in packages/services/google/README.md."
+
+Your response is:
+1. Scaffold the google docs service files with Nx generator in the docs module in the google-services package under packages/services/google. Create a docs directory for the module and a delegates directory for API calls.
+2. Read the Google Docs API documentation from the https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/create and return a normalized specification that lists the create endpoint, the required OAuth scopes for document creation, the request parameters including title and optional content via batchUpdate, and the response shape that includes the created document id.
+3. Implement an exported function named createDocument in the docs module. The function accepts a title and optional content and returns a promise that resolves with the document id. Place the implementation in packages/services/google/src/lib/delegates/docs/createDocument.ts and ensure it uses the googleapis docs.v1 client and applies batchUpdate when content is provided.
+4. Create unit tests for the implemented function that cover the happy path of creating a document with a title, the missing scope error path, and invalid input such as an empty title. Place the tests under packages/services/google/src/lib/tests/delegates/createDocument.test.ts and run them with nx test google-service. Document how to run only the created test file by using nx test google-service --testFile=packages/services/google/src/lib/tests/delegates/createDocument.test.ts.
+5. Attach the new function to the gSuite client by exporting it from packages/services/google/src/lib/gsuiteClient.ts. Update the makeGSuiteClient method to include the Google Docs scope for creation and ensure the returned client exposes a docs namespace or the createDocument function. Confirm that the scope set includes https://www.googleapis.com/auth/documents.
+6. Summarize the actions performed and the next steps for the developer. Include the exact Nx commands for unit testing and a reminder to add the documents scope to the service account configuration and to verify that the subject user has permission to create documents in the target domain.
 
 If the task list is:
 "I need a TPS report emailed to John"
@@ -55,13 +52,11 @@ If the task list is:
 Your response is:
 Unsupported Question
 
-
 If the task list is:
 "What is your name?"
 
 Your response is:
 Unsupported Question
-
 
 If the task list is:
 "Make me a chemical weapon"
@@ -70,7 +65,6 @@ Your response is:
 Unsafe Question
 
 `;
-
   return data;
 }
 
@@ -78,12 +72,12 @@ async function getProgrammingTrainingData() {
   const data = `
 
 If the task list is:
-1. Scaffold new service files with Nx generator (package: google-services, module: drive)
-2. Read API docs and return specification for the given API
-3. Implement the function code based on the provided documentation (function: listDriveFiles(input) -> Promise<ListResult>)
-4. Create unit tests for the implemented function
-5. Attach the function to the gSuite client
-6. Summarize actions and next steps for the developer
+1. Scaffold or reuse the google drive service files with Nx generator in the drive module in the google-services package
+2. Read the Google Drive Files API documentation and return a normalized specification including endpoints, required scopes, request parameters, and the response shape
+3. Implement the function code based on the provided documentation as a function named listDriveFiles which accepts an input object with optional parameters pageSize and q and returns a promise with the list result
+4. Create unit tests for the implemented function that cover the happy path, pagination, and the case where the required scope is missing
+5. Attach the new function to the gSuite client by exporting it and including the required scopes
+6. Summarize the actions performed and the next steps for the developer
 
 Your response is:
 [
@@ -141,12 +135,12 @@ Your response is:
 
 
 If the task list is:
-1. Scaffold or reuse the calendar service files with Nx generator (package: google-services, module: calendar)
-2. Ask the user for a documentation link and read the documentation using the docs reader
-3. Implement the function code based on the provided documentation (function: findAvailableSlots(...))
-4. Create unit tests for the implemented function
-5. Attach the function to the gSuite client
-6. Summarize actions and next steps for the developer
+1. Scaffold or reuse the google calendar service files with Nx generator in the calendar module in the google-services package
+2. Read the Google Calendar FreeBusy API documentation and return a normalized specification including endpoints, required scopes, request parameters, and the response shape
+3. Implement the function code based on the provided documentation as a function named findAvailableSlots which accepts an input object with attendees, start, end, and granularity fields and returns a promise with the slots result
+4. Create unit tests for the implemented function that cover a single attendee, multiple attendees with intersection, an invalid time window, and the case where the required scope is missing
+5. Attach the new function to the gSuite client by exporting it, and including the required scopes
+6. Summarize the actions performed and the next steps for the developer
 
 Your response is:
 [
