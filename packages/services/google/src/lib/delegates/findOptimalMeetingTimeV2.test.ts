@@ -281,7 +281,7 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
     expect(slots).toHaveLength(0);
   });
 
-  xit('skips weekends even across multi-day spans', async () => {
+  it('skips weekends even across multi-day spans', async () => {
     currentCalendarsFixture = { 'a@corp.com': { busy: [] } };
 
     const windowStartLocal = new Date('2025-07-26T08:00:00'); // Sat
@@ -305,7 +305,7 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
     for (const s of slots) expect(new Date(s.start).getDay()).toBe(1);
   });
 
-  xit('skipFriday=true removes Friday slots in mixed Thu→Fri range', async () => {
+  it('skipFriday=true removes Friday slots in mixed Thu→Fri range', async () => {
     currentCalendarsFixture = { 'a@corp.com': { busy: [] } };
 
     const windowStartLocal = new Date('2025-07-24T08:00:00'); // Thu
