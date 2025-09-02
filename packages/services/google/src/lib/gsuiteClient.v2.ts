@@ -38,8 +38,12 @@ export async function makeGSuiteClientV2(
       const timezone = 'America/Los_Angeles';
       const fallbackOffsetMinutes = -420;
 
+      console.log(`calling with deriveWindowFromTimeframe ${JSON.stringify(meetingRequest, null, 2)}`);
+
       const { windowStartLocal, windowEndLocal, slotStepMinutes } =
         deriveWindowFromTimeframe(meetingRequest, timezone, timezone);
+
+      console.log(`deriveWindowFromTimeframe returned start time of ${windowStartLocal} and end time of ${windowEndLocal}`)
 
       const slots = await findOptimalMeetingTimeV2({
         calendar: v1Client.getCalendarClient(),
