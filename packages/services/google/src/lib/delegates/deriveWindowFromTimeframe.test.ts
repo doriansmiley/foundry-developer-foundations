@@ -71,7 +71,7 @@ describe('deriveWindowFromTimeframe', () => {
 
     const now = new Date('2025-07-22T09:00:00');
     const { windowStartLocal, windowEndLocal, slotStepMinutes } =
-      deriveWindowFromTimeframe(req, timezone, now);
+      deriveWindowFromTimeframe(req, timezone, timezone, now);
 
     expect(slotStepMinutes).toBe(1);
     expectWallClock(windowStartLocal, 2025, 7, 22, 10, 10);
@@ -88,19 +88,19 @@ describe('deriveWindowFromTimeframe', () => {
 
     const now = new Date('2025-07-22T06:00:00');
     const { windowStartLocal, windowEndLocal, slotStepMinutes } =
-      deriveWindowFromTimeframe(req, timezone, now);
+      deriveWindowFromTimeframe(req, timezone, timezone, now);
 
     expect(slotStepMinutes).toBe(1);
     expectWallClock(windowStartLocal, 2025, 7, 22, 8, 0);
     expectWallClock(windowEndLocal, 2025, 7, 22, 8, 30);
   });
 
-  xit('as soon as possible: inside working hours → start = now (clamped), end = Friday 17:00 of same week', () => {
+  it('as soon as possible: inside working hours → start = now (clamped), end = Friday 17:00 of same week', () => {
     const req = buildReq({ timeframe_context: 'as soon as possible' });
     const now = new Date('2025-07-22T10:05:00'); // Tue
 
     const { windowStartLocal, windowEndLocal, slotStepMinutes } =
-      deriveWindowFromTimeframe(req, timezone, now);
+      deriveWindowFromTimeframe(req, timezone, timezone, now);
 
     expect(slotStepMinutes).toBe(30);
     // start should be 10:05 (no rounding here; v2 will round when slicing)
@@ -110,12 +110,13 @@ describe('deriveWindowFromTimeframe', () => {
     expect(windowEndLocal.getTime()).toBe(expectedFri.getTime());
   });
 
-  xit('as soon as possible: after hours → next business day 08:00, end = Friday 17:00', () => {
+  it('as soon as possible: after hours → next business day 08:00, end = Friday 17:00', () => {
     const req = buildReq({ timeframe_context: 'as soon as possible' });
     const now = new Date('2025-07-22T18:10:00'); // Tue after hours
 
     const { windowStartLocal, windowEndLocal } = deriveWindowFromTimeframe(
       req,
+      timezone,
       timezone,
       now
     );
@@ -134,6 +135,7 @@ describe('deriveWindowFromTimeframe', () => {
     const { windowStartLocal, windowEndLocal } = deriveWindowFromTimeframe(
       req,
       timezone,
+      timezone,
       now
     );
 
@@ -151,6 +153,7 @@ describe('deriveWindowFromTimeframe', () => {
     const { windowStartLocal, windowEndLocal } = deriveWindowFromTimeframe(
       req,
       timezone,
+      timezone,
       now
     );
 
@@ -159,12 +162,13 @@ describe('deriveWindowFromTimeframe', () => {
     expect(windowEndLocal.getTime()).toBe(expectedFri.getTime());
   });
 
-  xit('this week: past Friday close → rolls to next week Mon 08:00 → Fri 17:00', () => {
+  it('this week: past Friday close → rolls to next week Mon 08:00 → Fri 17:00', () => {
     const req = buildReq({ timeframe_context: 'this week' });
     const now = new Date('2025-07-25T18:10:00'); // Fri after hours
 
     const { windowStartLocal, windowEndLocal } = deriveWindowFromTimeframe(
       req,
+      timezone,
       timezone,
       now
     );
@@ -181,7 +185,7 @@ describe('deriveWindowFromTimeframe', () => {
     const now = new Date('2025-07-23T10:00:00'); // Wed
 
     const { windowStartLocal, windowEndLocal, slotStepMinutes } =
-      deriveWindowFromTimeframe(req, timezone, now);
+      deriveWindowFromTimeframe(req, timezone, timezone, now);
 
     expect(slotStepMinutes).toBe(30);
 

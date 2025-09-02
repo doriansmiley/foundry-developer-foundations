@@ -3,9 +3,18 @@ import {
   DerivedWindow,
 } from '@codestrap/developer-foundations-types';
 
+/**
+ * Derive a scheduling window from a MeetingRequest.
+ *
+ * @param req       Meeting request
+ * @param currentTZ Time zone the incoming wall-clock values are encoded in
+ * @param targetTZ  Time zone to normalize all outputs to
+ * @param now       "Now" (defaults to system clock)
+ */
 export function deriveWindowFromTimeframe(
   req: MeetingRequest,
-  timezone: string,
+  currentTZ: string,
+  targetTZ: string,
   now: Date = new Date()
 ): DerivedWindow {
   const {
@@ -16,8 +25,8 @@ export function deriveWindowFromTimeframe(
   } = req;
   const stepDefault = 30;
 
-  // Get "now" as a PT wall-clock Date (safe against host TZ)
-  const localNow = nowInTZ(timezone, now);
+  // Normalize "now" from currentTZ → targetTZ (as an absolute instant)
+  const localNow = nowInTZ(targetTZ, currentTZ, now);
 
   switch (timeframe_context) {
     case 'user defined exact date/time': {
@@ -26,47 +35,19 @@ export function deriveWindowFromTimeframe(
           ? localDateString
           : req.timeframe_context;
 
-      // ISO without timezone (e.g., 2025-09-01T09:30 or 2025-09-01 09:30)
+      // ISO without timezone (e.g., 2025-07-22T10:10 or 2025-07-22 10:10[:ss])
       const isoNoTZ = /^\s*\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2})?\s*$/;
 
       let candidate: Date;
       if (isoNoTZ.test(candidateStr)) {
-        // Interpret as wall-clock in target timezone
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        // Interpret as wall-clock in currentTZ → UTC instant
         const m = candidateStr.match(
           /^\s*(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?\s*$/
         )!;
-        const [year, month, day, hour, minute, second] = [
-          +m[1], +m[2], +m[3], +m[4], +m[5], +(m[6] || '0'),
-        ];
-
-        // Use Intl with target timezone to get UTC instant
-        const dtf = new Intl.DateTimeFormat('en-US', {
-          timeZone: timezone,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false,
-        });
-
-        const parts = Object.fromEntries(
-          dtf.formatToParts(new Date(year, month - 1, day, hour, minute, second))
-            .map(x => [x.type, x.value])
-        );
-
-        candidate = new Date(Date.UTC(
-          Number(parts['year']),
-          Number(parts['month']) - 1,
-          Number(parts['day']),
-          Number(parts['hour']),
-          Number(parts['minute']),
-          Number(parts['second'])
-        ));
+        const [Y, M, D, h, mm, s] = [+m[1], +m[2], +m[3], +m[4], +m[5], +(m[6] || '0')];
+        candidate = wallClockToUTC(Y, M, D, h, mm, s, currentTZ);
       } else {
-        // Let JS parse any other format (incl. "Wed Sep 03 2025 ... GMT-0700 (...)")
+        // Strings with explicit offset are real instants already
         const parsed = new Date(candidateStr);
         if (isNaN(parsed.getTime())) {
           throw new Error(
@@ -76,16 +57,15 @@ export function deriveWindowFromTimeframe(
         candidate = parsed;
       }
 
-      // Normalize seconds with UTC setters (host-agnostic)
+      // Snap seconds/millis
       candidate.setUTCSeconds(0, 0);
 
-      const windowStartLocal = new Date(candidate);
-      const windowEndLocal = new Date(
-        candidate.getTime() + duration_minutes * 60_000
-      );
+      const windowStartLocal = candidate; // absolute instant
+      const windowEndLocal = new Date(candidate.getTime() + duration_minutes * 60_000);
       const slotStepMinutes = 1;
 
-      const clampedStart = clampToWorkingInstant(windowStartLocal, working_hours);
+      // ↓↓↓ The fix: clamp boundaries computed in **targetTZ wall-clock**
+      const clampedStart = clampToWorkingInstant(windowStartLocal, working_hours, targetTZ);
       const clampedEnd = new Date(
         Math.max(
           clampedStart.getTime() + duration_minutes * 60_000,
@@ -93,170 +73,201 @@ export function deriveWindowFromTimeframe(
         )
       );
 
-      return {
-        windowStartLocal: clampedStart,
-        windowEndLocal: clampedEnd,
-        slotStepMinutes,
-      };
+      return { windowStartLocal: clampedStart, windowEndLocal: clampedEnd, slotStepMinutes };
     }
 
     case 'as soon as possible': {
-      const start = clampToWorkingInstant(localNow, working_hours);
-      // Search through end of THIS work week; if we're past Friday close, use NEXT week end
-      const endOfSpan = endOfCurrentOrNextWorkWeek(start, working_hours);
-      return {
-        windowStartLocal: start,
-        windowEndLocal: endOfSpan,
-        slotStepMinutes: stepDefault,
-      };
+      const start = clampToWorkingInstant(localNow, working_hours, targetTZ);
+      const endOfSpan = endOfCurrentOrNextWorkWeek(start, working_hours, targetTZ);
+      return { windowStartLocal: start, windowEndLocal: endOfSpan, slotStepMinutes: stepDefault };
     }
 
     case 'this week': {
-      // From now (clamped) to Friday 17:00 of the current ISO week; if already past, return next week window
-      const start = clampToWorkingInstant(localNow, working_hours);
-      const end = endOfWorkWeek(start, working_hours);
+      const start = clampToWorkingInstant(localNow, working_hours, targetTZ);
+      const end = endOfWorkWeek(start, working_hours, targetTZ);
       if (start.getTime() >= end.getTime()) {
-        // We're past business close for this week; bump to next week
-        const next = startOfNextWeek(start, working_hours);
-        const endNext = endOfWorkWeek(next, working_hours);
-        return {
-          windowStartLocal: next,
-          windowEndLocal: endNext,
-          slotStepMinutes: stepDefault,
-        };
+        const next = startOfNextWeek(start, working_hours, targetTZ);
+        const endNext = endOfWorkWeek(next, working_hours, targetTZ);
+        return { windowStartLocal: next, windowEndLocal: endNext, slotStepMinutes: stepDefault };
       }
-      return {
-        windowStartLocal: start,
-        windowEndLocal: end,
-        slotStepMinutes: stepDefault,
-      };
+      return { windowStartLocal: start, windowEndLocal: end, slotStepMinutes: stepDefault };
     }
 
     case 'next week': {
-      const start = startOfNextWeek(localNow, working_hours);
-      const end = endOfWorkWeek(start, working_hours);
-      return {
-        windowStartLocal: start,
-        windowEndLocal: end,
-        slotStepMinutes: stepDefault,
-      };
+      const start = startOfNextWeek(localNow, working_hours, targetTZ);
+      const end = endOfWorkWeek(start, working_hours, targetTZ);
+      return { windowStartLocal: start, windowEndLocal: end, slotStepMinutes: stepDefault };
     }
 
     default: {
-      // Fallback: treat like ASAP
-      const start = clampToWorkingInstant(localNow, working_hours);
-      const endOfSpan = endOfCurrentOrNextWorkWeek(start, working_hours);
-      return {
-        windowStartLocal: start,
-        windowEndLocal: endOfSpan,
-        slotStepMinutes: stepDefault,
-      };
+      const start = clampToWorkingInstant(localNow, working_hours, targetTZ);
+      const endOfSpan = endOfCurrentOrNextWorkWeek(start, working_hours, targetTZ);
+      return { windowStartLocal: start, windowEndLocal: endOfSpan, slotStepMinutes: stepDefault };
     }
   }
 }
 
-/* ---------- date helpers (PT-safe wall-clock) ---------- */
+/* ---------- TZ-aware helpers ---------- */
 
-function nowInTZ(tz: string, ref: Date): Date {
+/**
+ * Convert a Date from one timezone (currentTZ) to another (targetTZ).
+ * If both are equal → no shift.
+ */
+function nowInTZ(targetTZ: string, currentTZ: string, ref: Date): Date {
+  const inCurrent = partsInTZ(ref, currentTZ);
+  const inTarget = partsInTZ(ref, targetTZ);
+  const instantCurrent = Date.UTC(
+    inCurrent.year, inCurrent.month - 1, inCurrent.day,
+    inCurrent.hour, inCurrent.minute, inCurrent.second
+  );
+  const instantTarget = Date.UTC(
+    inTarget.year, inTarget.month - 1, inTarget.day,
+    inTarget.hour, inTarget.minute, inTarget.second
+  );
+  return new Date(ref.getTime() + (instantTarget - instantCurrent));
+}
+
+/**
+ * Interpret a wall-clock Y-M-D h:m:s in `tz` as a UTC instant.
+ * Robust across DST transitions.
+ */
+function wallClockToUTC(
+  year: number, month: number, day: number,
+  hour: number, minute: number, second: number,
+  tz: string
+): Date {
+  // Start with a baseline UTC instant equal to the wall-clock fields.
+  let utcMs = Date.UTC(year, month - 1, day, hour, minute, second);
+  // Iterate to converge (handles DST edges)
+  for (let i = 0; i < 3; i++) {
+    const got = partsInTZ(new Date(utcMs), tz);
+    const gotMs = Date.UTC(got.year, got.month - 1, got.day, got.hour, got.minute, got.second);
+    const wantMs = Date.UTC(year, month - 1, day, hour, minute, second);
+    const delta = wantMs - gotMs;
+    if (delta === 0) break;
+    utcMs += delta;
+  }
+  return new Date(utcMs);
+}
+
+/** Extract Y/M/D/h/m/s in a given TZ for a given instant */
+function partsInTZ(d: Date, tz: string): {
+  year: number; month: number; day: number;
+  hour: number; minute: number; second: number;
+} {
   const dtf = new Intl.DateTimeFormat('en-US', {
     timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
     hour12: false,
   });
-  const p = Object.fromEntries(
-    dtf.formatToParts(ref).map((x) => [x.type, x.value])
-  );
-  return new Date(Date.UTC(
-    Number(p['year']),
-    Number(p['month']) - 1,
-    Number(p['day']),
-    Number(p['hour']),
-    Number(p['minute']),
-    Number(p['second']),
-    0
-  ));
+  const p = Object.fromEntries(dtf.formatToParts(d).map(x => [x.type, x.value]));
+  return {
+    year: +p['year'],
+    month: +p['month'],
+    day: +p['day'],
+    hour: +p['hour'],
+    minute: +p['minute'],
+    second: +p['second'],
+  };
 }
 
-function startOfDayLocal(d: Date): Date {
-  const x = new Date(d);
-  x.setUTCHours(0, 0, 0, 0);
-  return x;
+/** Start of day (00:00) in tz as a UTC instant — FIXED to be TZ midnight, not UTC midnight */
+function startOfDayLocal(d: Date, tz: string): Date {
+  const p = partsInTZ(d, tz);
+  return wallClockToUTC(p.year, p.month, p.day, 0, 0, 0, tz);
 }
 
-function addDays(d: Date, days: number): Date {
-  const x = new Date(d);
-  x.setUTCDate(x.getUTCDate() + days);
-  return x;
+/** Add whole days in tz (handles DST). Returns midnight of the resulting day in tz. */
+function addDaysTZ(d: Date, days: number, tz: string): Date {
+  const p = partsInTZ(d, tz);
+  return wallClockToUTC(p.year, p.month, p.day + days, 0, 0, 0, tz);
 }
 
-function isWeekend(d: Date): boolean {
-  const dow = d.getUTCDay();
+/** Day-of-week in tz: 0=Sun..6=Sat */
+function dowInTZ(d: Date, tz: string): number {
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' });
+  const w = fmt.format(d);
+  switch (w) {
+    case 'Sun': return 0;
+    case 'Mon': return 1;
+    case 'Tue': return 2;
+    case 'Wed': return 3;
+    case 'Thu': return 4;
+    case 'Fri': return 5;
+    case 'Sat': return 6;
+    default: return new Date(d).getUTCDay();
+  }
+}
+
+function isWeekendTZ(d: Date, tz: string): boolean {
+  const dow = dowInTZ(d, tz);
   return dow === 0 || dow === 6;
 }
 
+/**
+ * Clamp an instant to working hours on that day in tz.
+ * If before start → bump to start; if after end → next business day's start.
+ */
 function clampToWorkingInstant(
-  d: Date,
-  hours: { start_hour: number; end_hour: number }
+  instant: Date,
+  hours: { start_hour: number; end_hour: number },
+  tz: string
 ): Date {
-  let x = new Date(d);
-  // If weekend, move to next Monday at start_hour
-  while (isWeekend(x)) {
-    x = startOfDayLocal(addDays(x, 1));
-  }
-  const within = new Date(x);
-  const start = new Date(x);
-  start.setUTCHours(hours.start_hour, 0, 0, 0);
-  const end = new Date(x);
-  end.setUTCHours(hours.end_hour, 0, 0, 0);
+  let x = new Date(instant);
 
-  if (within >= end) {
+  // If weekend, move forward to next Monday start in tz
+  while (isWeekendTZ(x, tz)) {
+    x = addDaysTZ(x, 1, tz); // midnight next day in tz
+  }
+
+  const p = partsInTZ(x, tz); // the actual day in tz we care about
+  const start = wallClockToUTC(p.year, p.month, p.day, hours.start_hour, 0, 0, tz);
+  const end = wallClockToUTC(p.year, p.month, p.day, hours.end_hour, 0, 0, tz);
+
+  if (x >= end) {
     // move to next business day start
-    let y = startOfDayLocal(addDays(x, 1));
-    while (isWeekend(y)) {
-      y = startOfDayLocal(addDays(y, 1));
+    let y = addDaysTZ(x, 1, tz);
+    while (isWeekendTZ(y, tz)) {
+      y = addDaysTZ(y, 1, tz);
     }
-    y.setUTCHours(hours.start_hour, 0, 0, 0);
-    return y;
+    const py = partsInTZ(y, tz);
+    return wallClockToUTC(py.year, py.month, py.day, hours.start_hour, 0, 0, tz);
   }
 
-  if (within < start) return new Date(start);
+  if (x < start) return start;
 
-  return within;
+  return x;
 }
 
-function startOfWeekMonday(d: Date): Date {
-  const x = startOfDayLocal(d);
-  const dow = x.getUTCDay(); // 0 Sun .. 6 Sat
+function startOfWeekMonday(d: Date, tz: string): Date {
+  const day0 = startOfDayLocal(d, tz);
+  const dow = dowInTZ(day0, tz);
   const delta = dow === 0 ? -6 : 1 - dow; // move to Monday
-  return startOfDayLocal(addDays(x, delta));
+  return addDaysTZ(day0, delta, tz);
 }
 
-function startOfNextWeek(d: Date, hours: { start_hour: number }): Date {
-  const nextMon = addDays(startOfWeekMonday(d), 7);
-  nextMon.setUTCHours(hours.start_hour, 0, 0, 0);
-  return nextMon;
+function startOfNextWeek(d: Date, hours: { start_hour: number }, tz: string): Date {
+  const nextMon = addDaysTZ(startOfWeekMonday(d, tz), 7, tz);
+  const p = partsInTZ(nextMon, tz);
+  return wallClockToUTC(p.year, p.month, p.day, hours.start_hour, 0, 0, tz);
 }
 
-function endOfWorkWeek(d: Date, hours: { end_hour: number }): Date {
-  // Friday of the week containing d
-  const mon = startOfWeekMonday(d);
-  const fri = addDays(mon, 4); // Mon + 4 = Fri
-  fri.setUTCHours(hours.end_hour, 0, 0, 0);
-  return fri;
+function endOfWorkWeek(d: Date, hours: { end_hour: number }, tz: string): Date {
+  const mon = startOfWeekMonday(d, tz);
+  const fri = addDaysTZ(mon, 4, tz);
+  const p = partsInTZ(fri, tz);
+  return wallClockToUTC(p.year, p.month, p.day, hours.end_hour, 0, 0, tz);
 }
 
 function endOfCurrentOrNextWorkWeek(
   start: Date,
-  hours: { end_hour: number }
+  hours: { end_hour: number },
+  tz: string
 ): Date {
-  const end = endOfWorkWeek(start, hours);
+  const end = endOfWorkWeek(start, hours, tz);
   if (start.getTime() >= end.getTime()) {
-    return endOfWorkWeek(addDays(start, 7), hours);
+    return endOfWorkWeek(addDaysTZ(start, 7, tz), hours, tz);
   }
   return end;
 }

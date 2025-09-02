@@ -34,11 +34,12 @@ export async function makeGSuiteClientV2(
       message: string;
       suggested_times: { start: string; end: string; score: number }[];
     }> => {
+      // TODO, get the TZ from the user profile
       const timezone = 'America/Los_Angeles';
       const fallbackOffsetMinutes = -420;
 
       const { windowStartLocal, windowEndLocal, slotStepMinutes } =
-        deriveWindowFromTimeframe(meetingRequest, timezone);
+        deriveWindowFromTimeframe(meetingRequest, timezone, timezone);
 
       const slots = await findOptimalMeetingTimeV2({
         calendar: v1Client.getCalendarClient(),
