@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 
-import { findOptimalMeetingTimeV2, Slot } from './findOptimalMeetingTime.v2';
+import { partsInTZ } from '@codestrap/developer-foundations-utils';
 import { OfficeServiceV2 } from '@codestrap/developer-foundations-types';
 import { makeGSuiteClientV2 } from '../gsuiteClient.v2';
 
@@ -10,11 +10,6 @@ if (!process.env.E2E) {
     });
 } else {
     describe('findOptimalMeetingTimeV2 E2E tests', () => {
-        const timezone = 'America/Los_Angeles';
-        const workingHours = { start_hour: 8, end_hour: 17 };
-        const durationMinutes = 30;
-        const slotStepMinutes = 30;
-        const fallbackOffsetMinutes = -420; // PDT
 
         let client: OfficeServiceV2;
 
@@ -29,12 +24,16 @@ if (!process.env.E2E) {
         });
 
         it('should get an exact time within PT working hours', async () => {
+            // LA wall-clock "YYYY-MM-DDT10:30:00" one week from now:
+            const p = partsInTZ(new Date(), 'America/Los_Angeles');
+            const pad = (n: number, len = 2) => String(n).padStart(len, '0');
+            const localDateString = `${p.year}-${pad(p.month)}-${pad(p.day + 7)}T10:30:00`;
 
             const slots = await client.getAvailableMeetingTimes({
                 participants: ['dsmiley@codestrap.me'],
                 subject: 'Circle Up',
                 timeframe_context: 'user defined exact date/time',
-                localDateString: 'Tue Sep 09 2025 10:30:00 GMT-0700 (Pacific Daylight Time)',
+                localDateString,
                 duration_minutes: 30,
                 working_hours: {
                     start_hour: 8,

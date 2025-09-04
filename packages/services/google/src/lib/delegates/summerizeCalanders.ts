@@ -1,9 +1,9 @@
 // types/summarizeCalendars.ts
 import { calendar_v3 } from 'googleapis';
 import {
-  toUTCFromWallClock,
   toZonedISOString,
-} from './findOptimalMeetingTime.v2';
+  toUTCFromWallClockLocal,
+} from '@codestrap/developer-foundations-utils';
 import {
   CalendarSummary,
   EventSummary,
@@ -11,13 +11,13 @@ import {
   Summaries,
 } from '@codestrap/developer-foundations-types';
 
+/* ----------------------------------------------------------------------- */
+
 function extractMeetingLink(evt: calendar_v3.Schema$Event): string | undefined {
   // Google Meet
   if (evt.hangoutLink) return evt.hangoutLink;
   // 3P links in description or location
-  const text = `${evt.summary ?? ''} ${evt.description ?? ''} ${
-    evt.location ?? ''
-  }`;
+  const text = `${evt.summary ?? ''} ${evt.description ?? ''} ${evt.location ?? ''}`;
   const regex =
     /(https?:\/\/[^\s]*?(zoom\.us|teams\.microsoft\.com|meet\.google\.com|gotomeet\.|webex\.com)[^\s]*)/i;
   const m = text.match(regex);
@@ -47,21 +47,20 @@ async function fetchCalendar(
     (res.data.items ?? []).forEach((evt) => {
       if (!evt.start?.dateTime || !evt.end?.dateTime) return;
 
-      const dur =
-        (new Date(evt.end.dateTime).getTime() -
-          new Date(evt.start.dateTime).getTime()) /
-        60000;
+      const startUTC = new Date(evt.start.dateTime);
+      const endUTC = new Date(evt.end.dateTime);
+      if (isNaN(startUTC.getTime()) || isNaN(endUTC.getTime())) return;
+
+      const dur = (endUTC.getTime() - startUTC.getTime()) / 60000;
 
       events.push({
         id: evt.id!,
         subject: evt.summary ?? '',
         description: evt.description ?? undefined,
-        start: toZonedISOString(new Date(evt.start.dateTime), tz),
-        end: toZonedISOString(new Date(evt.end.dateTime), tz),
+        start: toZonedISOString(startUTC, tz),
+        end: toZonedISOString(endUTC, tz),
         durationMinutes: Math.round(dur),
-        participants: (evt.attendees ?? [])
-          .map((a) => a.email!)
-          .filter(Boolean),
+        participants: (evt.attendees ?? []).map((a) => a.email!).filter(Boolean),
         meetingLink: extractMeetingLink(evt),
       });
     });
@@ -77,14 +76,15 @@ export async function summarizeCalendars(
 ): Promise<Summaries> {
   const { calendar, emails, timezone, windowStartLocal, windowEndLocal } = args;
 
-  const timeMin = toUTCFromWallClock(windowStartLocal, timezone).toISOString();
-  const timeMax = toUTCFromWallClock(windowEndLocal, timezone).toISOString();
+  // Convert local wall-clock bounds to UTC instants using your utils.
+  const timeMin = toUTCFromWallClockLocal(windowStartLocal, timezone).toISOString();
+  const timeMax = toUTCFromWallClockLocal(windowEndLocal, timezone).toISOString();
+
+  console.log(`summarizeCalendars fetchCalendar for timeMin ${timeMin} timeMax ${timeMax}`);
 
   // Kick off all fetches in parallel
   const settled = await Promise.allSettled(
-    emails.map((email) =>
-      fetchCalendar(calendar, email, timeMin, timeMax, timezone)
-    )
+    emails.map((email) => fetchCalendar(calendar, email, timeMin, timeMax, timezone))
   );
 
   // Split successes / failures
@@ -95,9 +95,7 @@ export async function summarizeCalendars(
     if (result.status === 'fulfilled') {
       calendars.push(result.value);
     } else {
-      failures.push(
-        `${emails[idx]}: ${result.reason?.message ?? 'unknown error'}`
-      );
+      failures.push(`${emails[idx]}: ${result.reason?.message ?? 'unknown error'}`);
     }
   });
 

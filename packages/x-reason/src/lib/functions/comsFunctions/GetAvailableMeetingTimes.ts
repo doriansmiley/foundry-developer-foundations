@@ -224,19 +224,18 @@ Your response is:
                 allAvailable: false,
             }
         }
-        // the array is presorted based on score, so we take the first one:
-        const time = availableTimes.suggested_times[0];
+        // the array is presorted based on score, 
+        // we return all the times for use cases there people want the explore the times themselves
+        const times = availableTimes.suggested_times.map(time => ({
+            start: time.start,
+            end: time.end,
+            availableAttendees: participants,
+            unavailableAttendees: [],
+        }));
         const message = availableTimes.message;
 
         const returnValue: ProposedTimes = {
-            times: [
-                {
-                    start: time.start,
-                    end: time.end,
-                    availableAttendees: participants,
-                    unavailableAttendees: [],
-                }
-            ], // Array of available time slots
+            times, // Array of available time slots
             agenda: message,
             subject: parsedResult.subject, // Meeting subject or title
             durationInMinutes: inputs.duration_minutes, // Meeting duration in minutes

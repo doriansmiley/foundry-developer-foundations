@@ -33,6 +33,8 @@ export async function resolveUnavailableAttendees(context: Context, event?: Mach
 
     let emails: string[] = [];
     const resultOfMeetingSchedulingAttempt = context[stateId] as ProposedTimes;
+    console.log(`resultOfMeetingSchedulingAttempt is: 
+        ${JSON.stringify(resultOfMeetingSchedulingAttempt, null, 2)}`);
     const dayTimes = resultOfMeetingSchedulingAttempt.times.reduce((acc, cur) => {
         emails = [...emails, ...cur.unavailableAttendees, ...cur.availableAttendees]
         acc = `${acc}
