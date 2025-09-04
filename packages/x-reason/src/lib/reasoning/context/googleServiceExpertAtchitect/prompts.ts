@@ -82,10 +82,93 @@ A comprehensive Google Workspace integration library providing seamless access t
 "
 
 Your response is:
-1. Confirm with user intent to "create" new function "listDriveFiles" in module "drive".
-2. Search for the Google Drive API documentation links which allows to list drive files.
-3. Build grounded prompt for Google Service Expert AI agent.
+1. Confirm user intent to "create" new function "listDriveFiles" in module "drive".
+2. Search for the the documentation
+3. Confirm detailed implementation plan
+4. Scaffold new function files
+5. Read provided documentation
+6. Implement the function
+7. Create unit tests for the implemented function
+8. Expose function via latest version of the gSuiteClient
 
+
+If the query is:
+"inside google-service package implement google doc service
+
+List of existing functions:
+# Google Service Package 🚀
+
+A comprehensive Google Workspace integration library providing seamless access to Gmail and Google Calendar APIs. This package offers both v1 and v2 clients with enhanced functionality for email management, calendar operations, and intelligent meeting scheduling.
+
+## 📋 Available Functions
+
+### Email Operations
+
+#### \`sendEmail\`
+
+- **Input**:
+
+\`\`\`typescript
+{
+  from: "sender@company.com",
+  recipients: ["recipient1@example.com", "recipient2@example.com"],
+  subject: "Project Update Meeting",
+  message: "Hi team, let's schedule our weekly sync. Please review the agenda attached."
+}
+\`\`\`
+
+- **Output**:
+
+\`\`\`typescript
+{
+  id: "18e2c3f4a5b6c7d8",
+  threadId: "18e2c3f4a5b6c7d8",
+  labelIds: ["SENT", "INBOX"]
+}
+\`\`\`
+
+- **Description**: Sends an email through Gmail API with support for multiple recipients. Returns the message ID and thread information for tracking and follow-up operations.
+
+#### \`readEmailHistory\`
+
+- **Input**:
+
+\`\`\`typescript
+{
+  email: "user@company.com",
+  publishTime: "2024-01-15T10:30:00Z",
+  labels: ["INBOX", "IMPORTANT"]
+}
+\`\`\`
+
+- **Output**:
+
+\`\`\`typescript
+{
+  messages: [
+    {
+      subject: 'Re: Project Timeline',
+      from: 'client@example.com',
+      body: 'Thanks for the update. The timeline looks good.',
+      id: '18e2c3f4a5b6c7d8',
+      threadId: '18e2c3f4a5b6c7d8',
+    },
+  ];
+}
+\`\`\`
+
+- **Description**: Retrieves email history from a specific timestamp with optional label filtering. Perfect for processing incoming emails and extracting relevant communication data.
+"
+
+Your response is:
+1. Confirm user intent, what exactly user want to implement
+2. Search for the the documentation
+3. Confirm detailed implementation plan
+4. Scaffold new function files
+5. Read provided documentation
+6. Implement the function
+7. Create unit tests for the implemented function
+8. Expose function via latest version of the gSuiteClient
 
 If the query is:
 "inside google-service package Create drive listing, update, add functionlities
@@ -157,12 +240,31 @@ A comprehensive Google Workspace integration library providing seamless access t
 
 Your response is:
 1. Confirm with user intent to "create" new function "listDriveFiles" in module "drive".
-2. Search for the Google Drive API documentation links which allows to list drive files.
+2. Search for the documentation
 3. Confirm with user intent to "create" new function "updateDriveFile" in module "drive".
-4. Search for the Google Drive API documentation which allows to update drive file.
+4. Search for the documentation
 5. Confirm with user intent to "create" new function "addDriveFile" in module "drive".
-6. Search for the Google Drive API documentation which allows to add drive file.
-7. Build grounded prompt for Google Service Expert AI agent.
+6. Search for the documentation
+7. Confirm detailed implementation plan
+8. Scaffold listDriveFiles function files
+9. Read documentation for listDriveFiles function
+10. Implement listDriveFiles function
+11. Create unit tests for the implemented listDriveFiles function
+12. Expose listDriveFiles function via latest version of the gSuiteClient
+13. Run human review of the implementation
+14. Scaffold updateDriveFile function files
+15. Read documentation for updateDriveFile function
+16. Implement updateDriveFile function
+17. Create unit tests for the implemented updateDriveFile function
+18. Expose updateDriveFile function via latest version of the gSuiteClient
+19. Run human review of the implementation
+20. Scaffold addDriveFile function files
+21. Read documentation for addDriveFile function
+22. Implement addDriveFile function
+23. Create unit tests for the implemented addDriveFile function
+24. Expose addDriveFile function via latest version of the gSuiteClient
+25. Run human review of the implementation
+
 
 If the query is:
 "inside google-service package create sendEmail function
@@ -233,15 +335,20 @@ A comprehensive Google Workspace integration library providing seamless access t
 "
 
 Your response is:
-1. Tell user that "sendEmail" function already exists under given path.
-2. Explain the functionality of current function.
-3. Ask user if he want to proceed with the modification or would like to create new sendEmailV2 function.
-4. Search for the Gmail API documentation which allows to send email.
-5. Build grounded prompt for Google Service Expert AI agent.
+1. Confirm user intent as function "sendEmail" already exists under given path, ask user if he want to proceed with the modification or would like to create new function or just explain.
+2. If user want to proceed with the modification, search for function usage in codebase.
+2. Search for documentation.
+3. Confirm detailed implementation plan
+4. Scaffold new function files
+5. Read provided documentation
+6. Implement the function
+7. Create unit tests for the implemented function
+8. Expose function via latest version of the gSuiteClient
+9. Run human review of the implementation
 
 
 If the query is:
-"inside google-service package create readEmailHistory function
+"inside google-service package update sendEmail function to support multiple templates
 
 List of existing functions:
 # Google Service Package 🚀
@@ -309,372 +416,14 @@ A comprehensive Google Workspace integration library providing seamless access t
 "
 
 Your response is:
-1. Tell user that "readEmailHistory" function already exists under given path.
-2. Explain the functionality of current function.
-3. Ask user if he want to proceed with the modification or would like to create new readEmailHistoryV2 function.
-4. Search for the Gmail API documentation which allows to send email.
-5. Build grounded prompt for Google Service Expert AI agent.
-
-If the query is:
-"inside google-service package create getAvailableMeetingTimes function
-
-List of existing functions:
-# Google Service Package 🚀
-
-A comprehensive Google Workspace integration library providing seamless access to Gmail and Google Calendar APIs. This package offers both v1 and v2 clients with enhanced functionality for email management, calendar operations, and intelligent meeting scheduling.
-
-## 📋 Available Functions
-
-### Email Operations
-
-#### \`sendEmail\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  from: "sender@company.com",
-  recipients: ["recipient1@example.com", "recipient2@example.com"],
-  subject: "Project Update Meeting",
-  message: "Hi team, let's schedule our weekly sync. Please review the agenda attached."
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  id: "18e2c3f4a5b6c7d8",
-  threadId: "18e2c3f4a5b6c7d8",
-  labelIds: ["SENT", "INBOX"]
-}
-\`\`\`
-
-- **Description**: Sends an email through Gmail API with support for multiple recipients. Returns the message ID and thread information for tracking and follow-up operations.
-
-#### \`readEmailHistory\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  email: "user@company.com",
-  publishTime: "2024-01-15T10:30:00Z",
-  labels: ["INBOX", "IMPORTANT"]
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  messages: [
-    {
-      subject: 'Re: Project Timeline',
-      from: 'client@example.com',
-      body: 'Thanks for the update. The timeline looks good.',
-      id: '18e2c3f4a5b6c7d8',
-      threadId: '18e2c3f4a5b6c7d8',
-    },
-  ];
-}
-\`\`\`
-
-- **Description**: Retrieves email history from a specific timestamp with optional label filtering. Perfect for processing incoming emails and extracting relevant communication data.
-
-#### \`getAvailableMeetingTimes\` (v1)
-
-- **Input**:
-
-\`\`\`typescript
-{
-  participants: ["alice@company.com", "bob@company.com"],
-  subject: "Design Review Meeting",
-  timeframe_context: "this week",
-  duration_minutes: 60,
-  working_hours: {
-    start_hour: 9,
-    end_hour: 17
-  }
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  suggested_times: [
-    {
-      start: "2024-02-14T10:00:00-08:00",
-      end: "2024-02-14T11:00:00-08:00",
-      score: 0.95
-    },
-    {
-      start: "2024-02-15T14:00:00-08:00",
-      end: "2024-02-15T15:00:00-08:00",
-      score: 0.87
-    }
-  ],
-  message: "Found 2 optimal meeting times based on participant availability"
-}
-\`\`\`
-
-- **Description**: Analyzes participant calendars to find optimal meeting times within specified constraints. Uses intelligent scoring to rank suggestions based on availability and preferences.
-
-#### \`getAvailableMeetingTimes\` (v2 - Enhanced)
-
-- **Input**: Same as v1
-- **Output**:
-
-\`\`\`typescript
-{
-  message: "Found 3 suggested times",
-  suggested_times: [
-    {
-      start: "2024-02-14T10:00:00-08:00",
-      end: "2024-02-14T11:00:00-08:00",
-      score: 0.95
-    }
-  ]
-}
-\`\`\`
-
-- **Description**: Enhanced version with improved scheduling algorithms and better conflict resolution. Provides more accurate availability analysis with refined scoring mechanisms.
-"
-
-Your response is:
-1. Tell user that "getAvailableMeetingTimes" and "getAvailableMeetingTimesV2" functions already exists under given paths.
-2. Explain the functionality of current function.
-3. Ask user if he want to proceed with the modification or would like to create new getAvailableMeetingTimesV3 function.
-4. Search for the Google Calendar API documentation which allows to get available meeting times.
-5. Build grounded prompt for Google Service Expert AI agent.
-
-If the query is:
-"inside google-service package create drive listing function
-
-List of existing functions:
-# Google Service Package 🚀
-
-A comprehensive Google Workspace integration library providing seamless access to Gmail and Google Calendar APIs. This package offers both v1 and v2 clients with enhanced functionality for email management, calendar operations, and intelligent meeting scheduling.
-
-## 📋 Available Functions
-
-### Email Operations
-
-#### \`sendEmail\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  from: "sender@company.com",
-  recipients: ["recipient1@example.com", "recipient2@example.com"],
-  subject: "Project Update Meeting",
-  message: "Hi team, let's schedule our weekly sync. Please review the agenda attached."
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  id: "18e2c3f4a5b6c7d8",
-  threadId: "18e2c3f4a5b6c7d8",
-  labelIds: ["SENT", "INBOX"]
-}
-\`\`\`
-
-- **Description**: Sends an email through Gmail API with support for multiple recipients. Returns the message ID and thread information for tracking and follow-up operations.
-
-#### \`readEmailHistory\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  email: "user@company.com",
-  publishTime: "2024-01-15T10:30:00Z",
-  labels: ["INBOX", "IMPORTANT"]
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  messages: [
-    {
-      subject: 'Re: Project Timeline',
-      from: 'client@example.com',
-      body: 'Thanks for the update. The timeline looks good.',
-      id: '18e2c3f4a5b6c7d8',
-      threadId: '18e2c3f4a5b6c7d8',
-    },
-  ];
-}
-\`\`\`
-
-- **Description**: Retrieves email history from a specific timestamp with optional label filtering. Perfect for processing incoming emails and extracting relevant communication data.
-"
-m
-Your response is:
-1. Confirm with user intent to "modify" function "sendEmail" in module "gmail".
-2. Search for the Gmail API documentation which allows to send email.
-3. Search codebase for the "sendEmail" function references and ask user if he want to proceed with the modification or would like to create v2 version of the function.
-4. Generate grounded prompt for Google Service Expert AI agent.
-
-
-If the query is:
-"inside google-service package update sendEmail function to support multiple templates and define 2 new boilerplate templates in templates catalog
-
-List of existing functions:
-# Google Service Package 🚀
-
-A comprehensive Google Workspace integration library providing seamless access to Gmail and Google Calendar APIs. This package offers both v1 and v2 clients with enhanced functionality for email management, calendar operations, and intelligent meeting scheduling.
-
-## 📋 Available Functions
-
-### Email Operations
-
-#### \`sendEmail\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  from: "sender@company.com",
-  recipients: ["recipient1@example.com", "recipient2@example.com"],
-  subject: "Project Update Meeting",
-  message: "Hi team, let's schedule our weekly sync. Please review the agenda attached."
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  id: "18e2c3f4a5b6c7d8",
-  threadId: "18e2c3f4a5b6c7d8",
-  labelIds: ["SENT", "INBOX"]
-}
-\`\`\`
-
-- **Description**: Sends an email through Gmail API with support for multiple recipients. Returns the message ID and thread information for tracking and follow-up operations.
-
-#### \`readEmailHistory\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  email: "user@company.com",
-  publishTime: "2024-01-15T10:30:00Z",
-  labels: ["INBOX", "IMPORTANT"]
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  messages: [
-    {
-      subject: 'Re: Project Timeline',
-      from: 'client@example.com',
-      body: 'Thanks for the update. The timeline looks good.',
-      id: '18e2c3f4a5b6c7d8',
-      threadId: '18e2c3f4a5b6c7d8',
-    },
-  ];
-}
-\`\`\`
-
-- **Description**: Retrieves email history from a specific timestamp with optional label filtering. Perfect for processing incoming emails and extracting relevant communication data.
-"
-m
-Your response is:
-1. Confirm with user intent to "create" new function "listDriveFiles" in module "drive".
-2. Search for the Google Drive API documentation which allows to list drive files.
-3. Confirm with user intent to "modify" function "sendEmail" in module "gmail".
-4. Search for the Gmail API documentation which allows to send email.
-5. Search codebase for the "sendEmail" function references and ask user if he want to proceed with the modification or would like to create v2 version of the function.
-6. Generate grounded prompt for Google Service Expert AI agent.
-
-If the query is:
-"inside google-service package create functionality to attach drive files to email sending function
-
-List of existing functions:
-# Google Service Package 🚀
-
-A comprehensive Google Workspace integration library providing seamless access to Gmail and Google Calendar APIs. This package offers both v1 and v2 clients with enhanced functionality for email management, calendar operations, and intelligent meeting scheduling.
-
-## 📋 Available Functions
-
-### Email Operations
-
-#### \`sendEmail\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  from: "sender@company.com",
-  recipients: ["recipient1@example.com", "recipient2@example.com"],
-  subject: "Project Update Meeting",
-  message: "Hi team, let's schedule our weekly sync. Please review the agenda attached."
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  id: "18e2c3f4a5b6c7d8",
-  threadId: "18e2c3f4a5b6c7d8",
-  labelIds: ["SENT", "INBOX"]
-}
-\`\`\`
-
-- **Description**: Sends an email through Gmail API with support for multiple recipients. Returns the message ID and thread information for tracking and follow-up operations.
-
-#### \`readEmailHistory\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  email: "user@company.com",
-  publishTime: "2024-01-15T10:30:00Z",
-  labels: ["INBOX", "IMPORTANT"]
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  messages: [
-    {
-      subject: 'Re: Project Timeline',
-      from: 'client@example.com',
-      body: 'Thanks for the update. The timeline looks good.',
-      id: '18e2c3f4a5b6c7d8',
-      threadId: '18e2c3f4a5b6c7d8',
-    },
-  ];
-}
-\`\`\`
-
-- **Description**: Retrieves email history from a specific timestamp with optional label filtering. Perfect for processing incoming emails and extracting relevant communication data.
-"
-m
-Your response is:
-1. Confirm with user intent to "create" new function "listDriveFiles" in module "drive".
-2. Search for the Google Drive API documentation which allows to list drive files.
-3. Confirm with user intent to "modify" function "sendEmail" in module "gmail".
-4. Search for the Gmail API documentation which allows to send email.
-5. Search codebase for the "sendEmail" function references and ask user if he want to proceed with the modification or would like to create v2 version of the function.
-6. Generate grounded prompt for Google Service Expert AI agent.
+1. Confirm user intent to "modify" function "sendEmail" and clarify functionality
+2. Search for function usage in codebase.
+3. Search for documentation.
+4. Confirm detailed implementation plan
+5. Run function modification with new functionality
+6. Run unit tests to make sure that regression is not introduced
+7. Expose function via latest version of the gSuiteClient if needed
+8. Run human review of the implementation
 
 If the query is:
 "I need a TPS report emailed to John"
@@ -702,62 +451,80 @@ async function getProgrammingTrainingData() {
   const data = `
 
 If the task list is:
-1. Confirm with user intent to "create" new function "listDriveFiles" in module "drive".
-2. Search for the Google Drive API documentation which allows to list drive files.
-3. Confirm with user intent to "modify" function "sendEmail" in module "gmail".
-4. Search for the Gmail API documentation which allows to send email.
-5. Search codebase for the "sendEmail" function references and ask user if he want to proceed with the modification or would like to create v2 version of the function.
-6. Generate grounded prompt for Google Service Expert AI agent.
+1. Confirm user intent to "create" new function "listDriveFiles".
+2. Search for the the documentation
+3. Confirm detailed implementation plan
+4. Scaffold new function files
+5. Read provided documentation
+6. Implement the function
+7. Create unit tests for the implemented function
+8. Expose function via latest version of the gSuiteClient
 
 Your response is:
 [
   {
-    "id": "SetIntentAndFunctionName",
+    "id": "ConfirmUserIntent",
     "transitions": [
       { "on": "CONTINUE", "target": "SearchForDocumentation" },
+       {
+        "on": "PAUSE",
+        "target": "pause"
+      },
       { "on": "ERROR", "target": "failure" }
     ],
-    "task": "Confirm with user intent to \"create\" new function \"listDriveFiles\" in module \"drive\"",
+    "task": "Confirm user intent to \"create\" new function \"listDriveFiles\" in module \"drive\".",
   },
   {
     "id": "SearchForDocumentation",
     "transitions": [
-      { "on": "CONTINUE", "target": "SetIntentAndFunctionName" },
+      { "on": "CONTINUE", "target": "ConfirmDetailedImplementationPlan" },
       { "on": "ERROR", "target": "failure" }
     ],
-    "task": "Search for the Google Drive API documentation which allows to list drive files.",
+    "task": "Search for the the documentation",
   },
   {
-    "id": "SetIntentAndFunctionName",
+    "id": "ConfirmDetailedImplementationPlan",
     "transitions": [
-      { "on": "CONTINUE", "target": "SearchForDocumentation" },
+      { "on": "CONTINUE", "target": "ScaffoldNewFunctionFiles" },
+       {
+        "on": "PAUSE",
+        "target": "pause"
+      },
       { "on": "ERROR", "target": "failure" }
     ],
-    "task": "Confirm with user intent to \"modify\" function \"sendEmail\" in module \"gmail\"",
+    "task": "Confirm detailed implementation plan",
   },
   {
-    "id": "SearchForDocumentation",
+    "id": "ScaffoldNewFunctionFiles",
     "transitions": [
-      { "on": "CONTINUE", "target": "SearchInCodebase" },
+      { "on": "CONTINUE", "target": "ReadProvidedDocumentation" },
       { "on": "ERROR", "target": "failure" }
     ],
-    "task": "Search for the Gmail API documentation which allows to send email.",
+    "task": "Scaffold new function files using Nx generators",
   },
   {
-    "id": "SearchInCodebase",
+    "id": "ReadProvidedDocumentation",
     "transitions": [
-      { "on": "CONTINUE", "target": "CreateGroundedPrompt" },
+      { "on": "CONTINUE", "target": "ImplementTheFunction" },
       { "on": "ERROR", "target": "failure" }
     ],
-    "task": "Search codebase for the \"sendEmail\" function references and ask user if he want to proceed with the modification or would like to create v2 version of the function.",
+    "task": "Read provided documentation",
   },
   {
-    "id": "CreateGroundedPrompt",
+    "id": "ImplementTheFunction",
+    "transitions": [
+      { "on": "CONTINUE", "target": "CreateUnitTestsForTheFunction" },
+      { "on": "ERROR", "target": "failure" }
+    ],
+    "task": "Implement the function",
+  },
+  {
+    "id": "CreateUnitTestsForTheFunction",
     "transitions": [
       { "on": "CONTINUE", "target": "success" },
       { "on": "ERROR", "target": "failure" }
     ],
-    "task": "Generate grounded prompt for Google Service Expert AI agent.",
+    "task": "Create unit tests for the implemented function",
   },
   {
     "id": "success",
@@ -1005,13 +772,15 @@ Tone:
 Using the developer query below, output a **properly defined task list** for the Google Service Expert Architect.
 
 **Output Rules (very important):**
-1) **Scope**: Keep the task list focused on a single feature or function (e.g., "Drive listing", "Calendar availability", "Docs create"). If the request mixes multiple feature,
+1) **Scope**: Keep the task list focused on feature or functions (e.g., "Drive listing", "Calendar availability", "Docs create"). Request can mix multiple features.
 2) **Supported Actions Only**: Every task must be achievable using one or more actions from the **Supported Action Types** (function catalog). If a task cannot be mapped, **prune it**.
 3) **Docs Acquisition**: If implementation depends on an external API, search for the documentation for the given API.
 4) **Codebase search**: If task is to modify existing function, search in codebase for the function references to find all usages of the function.
-5) **Grounded prompt**: Create grounded prompt for Google Service Expert AI agent.
-6) **Unsupported/Unsafe**: If none of the requested actions are supported, respond with **"Unsupported Question"**. If the request is harmful or disallowed, respond with **"Unsafe Question"**.
-7) **Formatting**: Always respond with an **ordered list** in markdown format—no extra commentary outside the list.
+5) **Confirmation**: Confirm the implementation plan with the user.
+6) **Implementation**: Implement function based on the detailed plan and grounded data.
+7) **Unsupported/Unsafe**: If none of the requested actions are supported, respond with **"Unsupported Question"**. If the request is harmful or disallowed, respond with **"Unsafe Question"**.
+8) **Formatting**: Always respond with an **ordered list** in markdown format—no extra commentary outside the list.
+9) **Pause**: If you need to pause the execution to ask user for additional information, respond with **"Pause"**.
 
 **Developer Query**
 ${query}
@@ -1020,10 +789,10 @@ ${query}
 ${toolsCatalog}
 
 To craft the actionable task list, take it step by step:
-  1. Identify if the request can be fulfilled **only** via the supported actions.
+  1. Always confirm user intent as a first step what exactly user want to implement
   2. Add the **docs search** step when applicable.
   3. Add the **codebase search** step when applicable.
-  4. Add the **grounded prompt** step if all other steps are completed.
+  4. Add the **confirmation** step when applicable.
   5. If unsupported → "Unsupported Question". If unsafe → "Unsafe Question".
 
 **Examples**

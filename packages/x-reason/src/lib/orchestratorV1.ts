@@ -26,14 +26,20 @@ export async function getState(
   solution: Solutions,
   forward = true,
   workflow?: Record<string, any>,
-  xreason: SupportedEngines = SupportedEngines.COMS
+  xreason: SupportedEngines = SupportedEngines.COMS,
+  config?: {
+    debug?: boolean;
+  }
 ) {
+  const debug = config?.debug ?? false;
   const { programmer, aiTransition, evaluate, functionCatalog } =
     xReasonFactory(xreason)({});
   let currentState: State<Context, MachineEvent> | undefined;
 
   const dispatch = (action: ActionType) => {
-    console.log(`route dispatch callback called`);
+    if (debug) {
+      console.log(`route dispatch callback called`);
+    }
     switch (action.type) {
       case 'SET_STATE':
         currentState = action.value?.currentState as State<
@@ -69,7 +75,9 @@ export async function getState(
       solution.id,
       `machineDao.read returned the following error:\n${error.message}\n${error.stack}`
     );
-    console.log(e);
+    if (debug) {
+      console.log(e);
+    }
   }
 
   const machine: StateConfig[] =
@@ -123,9 +131,11 @@ export async function getState(
       solution.id,
       `resetting stateDefinition.value from ${stateDefinition.value} to ${savePoint}`
     );
-    console.log(
-      `resetting stateDefinition.value from ${stateDefinition.value} to ${savePoint}`
-    );
+    if (debug) {
+      console.log(
+        `resetting stateDefinition.value from ${stateDefinition.value} to ${savePoint}`
+      );
+    }
 
     stateDefinition.value = savePoint;
   } else if (
@@ -134,9 +144,11 @@ export async function getState(
     stateDefinition &&
     previousState !== stateDefinition.value
   ) {
-    console.log(
-      `resetting stateDefinition.value from ${stateDefinition.value} to ${previousState}`
-    );
+    if (debug) {
+      console.log(
+        `resetting stateDefinition.value from ${stateDefinition.value} to ${previousState}`
+      );
+    }
     log(
       solution.id,
       `resetting stateDefinition.value from ${stateDefinition.value} to ${previousState}`
@@ -163,9 +175,11 @@ export async function getState(
       solution.id,
       `moving backward, returning previous state of ${targetState.value}`
     );
-    console.log(
-      `moving backward, returning previous state of ${targetState.value}`
-    );
+    if (debug) {
+      console.log(
+        `moving backward, returning previous state of ${targetState.value}`
+      );
+    }
 
     return {
       stateMachine: machine,
@@ -203,7 +217,9 @@ export async function getState(
         solution.id,
         `The AI transition returned the target state of: ${nextState}`
       );
-      console.log(`resetting the starting state to: ${nextState}`);
+      if (debug) {
+        console.log(`resetting the starting state to: ${nextState}`);
+      }
       // Create a new State object with the updated value
       startingState = State.create<Context, MachineEvent>({
         value: nextState, // The new state value returned by the AI model
@@ -229,7 +245,8 @@ export async function getState(
     : await engine.programmer.program(
         solution.plan,
         JSON.stringify(Array.from(toolsCatalog.entries())),
-        programmer
+        programmer,
+        config?.debug
       );
   // evaluate the generated program. Currently, this just checks if the machine compiles
   // in the future we will use specially trained evaluation models
@@ -239,7 +256,8 @@ export async function getState(
       states: result,
       tools: functions,
     },
-    evaluate
+    evaluate,
+    config?.debug
   );
   if (!evaluationResult.correct) {
     throw (
@@ -262,9 +280,11 @@ export async function getState(
     solution.id,
     `calling start on the machine with starting state of: ${startingState?.value}`
   );
-  console.log(
-    `calling start on the machine with starting state of: ${startingState?.value}`
-  );
+  if (debug) {
+    console.log(
+      `calling start on the machine with starting state of: ${startingState?.value}`
+    );
+  }
 
   start();
 
@@ -285,7 +305,9 @@ export async function getState(
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     log(solution.id, `awaiting results`);
-    console.log('awaiting results');
+    if (debug) {
+      console.log('awaiting results');
+    }
 
     iterations++;
   }

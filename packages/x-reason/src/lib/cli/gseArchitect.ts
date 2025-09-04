@@ -40,7 +40,7 @@ ${readme}
 
   console.log(architectTaskList);
   const solution = {
-    input: enhancedPromptWithReadme,
+    input: task,
     id: `x-reason-architect-cli-${Date.now()}`,
     plan: architectTaskList || '',
   };
@@ -52,7 +52,8 @@ ${readme}
     solution,
     true,
     {},
-    SupportedEngines.GOOGLE_SERVICE_EXPERT_ARCHITECT
+    SupportedEngines.GOOGLE_SERVICE_EXPERT_ARCHITECT,
+    { debug: false }
   );
 
   // if result === new intent, then run solver once again with the new query

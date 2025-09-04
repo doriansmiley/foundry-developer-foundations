@@ -24,7 +24,7 @@ type IntentResult = {
     | 'forms';
 };
 
-export const searchForGoogleDocsLinks = async (functionName: string) => {
+export const searchForDocumentation = async (functionName: string) => {
   // Step A: Call Gemini (or other LLM service) to resolve intent
   const systemPrompt = `
 You are an expert in Google Workspace REST APIs.
