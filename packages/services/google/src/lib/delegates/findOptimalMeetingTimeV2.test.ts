@@ -1,4 +1,3 @@
-// src/test/findOptimalMeetingTimeV2.test.ts
 import { google } from 'googleapis';
 
 import {
@@ -9,6 +8,11 @@ import {
 } from '../__fixtures__/schedule';
 
 import { findOptimalMeetingTimeV2, Slot } from './findOptimalMeetingTime.v2';
+import {
+  dayInTZ,
+  wallClockToUTC,
+  workingHoursUTCForDate,
+} from '@codestrap/developer-foundations-utils';
 
 // ------------------------------
 // Inline mocks (auth INCLUDED)
@@ -53,17 +57,15 @@ jest.mock('googleapis', () => ({
   },
 }));
 
-describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
+describe('findOptimalMeetingTimeV2 (UTC bounds + PT semantics)', () => {
   const timezone = 'America/Los_Angeles';
-  const workingHours = { start_hour: 8, end_hour: 17 };
   const durationMinutes = 30;
   const slotStepMinutes = 30;
-  const fallbackOffsetMinutes = -420; // PDT
 
   let calendar: any;
 
   beforeAll(() => {
-    // Force Node's wall-clock to PT so Date('YYYY-MM-DDTHH:mm:ss') is deterministic.
+    // Keep wall-clock deterministic for any Date(...) literals used in helpers, etc.
     process.env.TZ = 'America/Los_Angeles';
   });
 
@@ -76,73 +78,73 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
     jest.clearAllMocks();
   });
 
-  // ---------------- EXISTING TESTS ----------------
+  // ---------------- EXISTING TESTS (updated to use wallClockToUTC) ----------------
 
   it('single-day, 3 attendees: outputs slots that do not intersect busy times and lie within PT working hours', async () => {
     currentCalendarsFixture = fbSingleDayCalendars;
 
-    const windowStartLocal = new Date('2025-07-22T08:00:00'); // PT
-    const windowEndLocal = new Date('2025-07-22T17:00:00'); // PT
+    const windowStartUTC = wallClockToUTC('2025-07-22T08:00:00', timezone); // PT → UTC
+    const windowEndUTC = wallClockToUTC('2025-07-22T17:00:00', timezone); // PT → UTC
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(fbSingleDayCalendars),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes,
       workingHours,
       slotStepMinutes,
       skipFriday: false,
-      fallbackOffsetMinutes,
     });
 
     expect(slots.length).toBeGreaterThan(0);
     assertNoOverlap(slots, flattenBusy(fbSingleDayCalendars));
-    assertWithinLocalWorkingHours(slots, workingHours);
+    assertWithinLocalWorkingHours(slots, { start_hour: 8, end_hour: 17 });
   });
 
   it('multi-day window: handles union of busy blocks across attendees and days', async () => {
     currentCalendarsFixture = fbMultiDayCalendars;
 
-    const windowStartLocal = new Date('2025-07-22T08:00:00'); // PT
-    const windowEndLocal = new Date('2025-07-23T17:00:00'); // PT
+    const windowStartUTC = wallClockToUTC('2025-07-22T08:00:00', timezone); // PT → UTC
+    const windowEndUTC = wallClockToUTC('2025-07-23T17:00:00', timezone); // PT → UTC
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(fbMultiDayCalendars),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes,
       workingHours,
       slotStepMinutes,
       skipFriday: false,
-      fallbackOffsetMinutes,
     });
 
     expect(slots.length).toBeGreaterThan(0);
     assertNoOverlap(slots, flattenBusy(fbMultiDayCalendars));
-    assertWithinLocalWorkingHours(slots, workingHours);
+    assertWithinLocalWorkingHours(slots, { start_hour: 8, end_hour: 17 });
   });
 
   it('skipFriday=true → zero slots for a Friday-only window', async () => {
     currentCalendarsFixture = fbFridayCalendars;
 
-    const windowStartLocal = new Date('2025-07-25T08:00:00'); // PT (Friday)
-    const windowEndLocal = new Date('2025-07-25T17:00:00'); // PT
+    const windowStartUTC = wallClockToUTC('2025-07-25T08:00:00', timezone); // Fri PT
+    const windowEndUTC = wallClockToUTC('2025-07-25T17:00:00', timezone); // PT
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(fbFridayCalendars),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes,
       workingHours,
       slotStepMinutes,
       skipFriday: true,
-      fallbackOffsetMinutes,
     });
 
     expect(slots).toHaveLength(0);
@@ -151,20 +153,20 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
   it('DST boundary spanning Nov 1–3 2025: returns slots with proper -07:00 or -08:00 offsets', async () => {
     currentCalendarsFixture = fbDSTCalendars;
 
-    const windowStartLocal = new Date('2025-11-01T08:00:00'); // PT (PDT)
-    const windowEndLocal = new Date('2025-11-03T17:00:00'); // PT (PST)
+    const windowStartUTC = wallClockToUTC('2025-11-01T08:00:00', timezone); // PDT
+    const windowEndUTC = wallClockToUTC('2025-11-03T17:00:00', timezone); // PST
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(fbDSTCalendars),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes,
       workingHours,
       slotStepMinutes,
       skipFriday: false,
-      fallbackOffsetMinutes: -480, // conservative across DST
     });
 
     expect(slots.length).toBeGreaterThan(0);
@@ -174,44 +176,36 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
     }
   });
 
-  it('uses fallbackOffsetMinutes if Intl fails', async () => {
+  it('works with hardcoded UTC instants (no wallClockToUTC usage)', async () => {
     currentCalendarsFixture = fbSingleDayCalendars;
 
-    const original = Intl.DateTimeFormat;
-    // @ts-expect-error - force failure
-    Intl.DateTimeFormat = jest.fn(() => {
-      throw new Error('Intl b0rked');
+    // July in PT is UTC-7 → 08:00 PT == 15:00Z, 09:00 PT == 16:00Z
+    const windowStartUTC = new Date('2025-07-22T15:00:00Z');
+    const windowEndUTC = new Date('2025-07-22T16:00:00Z');
+
+    // PT business hours 08–17 → in UTC they’re 15 → 00 (end wraps to next UTC day)
+    const workingHours = { start_hour: 15, end_hour: 0 };
+
+    const slots = await findOptimalMeetingTimeV2({
+      calendar,
+      attendees: Object.keys(fbSingleDayCalendars),
+      timezone,
+      windowStartUTC,
+      windowEndUTC,
+      durationMinutes,
+      workingHours,
+      slotStepMinutes,
+      skipFriday: false,
     });
 
-    const windowStartLocal = new Date('2025-07-22T08:00:00');
-    const windowEndLocal = new Date('2025-07-22T09:00:00');
-
-    try {
-      const slots = await findOptimalMeetingTimeV2({
-        calendar,
-        attendees: Object.keys(fbSingleDayCalendars),
-        timezone,
-        windowStartLocal,
-        windowEndLocal,
-        durationMinutes,
-        workingHours,
-        slotStepMinutes,
-        skipFriday: false,
-        fallbackOffsetMinutes: -420,
-      });
-
-      expect(slots.length).toBeGreaterThan(0);
-      const offsetRegex = /(-07:00|-08:00)$/;
-      for (const s of slots) {
-        expect(offsetRegex.test(s.start)).toBe(true);
-      }
-    } finally {
-      Intl.DateTimeFormat = original;
+    expect(slots.length).toBeGreaterThan(0);
+    const offsetRegex = /(-07:00|-08:00)$/;
+    for (const s of slots) {
+      expect(offsetRegex.test(s.start)).toBe(true);
     }
   });
 
   // ---------------- ADDED EDGE-CASE TESTS ----------------
-
   it('rounds up first slot to step boundary and supports step < duration', async () => {
     // Working window 08:00–10:00. Leave free 08:05–09:10 local.
     // Block 1: 08:00–08:05 PT => 15:00–15:05Z (PDT, -07:00)
@@ -225,23 +219,23 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
       },
     };
 
-    const windowStartLocal = new Date('2025-07-22T08:00:00'); // PT
-    const windowEndLocal = new Date('2025-07-22T10:00:00'); // PT
+    const windowStartUTC = wallClockToUTC('2025-07-22T08:00:00', timezone); // PT
+    const windowEndUTC = wallClockToUTC('2025-07-22T10:00:00', timezone); // PT
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(currentCalendarsFixture),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes: 30,
       workingHours,
       slotStepMinutes: 15,
       skipFriday: false,
-      fallbackOffsetMinutes,
     });
 
-    // Free gap 08:05–09:10 with 30‑min duration and 15‑min step → 08:15–08:45, 08:30–09:00.
+    // Free gap 08:05–09:10 with 30-min duration and 15-min step → 08:15–08:45, 08:30–09:00.
     expect(slots.length).toBeGreaterThanOrEqual(2);
     expect(slots[0].start.slice(11, 16)).toBe('08:15');
     expect(slots[0].end.slice(11, 16)).toBe('08:45');
@@ -262,20 +256,20 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
       },
     };
 
-    const windowStartLocal = new Date('2025-07-22T08:00:00');
-    const windowEndLocal = new Date('2025-07-22T17:00:00');
+    const windowStartUTC = wallClockToUTC('2025-07-22T08:00:00', timezone);
+    const windowEndUTC = wallClockToUTC('2025-07-22T17:00:00', timezone);
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(currentCalendarsFixture),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes: 30,
       workingHours,
       slotStepMinutes: 10,
       skipFriday: false,
-      fallbackOffsetMinutes,
     });
 
     expect(slots).toHaveLength(0);
@@ -284,67 +278,67 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
   it('skips weekends even across multi-day spans', async () => {
     currentCalendarsFixture = { 'a@corp.com': { busy: [] } };
 
-    const windowStartLocal = new Date('2025-07-26T08:00:00'); // Sat
-    const windowEndLocal = new Date('2025-07-28T17:00:00'); // Mon
+    const windowStartUTC = wallClockToUTC('2025-07-26T08:00:00', timezone); // Sat PT
+    const windowEndUTC = wallClockToUTC('2025-07-28T17:00:00', timezone); // Mon PT
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(currentCalendarsFixture),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes,
       workingHours,
       slotStepMinutes,
       skipFriday: false,
-      fallbackOffsetMinutes,
     });
 
     expect(slots.length).toBeGreaterThan(0);
-    // All slots should be Monday (getDay()==1)
-    for (const s of slots) expect(new Date(s.start).getDay()).toBe(1);
+    // All slots should be Monday (getDay()==1) in PT
+    for (const s of slots) expect(dayInTZ(s.start, timezone)).toBe(1);
   });
 
   it('skipFriday=true removes Friday slots in mixed Thu→Fri range', async () => {
     currentCalendarsFixture = { 'a@corp.com': { busy: [] } };
 
-    const windowStartLocal = new Date('2025-07-24T08:00:00'); // Thu
-    const windowEndLocal = new Date('2025-07-25T17:00:00'); // Fri
+    const windowStartUTC = wallClockToUTC('2025-07-24T08:00:00', timezone); // Thu PT
+    const windowEndUTC = wallClockToUTC('2025-07-25T17:00:00', timezone); // Fri PT
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(currentCalendarsFixture),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes,
       workingHours,
       slotStepMinutes,
       skipFriday: true,
-      fallbackOffsetMinutes,
     });
 
     expect(slots.length).toBeGreaterThan(0);
-    for (const s of slots) expect(new Date(s.start).getDay()).toBe(4); // Thu
+    for (const s of slots) expect(dayInTZ(s.start, timezone)).toBe(4); // Thursday
   });
 
-  it('honors windowStartLocal inside the working day (rounds to step)', async () => {
+  it('honors windowStart inside the working day (rounds to step)', async () => {
     currentCalendarsFixture = { 'a@corp.com': { busy: [] } };
 
-    const windowStartLocal = new Date('2025-07-22T10:10:00');
-    const windowEndLocal = new Date('2025-07-22T12:00:00');
+    const windowStartUTC = wallClockToUTC('2025-07-22T10:10:00', timezone); // PT
+    const windowEndUTC = wallClockToUTC('2025-07-22T12:00:00', timezone); // PT
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(currentCalendarsFixture),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes: 30,
       workingHours,
       slotStepMinutes: 30,
       skipFriday: false,
-      fallbackOffsetMinutes,
     });
 
     expect(slots.length).toBeGreaterThan(0);
@@ -359,20 +353,20 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
       },
     };
 
-    const windowStartLocal = new Date('2025-07-22T08:00:00');
-    const windowEndLocal = new Date('2025-07-22T17:00:00');
+    const windowStartUTC = wallClockToUTC('2025-07-22T08:00:00', timezone);
+    const windowEndUTC = wallClockToUTC('2025-07-22T17:00:00', timezone);
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(currentCalendarsFixture),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes,
       workingHours,
       slotStepMinutes,
       skipFriday: false,
-      fallbackOffsetMinutes,
     });
 
     expect(slots).toHaveLength(0);
@@ -389,20 +383,20 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
       },
     };
 
-    const windowStartLocal = new Date('2025-07-22T08:00:00');
-    const windowEndLocal = new Date('2025-07-22T17:00:00');
+    const windowStartUTC = wallClockToUTC('2025-07-22T08:00:00', timezone);
+    const windowEndUTC = wallClockToUTC('2025-07-22T17:00:00', timezone);
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(currentCalendarsFixture),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes,
       workingHours,
       slotStepMinutes,
       skipFriday: false,
-      fallbackOffsetMinutes,
     });
 
     expect(slots.length).toBeGreaterThan(0);
@@ -412,20 +406,20 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
   it('scores earlier slots higher (non-increasing sequence)', async () => {
     currentCalendarsFixture = { 'a@corp.com': { busy: [] } };
 
-    const windowStartLocal = new Date('2025-07-22T08:00:00');
-    const windowEndLocal = new Date('2025-07-22T17:00:00');
+    const windowStartUTC = wallClockToUTC('2025-07-22T08:00:00', timezone);
+    const windowEndUTC = wallClockToUTC('2025-07-22T17:00:00', timezone);
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(currentCalendarsFixture),
       timezone,
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes,
       workingHours,
       slotStepMinutes,
       skipFriday: false,
-      fallbackOffsetMinutes,
     });
 
     expect(slots.length).toBeGreaterThan(5);
@@ -439,20 +433,20 @@ describe('findOptimalMeetingTimeV2 (plane-sweep + strict PT handling)', () => {
     // Windows skip weekend; this range yields Fri (PST, -08:00) and Mon (PDT, -07:00).
     currentCalendarsFixture = { 'a@corp.com': { busy: [] } };
 
-    const windowStartLocal = new Date('2025-03-07T08:00:00'); // Fri (PST)
-    const windowEndLocal = new Date('2025-03-10T17:00:00'); // Mon (PDT)
+    const windowStartUTC = wallClockToUTC('2025-03-07T08:00:00', timezone); // Fri (PST)
+    const windowEndUTC = wallClockToUTC('2025-03-10T17:00:00', timezone); // Mon (PDT)
+    const workingHours = workingHoursUTCForDate(windowStartUTC, timezone, 8, 17);
 
     const slots = await findOptimalMeetingTimeV2({
       calendar,
       attendees: Object.keys(currentCalendarsFixture),
       timezone: 'America/Los_Angeles',
-      windowStartLocal,
-      windowEndLocal,
+      windowStartUTC,
+      windowEndUTC,
       durationMinutes: 30,
-      workingHours: { start_hour: 8, end_hour: 17 },
+      workingHours,
       slotStepMinutes: 30,
       skipFriday: false,
-      fallbackOffsetMinutes: -480, // fine here; Intl will compute true offsets
     });
 
     expect(slots.length).toBeGreaterThan(0);

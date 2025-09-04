@@ -1,41 +1,35 @@
 // scheduler.ts
 import { calendar_v3 } from 'googleapis';
+import { partsInTZ, wallClockToUTC } from '@codestrap/developer-foundations-utils';
 
 type Busy = { start: string; end: string };
 export type Slot = { start: string; end: string; score?: number };
-
-type WorkingHours = { start_hour: number; end_hour: number };
+type WorkingHoursUTC = { start_hour: number; end_hour: number };
 
 export type FindArgs = {
   calendar: calendar_v3.Calendar;
   attendees: string[];
-  timezone: string; // IANA, e.g. "America/Los_Angeles"
-  windowStartLocal: Date; // local “wall clock” start (e.g., PT start)
-  windowEndLocal: Date;   // local “wall clock” end   (e.g., PT end)
+  timezone: string;                 // IANA, e.g. "America/Los_Angeles"
+  windowStartUTC: Date;             // UTC instant
+  windowEndUTC: Date;               // UTC instant
   durationMinutes: number;
-  workingHours: WorkingHours;
-  slotStepMinutes?: number; // default 30
-  skipFriday?: boolean;     // default false
-  fallbackOffsetMinutes?: number; // e.g. -480/-420
+  workingHours: WorkingHoursUTC;    // PRECOMPUTED UTC hours for that day (from workingHoursUTCForDate)
+  slotStepMinutes?: number;         // default 30
+  skipFriday?: boolean;             // default false
 };
 
 export async function findOptimalMeetingTimeV2({
   calendar,
   attendees,
   timezone,
-  windowStartLocal,
-  windowEndLocal,
+  windowStartUTC,
+  windowEndUTC,
   durationMinutes,
-  workingHours,
+  workingHours,          // UTC hours (already localized for that date)
   slotStepMinutes = 30,
   skipFriday = false,
-  fallbackOffsetMinutes = -420,
 }: FindArgs): Promise<Slot[]> {
-  // Convert wall-clock window into UTC instants (DST-safe, host-agnostic)
-  const windowStartUTC = toUTCFromWallClock(windowStartLocal, timezone, fallbackOffsetMinutes);
-  const windowEndUTC = toUTCFromWallClock(windowEndLocal, timezone, fallbackOffsetMinutes);
-
-  // Pull busy blocks via FreeBusy in UTC
+  // 1) FreeBusy in UTC
   const fb = await calendar.freebusy.query({
     requestBody: {
       timeMin: windowStartUTC.toISOString(),
@@ -55,27 +49,25 @@ export async function findOptimalMeetingTimeV2({
       }
     }
   }
-
   const mergedBusy = mergeBusyIntervals(allBusy);
 
-  // Build per-day working windows as UTC instants, iterating days in `timezone`
-  const dailyWorkWindowsUTC = buildWorkingWindowsUTC(
-    windowStartLocal,
-    windowEndLocal,
+  // 2) Build per-day working windows in UTC, iterating calendar days in `timezone`
+  const dailyWorkWindowsUTC = buildWorkingWindowsUTCFromUTCBounds(
+    windowStartUTC,
+    windowEndUTC,
     timezone,
     workingHours,
-    skipFriday,
-    fallbackOffsetMinutes
+    skipFriday
   );
 
-  // Subtract busy from those windows (all UTC instants)
+  // 3) Subtract busy from those windows (still UTC)
   const freeIntervals = subtractBusyFromWindows(dailyWorkWindowsUTC, mergedBusy);
 
-  // Slice into candidate slots, score, and format with zone offset suffix
+  // 4) Slice into candidate slots, score, and format as zoned ISO with ±HH:MM
   const slots = sliceIntoSlots(freeIntervals, durationMinutes, slotStepMinutes)
     .map((s) => ({
-      start: toZonedISOString(s.start, timezone, fallbackOffsetMinutes),
-      end: toZonedISOString(s.end, timezone, fallbackOffsetMinutes),
+      start: toZonedISOString(s.start, timezone),
+      end: toZonedISOString(s.end, timezone),
       score: simpleHeuristicScore(s.start),
     }))
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
@@ -83,106 +75,71 @@ export async function findOptimalMeetingTimeV2({
   return slots;
 }
 
-/* ========================= TZ-ROBUST CORE HELPERS ========================= */
+/* ======================= UTC day-iteration using your utils ======================= */
 
-/** Safe TZ parts: tries Intl; on failure, uses fallback offset minutes. */
-function partsInTZSafe(
-  d: Date,
+type Interval = { start: Date; end: Date };
+
+/**
+ * Iterate calendar days in `tz` between [windowStartUTC, windowEndUTC], and for each day
+ * construct the working window using **UTC hours** already localized for that date.
+ * (If end_hour <= start_hour, we roll the end into the next UTC day.)
+ */
+function buildWorkingWindowsUTCFromUTCBounds(
+  windowStartUTC: Date,
+  windowEndUTC: Date,
   tz: string,
-  fallbackOffsetMinutes: number
-): { year: number; month: number; day: number; hour: number; minute: number; second: number } {
-  try {
-    const dtf = new Intl.DateTimeFormat('en-US', {
-      timeZone: tz,
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false,
-    });
-    const p = Object.fromEntries(dtf.formatToParts(d).map(x => [x.type, x.value]));
-    return {
-      year: +p['year'], month: +p['month'], day: +p['day'],
-      hour: +p['hour'], minute: +p['minute'], second: +p['second'],
-    };
-  } catch {
-    // Fallback: represent the instant shifted by the fallback offset, then read UTC fields
-    const local = new Date(d.getTime() + fallbackOffsetMinutes * 60_000);
-    return {
-      year: local.getUTCFullYear(),
-      month: local.getUTCMonth() + 1,
-      day: local.getUTCDate(),
-      hour: local.getUTCHours(),
-      minute: local.getUTCMinutes(),
-      second: local.getUTCSeconds(),
-    };
-  }
-}
+  hoursUTC: WorkingHoursUTC,
+  skipFriday: boolean
+): Interval[] {
+  const result: Interval[] = [];
 
-/** Offset (minutes) for a given UTC instant in tz. Positive if tz AHEAD of UTC, negative if behind. */
-function getOffsetForUTCInstant(tz: string, utc: Date, fallback = -420): number {
-  try {
-    const map = partsInTZSafe(utc, tz, fallback);
-    const asIfUTC = Date.UTC(map.year, map.month - 1, map.day, map.hour, map.minute, map.second);
-    return Math.round((asIfUTC - utc.getTime()) / 60000);
-  } catch {
-    return fallback;
-  }
-}
-
-/** Build a UTC instant from a wall-clock Date (Y/M/D/H/M/S) in tz (DST-safe, host-agnostic) */
-export function toUTCFromWallClock(localWall: Date, tz: string, fallback = -420): Date {
-  const y = localWall.getFullYear();
-  const m0 = localWall.getMonth(); // 0-based
-  const d = localWall.getDate();
-  const H = localWall.getHours();
-  const M = localWall.getMinutes();
-  const S = localWall.getSeconds();
-
-  // First guess: interpret the wall clock as if it were UTC.
-  const guessUTC = new Date(Date.UTC(y, m0, d, H, M, S));
-
-  // Compute tz offset at that instant; adjust to get the true UTC instant.
-  const offMin = getOffsetForUTCInstant(tz, guessUTC, fallback);
-  return new Date(guessUTC.getTime() - offMin * 60_000);
-}
-
-/** ISO string for the SAME instant, formatted in target tz with ±HH:MM suffix (fallback-safe) */
-export function toZonedISOString(utc: Date, tz: string, fallback = -420): string {
-  const map = partsInTZSafe(utc, tz, fallback);
-  const offMin = getOffsetForUTCInstant(tz, utc, fallback);
-  const sign = offMin >= 0 ? '+' : '-';
-  const abs = Math.abs(offMin);
   const pad = (n: number, len = 2) => String(n).padStart(len, '0');
 
-  return `${pad(map.year, 4)}-${pad(map.month)}-${pad(map.day)}T${pad(map.hour)}:${pad(map.minute)}:${pad(map.second)}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
-}
+  // tz-midnight for start and end (as UTC instants)
+  const sp = partsInTZ(windowStartUTC, tz);
+  const ep = partsInTZ(windowEndUTC, tz);
+  let dayUTC = wallClockToUTC(`${sp.year}-${pad(sp.month)}-${pad(sp.day)}T00:00:00`, tz);
+  const lastDayUTC = wallClockToUTC(`${ep.year}-${pad(ep.month)}-${pad(ep.day)}T00:00:00`, tz);
 
-/** Midnight of the same calendar day *in tz* (returns a UTC instant) */
-function startOfDayTZ(localWall: Date, tz: string, fallback = -420): Date {
-  const y = localWall.getFullYear();
-  const m0 = localWall.getMonth();
-  const d = localWall.getDate();
-  return toUTCFromWallClock(new Date(y, m0, d, 0, 0, 0), tz, fallback);
-}
+  const clipStart = new Date(windowStartUTC);
+  const clipEnd = new Date(windowEndUTC);
 
-/** Add whole days relative to tz’s calendar (returns midnight of resulting day as a UTC instant) */
-function addDaysTZFromUTC(dayUTC: Date, days: number, tz: string, fallback = -420): Date {
-  const p = partsInTZSafe(dayUTC, tz, fallback);
-  return toUTCFromWallClock(new Date(p.year, p.month - 1, p.day + days, 0, 0, 0), tz, fallback);
-}
+  while (dayUTC.getTime() <= lastDayUTC.getTime()) {
+    // weekday in target tz
+    const w = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' }).format(dayUTC);
+    const isWeekend = w === 'Sat' || w === 'Sun';
+    const isFriday = w === 'Fri';
 
-/** Safe weekday string 'Sun'..'Sat' in tz; falls back using fallback offset when Intl fails */
-function weekdayShortSafe(d: Date, tz: string, fallback = -420): 'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' {
-  try {
-    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short' });
-    return fmt.format(d) as any;
-  } catch {
-    const shifted = new Date(d.getTime() + fallback * 60_000);
-    const dow = shifted.getUTCDay(); // 0..6
-    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dow] as any;
+    if (!isWeekend && !(skipFriday && isFriday)) {
+      // Build day window using **UTC hours**
+      const dayStart = new Date(dayUTC);
+      dayStart.setUTCHours(hoursUTC.start_hour, 0, 0, 0);
+
+      let dayEnd = new Date(dayUTC);
+      dayEnd.setUTCHours(hoursUTC.end_hour, 0, 0, 0);
+      if (dayEnd.getTime() <= dayStart.getTime()) {
+        // end spills into next UTC day (common for US timezones)
+        dayEnd = new Date(dayEnd.getTime() + 24 * 60 * 60 * 1000);
+      }
+
+      const start = new Date(Math.max(dayStart.getTime(), clipStart.getTime()));
+      const end = new Date(Math.min(dayEnd.getTime(), clipEnd.getTime()));
+
+      if (start < end) result.push({ start, end });
+    }
+
+    // advance to next tz-midnight
+    const cur = partsInTZ(dayUTC, tz);
+    dayUTC = wallClockToUTC(
+      `${cur.year}-${pad(cur.month)}-${pad(cur.day + 1)}T00:00:00`,
+      tz
+    );
   }
+
+  return result;
 }
 
-/* =========================== BUSY/INTERVAL HELPERS =========================== */
+/* =========================== Busy & slotting (UTC) =========================== */
 
 function mergeBusyIntervals(busy: Busy[]): Busy[] {
   if (!busy.length) return [];
@@ -207,59 +164,6 @@ function mergeBusyIntervals(busy: Busy[]): Busy[] {
     start: m.start.toISOString(),
     end: m.end.toISOString(),
   }));
-}
-
-type Interval = { start: Date; end: Date };
-
-/** Build per-day working windows as UTC instants, iterating calendar days in `tz` (DST & fallback safe) */
-function buildWorkingWindowsUTC(
-  windowStartLocal: Date,
-  windowEndLocal: Date,
-  tz: string,
-  hours: WorkingHours,
-  skipFriday: boolean,
-  fallbackOffset = -420
-): Interval[] {
-  const result: Interval[] = [];
-
-  // Interpret provided wall-clock bounds as tz midnights & iterate by tz calendar
-  const startDayUTC = startOfDayTZ(windowStartLocal, tz, fallbackOffset);
-  const endDayUTC = startOfDayTZ(windowEndLocal, tz, fallbackOffset);
-
-  // Clip bounds (convert exact local walls to UTC instants in tz)
-  const clipStartUTC = toUTCFromWallClock(windowStartLocal, tz, fallbackOffset);
-  const clipEndUTC = toUTCFromWallClock(windowEndLocal, tz, fallbackOffset);
-
-  for (let dayUTC = new Date(startDayUTC); dayUTC.getTime() <= endDayUTC.getTime();) {
-    const dow = weekdayShortSafe(dayUTC, tz, fallbackOffset); // 'Sun'..'Sat'
-    const isWeekend = dow === 'Sat' || dow === 'Sun';
-    const isFriday = dow === 'Fri';
-
-    if (!isWeekend && !(skipFriday && isFriday)) {
-      const p = partsInTZSafe(dayUTC, tz, fallbackOffset);
-
-      const dayStartUTC = toUTCFromWallClock(
-        new Date(p.year, p.month - 1, p.day, hours.start_hour, 0, 0),
-        tz,
-        fallbackOffset
-      );
-      const dayEndUTC = toUTCFromWallClock(
-        new Date(p.year, p.month - 1, p.day, hours.end_hour, 0, 0),
-        tz,
-        fallbackOffset
-      );
-
-      const start = new Date(Math.max(dayStartUTC.getTime(), clipStartUTC.getTime()));
-      const end = new Date(Math.min(dayEndUTC.getTime(), clipEndUTC.getTime()));
-
-      if (start < end) result.push({ start, end });
-    }
-
-    // Advance exactly one calendar day in tz
-    dayUTC = addDaysTZFromUTC(dayUTC, 1, tz, fallbackOffset);
-  }
-
-  return result;
 }
 
 function subtractBusyFromWindows(windows: Interval[], busy: Busy[]): Interval[] {
@@ -314,7 +218,7 @@ function sliceIntoSlots(free: Interval[], durationMinutes: number, stepMinutes: 
   const stepMs = stepMinutes * 60_000;
 
   for (const f of free) {
-    let t = roundUpToStepUTC(f.start, stepMinutes); // round in UTC (host-agnostic)
+    let t = roundUpToStepUTC(f.start, stepMinutes); // round in UTC
     while (t.getTime() + durMs <= f.end.getTime()) {
       const end = new Date(t.getTime() + durMs);
       slots.push({ start: new Date(t), end });
@@ -324,7 +228,6 @@ function sliceIntoSlots(free: Interval[], durationMinutes: number, stepMinutes: 
   return slots;
 }
 
-/** Round up an instant to the next step boundary in UTC (host-TZ agnostic) */
 function roundUpToStepUTC(d: Date, stepMinutes: number): Date {
   const t = new Date(d.getTime());
   const mins = t.getUTCMinutes();
@@ -337,9 +240,25 @@ function roundUpToStepUTC(d: Date, stepMinutes: number): Date {
   return t;
 }
 
-/* =============================== SCORING =============================== */
+/* =============================== Scoring/formatting =============================== */
 
 function simpleHeuristicScore(startUTC: Date): number {
   const hoursFromNow = (startUTC.getTime() - Date.now()) / 3_600_000;
   return Math.max(0, 100 - Math.min(hoursFromNow * 0.5, 20));
+}
+
+/** Render the SAME instant as local time in `tz` with ±HH:MM suffix (e.g. 2025-07-22T10:30:00-07:00) */
+function toZonedISOString(utc: Date, tz: string): string {
+  const p = partsInTZ(utc, tz); // local Y/M/D/H/M/S in tz
+  const offMin = offsetMinutesForInstantInTZ(utc, tz);
+  const sign = offMin >= 0 ? '+' : '-';
+  const abs = Math.abs(offMin);
+  const pad = (n: number, len = 2) => String(n).padStart(len, '0');
+  return `${pad(p.year, 4)}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+}
+
+function offsetMinutesForInstantInTZ(utc: Date, tz: string): number {
+  const p = partsInTZ(utc, tz);
+  const asIfUTC = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return Math.round((asIfUTC - utc.getTime()) / 60000);
 }

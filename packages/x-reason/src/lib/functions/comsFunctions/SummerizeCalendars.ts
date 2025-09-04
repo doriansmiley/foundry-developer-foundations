@@ -57,6 +57,9 @@ export async function summarizeCalendars(
   event?: MachineEvent,
   task?: string
 ): Promise<Summaries> {
+  const TZ = 'America/Los_Angeles';
+  const nowPT = nowInTZ(TZ, new Date()); // wall-clock PT “now”
+
   const system = `You are a helpful virtual ai assistant tasked with extracting the time frame for a calendar queries.`;
 
   const userPrompt = `
@@ -68,6 +71,9 @@ export async function summarizeCalendars(
 
     The task from the end user:
     ${task}
+
+    The current day/time in the user's time zone (${TZ}) is:
+    ${nowPT}
 
     You can only respond in JSON in the following format:
     {
@@ -113,8 +119,6 @@ export async function summarizeCalendars(
   };
 
   /* ---------- build PT window ---------- */
-  const TZ = 'America/Los_Angeles';
-  const nowPT = nowInTZ(TZ, new Date()); // wall-clock PT “now”
 
   let windowStartLocal: Date;
   let windowEndLocal: Date;

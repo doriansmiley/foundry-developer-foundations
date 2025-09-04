@@ -1,24 +1,24 @@
 import {
-  Context,
-  MachineEvent,
-  Task,
-  ActionType,
+    Context,
+    MachineEvent,
+    Task,
+    ActionType,
 } from '@codestrap/developer-foundations-types';
 import {
-  readEmails,
-  writeEmail,
-  researchReport,
-  resolveUnavailableAttendees,
-  createTask,
-  getAvailableMeetingTimes,
-  getProjectFiles,
-  getProjectStatusReport,
-  scheduleMeeting,
-  summarizeCalendars,
-  sendEmail,
-  readWebPage,
-  sendSlackMessage,
-  writeSlackMessage,
+    readEmails,
+    writeEmail,
+    researchReport,
+    resolveUnavailableAttendees,
+    createTask,
+    getAvailableMeetingTimes,
+    getProjectFiles,
+    getProjectStatusReport,
+    scheduleMeeting,
+    summarizeCalendars,
+    sendEmail,
+    readWebPage,
+    sendSlackMessage,
+    writeSlackMessage,
 } from '../../../functions';
 
 
@@ -174,8 +174,8 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                         // if everyone is available schedule
                         "CONTINUE|resolveUnavailableAttendees",
                         (context: Context, event: MachineEvent) => {
-                            console.log(`evaluating pause transition logic for state: ${event.stateId}`);
-                            if (event.payload && event.payload.stateId) {
+                            console.log(`evaluating pause transition logic for state: ${event.payload?.stateId}`);
+                            if (event.payload && event.payload?.stateId) {
                                 // if all are available return false and move to schedule meeting
                                 return !(event.payload[event.payload.stateId].allAvailable as boolean);
                             }
