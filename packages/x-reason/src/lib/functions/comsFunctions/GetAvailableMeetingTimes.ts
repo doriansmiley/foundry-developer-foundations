@@ -174,38 +174,15 @@ Your response is:
 
         let availableTimes = await officeService.getAvailableMeetingTimes(inputs);
 
-        // no times found
-        if (availableTimes.suggested_times.length === 0) {
-            switch (inputs.timeframe_context) {
-                case 'as soon as possible':
-                    inputs.timeframe_context = 'this week';
-                    break;
-                case 'this week':
-                    inputs.timeframe_context = 'next week';
-                    break;
-                default:
-                    inputs.timeframe_context = 'as soon as possible';
+        // no times found, retry when the user has not specified a time frame
+        if (availableTimes.suggested_times.length === 0 && inputs.timeframe_context === 'as soon as possible') {
+            // first try this week, then next week
+            inputs.timeframe_context = 'this week';
+            availableTimes = await officeService.getAvailableMeetingTimes(inputs);
+            if (availableTimes.suggested_times.length === 0) {
+                inputs.timeframe_context = 'next week';
+                availableTimes = await officeService.getAvailableMeetingTimes(inputs);
             }
-            availableTimes = await officeService.getAvailableMeetingTimes(inputs);
-        }
-
-        // try again
-        if (availableTimes.suggested_times.length === 0 && inputs.timeframe_context !== 'next week') {
-            switch (inputs.timeframe_context) {
-                case 'as soon as possible':
-                    inputs.timeframe_context = 'this week';
-                    break;
-                case 'this week':
-                    inputs.timeframe_context = 'next week';
-                    break;
-            }
-            availableTimes = await officeService.getAvailableMeetingTimes(inputs);
-        }
-
-        // try next week
-        if (availableTimes.suggested_times.length === 0 && inputs.timeframe_context !== 'next week') {
-            inputs.timeframe_context = 'next week';
-            availableTimes = await officeService.getAvailableMeetingTimes(inputs);
         }
 
         // still nothing, return allAvailable false to resolve manually
