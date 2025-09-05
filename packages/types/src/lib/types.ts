@@ -32,6 +32,16 @@ export const TYPES = {
   LoggingService: Symbol.for('LoggingService'),
 };
 
+export type ResearchAssistant = (
+  userInput: string,
+  num?: number,
+  dateRestrict?: string,
+  siteSearch?: string,
+  siteSearchFilter?: string,
+  searchEngineId?: string
+
+) => Promise<string>
+
 // Schema Definitions for compute module
 // IMPORTANT:  @sinclair/typebox is required!!!
 // https://github.com/palantir/typescript-compute-module?tab=readme-ov-file#schema-registration

@@ -110,7 +110,7 @@ export async function createTask(
 
   const description = parsedResult.description;
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
+  // @ts-ignore
   const assignee = Users[parsedResult.assignee];
   const taskType = parsedResult.taskType;
   const severity = parsedResult.severity;

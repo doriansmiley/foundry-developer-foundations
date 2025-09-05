@@ -21,12 +21,45 @@ import {
   Threads,
   Communications,
   LoggingService,
+  User,
 } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import { State } from 'xstate';
 
 // use classes to take advantage of trace decorator
 export class Text2Action {
+  @Trace({
+    resource: {
+      service_name: 'text2action',
+      service_instance_id: 'production',
+      telemetry_sdk_name: 'xreason-functions',
+      telemetry_sdk_version: '7.0.2',
+      host_hostname: 'codestrap.usw-3.palantirfoundry.com',
+      host_architecture: 'prod',
+    },
+    operationName: 'recall',
+    kind: 'Server',
+    samplingDecision: 'RECORD_AND_SAMPLE',
+    samplingRate: 1.0,
+    attributes: {
+      endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/recall/execute`,
+    },
+  })
+  public async recall(query: string, userProfile: User) {
+    const recalledInformation = await recall(
+      {
+        requestId: '1234',
+        status: 0,
+        stack: ['userProfile'],
+        userProfile,
+      },
+      undefined,
+      query
+    );
+
+    return recalledInformation;
+  }
+
   @Trace({
     resource: {
       service_name: 'vickie',
@@ -66,16 +99,7 @@ export class Text2Action {
       userProfile,
     });
 
-    const recalledInformation = await recall(
-      {
-        requestId: '1234',
-        status: 0,
-        stack: ['userProfile'],
-        userProfile,
-      },
-      undefined,
-      query
-    );
+    const recalledInformation = await this.recall(query, userProfile);
 
     // TODO: remove the bard coded context information once CodeStrap employeed slack channels are added to the contacts dataset
     const groudingContext = `

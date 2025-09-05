@@ -4,7 +4,7 @@ import { xReasonFactory, SupportedEngines } from './factory';
 import {
   headlessInterpreter,
   engineV1 as engine,
-} from '@codestrap/developer-foundations-x-reason';
+} from '../';
 import {
   sanitizeJSONString,
   uuidv4,
@@ -185,6 +185,8 @@ export async function getState(
         events: startingState.events, // Preserve events if needed
         configuration: startingState.configuration, // Preserve configuration if needed
         // Required properties for StateConfig
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
         _event: startingState._event || { type: '' }, // Default _event if not available
         _sessionid: startingState._sessionid || null, // Default _sessionid if not available
         transitions: startingState.transitions || [], // Default transitions if not available

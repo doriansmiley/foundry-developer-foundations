@@ -8,8 +8,6 @@ export function makeTelemetryDao(): TelemetryDao {
   const { getToken, url, ontologyRid } = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return async (inputJSON) => {
-    console.log(`telemetryDao telemetryDao: ${inputJSON}`);
-
     const token = await getToken();
     const apiKey = token;
 
