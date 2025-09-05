@@ -14,6 +14,7 @@ import {
     EmailMessage,
     MachineDao,
     LoggingService,
+    User,
 } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 
@@ -226,5 +227,37 @@ export class Larry extends Text2Action {
             executionId: communication.id,
             taskList: communication.taskList,
         };
+    }
+
+    @Trace({
+        resource: {
+            service_name: 'text2action',
+            service_instance_id: 'production',
+            telemetry_sdk_name: 'xreason-functions',
+            telemetry_sdk_version: '7.0.2',
+            host_hostname: 'codestrap.usw-3.palantirfoundry.com',
+            host_architecture: 'prod',
+        },
+        operationName: 'recall',
+        kind: 'Server',
+        samplingDecision: 'RECORD_AND_SAMPLE',
+        samplingRate: 1.0,
+        attributes: {
+            endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/recall/execute`,
+        },
+    })
+    public override async recall(query: string, userProfile: User) {
+
+        return {
+            contacts: [],
+            currentUser: {
+                name: userProfile.givenName || '',
+                email: userProfile.email || '',
+                id: userProfile.id,
+                timezone: 'America/Los Angeles',
+            },
+            messages: [],
+            reasoning: 'none',
+        };;
     }
 }
