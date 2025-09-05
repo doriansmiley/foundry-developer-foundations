@@ -1,4 +1,4 @@
-import { Context, MachineEvent } from '@codestrap/developer-foundations-types';
+import { Context, MachineEvent, ThreadsDao } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import {
     GeminiService,
@@ -14,6 +14,8 @@ export async function confirmUserIntent(
     event?: MachineEvent,
     task?: string
 ): Promise<UserIntent> {
+    let userResponses;
+
     const system = `You are Larry, a helpful AI software engineering assistant that specializes in helping software engineers create well defined tasks.
     You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Larry, your AI engineering assistant. 
     You can get creative on your greeting, taking into account the day of the week. Today is ${new Date().toLocaleDateString(
@@ -27,13 +29,15 @@ export async function confirmUserIntent(
     When asking clarifying questions you always leverage your knowledge of APIs and SDKs with a focus on TypeScript/Node SDKs when available.
     You also careful craft your clarifying questions to make sure the engineer does not leave out critical details or footgun themselves with more complex design details such as handling concurrent requests, rate limits, and timeouts`;
 
-    const user = `
+    let user = `
     Below is the software engineers initial prompt to modify or create code within the code base, 
     and additional contextually relevant information about the tech stack and dependencies.
     there me also be some message threads from previous interactions.
 
     The initial prompt from the end user:
     ${task}
+
+    This ensures you don't ask the user the same freaking questions over and over if they already provide an answer!
 
     Respond to the user with clarifying questions or comments to flush out their intentions and get to a point where their request is actionable.
     Your goal is to get to a detailed specification with enough detail to make sure the engineer hasn't left out critical design details
@@ -47,6 +51,24 @@ export async function confirmUserIntent(
     We use Python for data science and data engineering. We use TypeScript, React, and Node for applications
     We are an AI services startup that specializes in delivers consulting services as software products.
     `;
+
+    if (context.machineExecutionId) {
+        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+        try {
+            userResponses = await threadsDao.read(context.machineExecutionId);
+            if (userResponses) {
+                user = `
+Below is the current conversation thread with the user. Read and review if carefully 
+and consider the users responses and current iteration ot the generated task list. 
+User responses start the phrases like "The user responded with:"
+Be sure to factor in information the user has already clarified!!! 
+We don't want them answering a bunch of shit twice!
+Output the remaining items that require clarification based on the message thread:
+    ${userResponses?.messages}
+            `;
+            }
+        } catch (e) { /* empty */ }
+    }
 
     const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 

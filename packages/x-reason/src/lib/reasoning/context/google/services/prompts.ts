@@ -375,6 +375,20 @@ export async function aiTransition(
   Return the target for the next state.
   A: IngredientDatabase
 
+  If The current state of the application is confirm user intent and:
+
+  1. The current state confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654 corresponds to the first task: "Clarify Design with User".
+  2.  The current state has includesLogic set to true and transitions defined as:
+    *   { "on": "confirmUserIntent", "target": "success" }
+    *   { "on": "CONTINUE", "target": "success" }
+    *   { "on": "ERROR", "target": "failure" }
+    The user has provided some information in userResponse, but its likely not sufficient to consider all questions answered 
+    and the software specification acceptable. Therefore, we should loop back to the confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654 state to gather more information from the user. 
+  3. Therefore, the target should be confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654.
+
+  Return the target for the next state.
+  A: confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654
+
   ### End training data ###
 
   Based on the following task list:

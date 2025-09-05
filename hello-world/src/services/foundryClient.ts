@@ -4,13 +4,6 @@ import { User, Users } from "@osdk/foundry.admin";
 import { FoundryClient } from '@hello/types'
 
 export function createFoundryClient(): FoundryClient {
-    // log ENV vars
-    console.log('Environment variable keys:');
-    Object.keys(process.env).forEach(key => {
-        if (key.indexOf('FOUNDRY') >= 0 || key.indexOf('OSDK') >= 0) {
-            console.log(`- ${key}`);
-        }
-    });
 
     if (!process.env.OSDK_CLIENT_ID || !process.env.OSDK_CLIENT_SECRET) {
         throw new Error('missing required env vars');

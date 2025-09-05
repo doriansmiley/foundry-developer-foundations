@@ -48,7 +48,5 @@ export async function searchMemoryRecall(
     );
   }
 
-  console.log(`the threads ontology returned: ${JSON.stringify(apiResponse)}`);
-
   return apiResponse.value as MemoryRecall[];
 }
