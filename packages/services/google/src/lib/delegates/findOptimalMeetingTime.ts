@@ -8,10 +8,96 @@ import { calendar_v3 } from 'googleapis';
 
 const LOG_PREFIX = 'GSUITE - findOptimalMeetingTime - ';
 
+/* ============================ TZ-ROBUST HELPERS ============================ */
+
+/** Extract Y/M/D/h/m/s in a given TZ for a given instant (host-TZ agnostic) */
+function partsInTZ(d: Date, tz: string): {
+  year: number; month: number; day: number;
+  hour: number; minute: number; second: number;
+} {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  });
+  const p = Object.fromEntries(dtf.formatToParts(d).map(x => [x.type, x.value]));
+  return {
+    year: +p['year'],
+    month: +p['month'],
+    day: +p['day'],
+    hour: +p['hour'],
+    minute: +p['minute'],
+    second: +p['second'],
+  };
+}
+
+/** Interpret a wall-clock Y-M-D h:m:s in tz as a UTC instant (DST-safe) */
+function wallClockToUTC(
+  year: number, month: number, day: number,
+  hour: number, minute: number, second: number,
+  tz: string
+): Date {
+  let utcMs = Date.UTC(year, month - 1, day, hour, minute, second);
+  for (let i = 0; i < 3; i++) {
+    const got = partsInTZ(new Date(utcMs), tz);
+    const gotMs = Date.UTC(got.year, got.month - 1, got.day, got.hour, got.minute, got.second);
+    const wantMs = Date.UTC(year, month - 1, day, hour, minute, second);
+    const delta = wantMs - gotMs;
+    if (delta === 0) break;
+    utcMs += delta;
+  }
+  return new Date(utcMs);
+}
+
+/** Local wall-clock parts at the same instant in tz */
+function utcToWallClock(d: Date, tz: string) {
+  return partsInTZ(d, tz);
+}
+
+/** Offset minutes of tz at instant d (positive if tz AHEAD of UTC, negative if behind) */
+function offsetAt(d: Date, tz: string): number {
+  const p = partsInTZ(d, tz);
+  const localAsUTC = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return Math.round((localAsUTC - d.getTime()) / 60000);
+}
+
+/** Midnight of the same day in tz (as a UTC instant) */
+function startOfDayTZ(d: Date, tz: string): Date {
+  const p = partsInTZ(d, tz);
+  return wallClockToUTC(p.year, p.month, p.day, 0, 0, 0, tz);
+}
+
+/** Add whole days in tz (DST-safe). Returns midnight of resulting day in tz. */
+function addDaysTZ(d: Date, days: number, tz: string): Date {
+  const p = partsInTZ(d, tz);
+  return wallClockToUTC(p.year, p.month, p.day + days, 0, 0, 0, tz);
+}
+
+/** Round up an instant to the next slot boundary in tz */
+function roundUpToNextSlotTZ(d: Date, slotMinutes = 30, tz: string): Date {
+  const p = partsInTZ(d, tz);
+  const rem = p.minute % slotMinutes;
+  const add = (rem === 0 && p.second === 0) ? 0 : (slotMinutes - rem);
+  return wallClockToUTC(p.year, p.month, p.day, p.hour, p.minute + add, 0, tz);
+}
+
+/** RFC3339 string for the SAME instant, formatted in timezone's local clock with offset */
+function toISOStringWithTimezone(date: Date, timezone: string): string {
+  const off = offsetAt(date, timezone); // minutes
+  const p = utcToWallClock(date, timezone);
+  const sign = off >= 0 ? '+' : '-';
+  const abs = Math.abs(off);
+  const pad = (n: number, len = 2) => String(n).padStart(len, '0');
+  return `${pad(p.year, 4)}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+}
+
+/* ============================ ORIGINAL APIS, FIXED ============================ */
+
 /**
  * Returns the offset (in minutes) for the target time zone on the given date.
- * For example, for America/Los_Angeles during PDT this might return 420.
- * If obtaining the offset fails, fallbackOffset (if provided) is returned.
+ * Positive if the zone is ahead of UTC, negative if behind.
+ * Fallback used only if ICU fails (rare).
  */
 function getTimeZoneOffset(
   timeZone: string,
@@ -19,126 +105,98 @@ function getTimeZoneOffset(
   fallbackOffset?: number
 ): number {
   try {
-    // Use Intl.DateTimeFormat to extract the target zone’s local parts.
-    const dtf = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-    const parts = dtf.formatToParts(date);
-    const year = parts.find((p) => p.type === 'year')?.value;
-    const month = parts.find((p) => p.type === 'month')?.value;
-    const day = parts.find((p) => p.type === 'day')?.value;
-    const hour = parts.find((p) => p.type === 'hour')?.value;
-    const minute = parts.find((p) => p.type === 'minute')?.value;
-    const second = parts.find((p) => p.type === 'second')?.value;
-    if (!year || !month || !day || !hour || !minute || !second) {
-      throw new Error('Incomplete parts');
-    }
-    // Construct a string in YYYY-MM-DDTHH:mm:ss format.
-    const localString = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
-    // When parsing this string, JavaScript treats it as local time.
-    const asLocal = new Date(localString);
-    // The difference between the given date (an absolute instant) and asLocal is the offset.
-    return Math.round((asLocal.getTime() - date.getTime()) / (60 * 1000));
-  } catch (e) {
-    return fallbackOffset || 0;
+    return offsetAt(date, timeZone);
+  } catch {
+    return fallbackOffset ?? 0;
   }
 }
 
 /**
- * Computes meeting start and end times in GMT.
- * First, it computes the target “wall‐clock” times (using the target timezone)
- * then adjusts them to GMT using the computed offset.
+ * Computes meeting start and end times as UTC instants.
+ * Interprets ISO-without-offset strings as wall-clock in `timezone`.
+ * Relative contexts use working hours and tz-aware day math.
  */
 function calculateMeetingTime(
   timeframeContext: string,
   workingHours = { start_hour: 8, end_hour: 17 },
   now = new Date(),
   timezone: string = 'America/Los_Angeles',
-  fallbackOffset?: number,
+  _fallbackOffset?: number,
   skipFridayMeetings = false,
-  meetingDuration = 30 //meeting duration in minutes
+  meetingDuration = 30 // minutes
 ) {
-  // Try to parse timeframeContext as a valid date string.
-  const candidateDate = new Date(timeframeContext);
-  // if an exact day/time was passed use it
-  if (!isNaN(candidateDate.getTime())) {
-    // A valid date string was provided
-    // Assume candidateDate is already in local time with the correct offset.
-    const startTime = new Date(candidateDate);
-    const endTime = new Date(startTime.getTime() + meetingDuration * 60 * 1000);
+  // Try exact timestamp
+  const parsed = new Date(timeframeContext);
+  const isoNoTZ = /^\s*\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2})?\s*$/;
 
+  if (!isNaN(parsed.getTime())) {
+    const hasOffset = /([zZ]|[+\-]\d{2}:?\d{2})\s*$/.test(timeframeContext);
+    if (hasOffset) {
+      const startTime = new Date(parsed);
+      const endTime = new Date(startTime.getTime() + meetingDuration * 60000);
+      return { startTime, endTime };
+    }
+    if (isoNoTZ.test(timeframeContext)) {
+      const m = timeframeContext.match(
+        /^\s*(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?\s*$/
+      )!;
+      const [Y, M, D, h, mm, ss] = [+m[1], +m[2], +m[3], +m[4], +m[5], +(m[6] || '0')];
+      const startTime = wallClockToUTC(Y, M, D, h, mm, ss, timezone);
+      const endTime = new Date(startTime.getTime() + meetingDuration * 60000);
+      return { startTime, endTime };
+    }
+    // Other string formats with no offset are ambiguous—treat as already an instant
+    const startTime = new Date(parsed);
+    const endTime = new Date(startTime.getTime() + meetingDuration * 60000);
     return { startTime, endTime };
   }
 
-  // Convert the incoming date to the target timezone’s "wall clock" by using toLocaleString.
-  // (Note: toLocaleString returns a string WITHOUT offset information.)
-  const nowLocalString = new Date(now).toLocaleString('en-US', {
-    timeZone: timezone,
-  });
-  // The new Date(nowLocalString) creates a Date whose clock values match the target zone,
-  // but its internal value is parsed as if it were local (or GMT if TZ=UTC).
-  const localNow = new Date(nowLocalString);
+  // Relative contexts: build "now" in tz
+  const nowParts = partsInTZ(now, timezone);
+  let day0 = startOfDayTZ(now, timezone); // midnight today in tz (UTC instant)
 
-  if (localNow.getHours() > workingHours.end_hour - 1) {
-    // Outside business hours: move to the next day start of working hours.
-    localNow.setDate(localNow.getDate() + 1);
-    localNow.setHours(workingHours.start_hour, 0, 0, 0);
+  // If after hours, advance to next day
+  if (nowParts.hour >= workingHours.end_hour) {
+    day0 = addDaysTZ(day0, 1, timezone);
   }
 
-  // Create startTime and endTime as copies of the "local" now.
-  let startTime = new Date(localNow);
-  let endTime = new Date(localNow);
+  // Determine base day considering weekend/next week/friday skip
+  const weekdayShort = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' });
+  const dowIndex = (d: Date) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(weekdayShort.format(d));
+  let baseDay = day0;
 
-  // Adjust the "local" now for business hours.
-  let daysOffset = 0;
+  const todayDow = dowIndex(baseDay);
+  let step = 0;
+  if (skipFridayMeetings && todayDow === 5) step = 3; // Fri -> Mon
+  if (todayDow === 6) step = 2;                        // Sat -> Mon
+  if (todayDow === 0) step = 1;                        // Sun -> Mon
 
-  const currentDay = localNow.getDay();
-  switch (currentDay) {
-    case 5:
-      if (skipFridayMeetings) {
-        daysOffset = 3; // Friday -> Monday
-      }
-      break;
-    case 6:
-      daysOffset = 2; // Saturday -> Monday
-      break;
-    case 0:
-      daysOffset = 1; // Sunday -> Monday
-      break;
-    default:
-  }
   if (timeframeContext === 'next week') {
-    const currentDay = localNow.getDay();
-    let daysToNextMonday = (1 - currentDay + 7) % 7;
-    if (daysToNextMonday === 0) {
-      daysToNextMonday = 7;
-    }
-    daysOffset = daysToNextMonday;
+    const d = dowIndex(baseDay);
+    const toNextMonday = ((1 - d + 7) % 7) || 7;
+    step = toNextMonday;
   }
 
-  startTime.setDate(localNow.getDate() + daysOffset);
-  endTime.setDate(localNow.getDate() + daysOffset);
+  if (step) baseDay = addDaysTZ(baseDay, step, timezone);
 
-  startTime = roundUpToNextSlot(startTime);
-  endTime = new Date(startTime.getTime() + meetingDuration * 60000);
+  // Choose start hour (if we didn't move days and we're before start_hour, use start_hour; otherwise use max(now, start))
+  let startHour = workingHours.start_hour;
+  if (step === 0 && nowParts.hour > workingHours.start_hour && nowParts.hour < workingHours.end_hour) {
+    startHour = nowParts.hour;
+  }
 
-  // Now, adjust these "local" times to GMT by adding the target timezone’s offset.
-  const offsetMinutes = getTimeZoneOffset(timezone, startTime, fallbackOffset);
-  const adjustedStartTime = new Date(
-    startTime.getTime() - offsetMinutes * 60 * 1000
+  let startTime = wallClockToUTC(
+    partsInTZ(baseDay, timezone).year,
+    partsInTZ(baseDay, timezone).month,
+    partsInTZ(baseDay, timezone).day,
+    startHour, 0, 0, timezone
   );
-  const adjustedEndTime = new Date(
-    endTime.getTime() - offsetMinutes * 60 * 1000
-  );
 
-  return { startTime: adjustedStartTime, endTime: adjustedEndTime };
+  // Round to slot boundary in tz
+  startTime = roundUpToNextSlotTZ(startTime, 30, timezone);
+  const endTime = new Date(startTime.getTime() + meetingDuration * 60000);
+
+  return { startTime, endTime };
 }
 
 function calculateTimeSlotScore(
@@ -147,18 +205,17 @@ function calculateTimeSlotScore(
 ): number {
   let score = 100;
   const hoursFromNow =
-    (new Date(slot.start).getTime() - new Date().getTime()) / (1000 * 60 * 60);
+    (Date.parse(slot.start) - Date.now()) / (1000 * 60 * 60);
   score -= Math.min(hoursFromNow * 0.5, 20);
 
   for (const busy of allBusyTimes) {
-    const busyStart = new Date(busy.start);
-    const busyEnd = new Date(busy.end);
-    const slotStart = new Date(slot.start);
-    const slotEnd = new Date(slot.end);
+    const busyStart = Date.parse(busy.start);
+    const busyEnd = Date.parse(busy.end);
+    const slotStart = Date.parse(slot.start);
+    const slotEnd = Date.parse(slot.end);
 
-    const bufferBefore =
-      (slotStart.getTime() - busyEnd.getTime()) / (1000 * 60);
-    const bufferAfter = (busyStart.getTime() - slotEnd.getTime()) / (1000 * 60);
+    const bufferBefore = (slotStart - busyEnd) / 60000;
+    const bufferAfter = (busyStart - slotEnd) / 60000;
 
     if (bufferBefore > 0 && bufferBefore < 30) score -= 10;
     if (bufferAfter > 0 && bufferAfter < 30) score -= 10;
@@ -169,76 +226,30 @@ function calculateTimeSlotScore(
 
 /**
  * Formats a date as an ISO string including the correct offset for the given timezone.
- * The date should be in GMT (adjusted via calculateMeetingTime).
+ * Shows the same instant with the zone's local wall clock and offset.
  */
-function toISOStringWithTimezone(
+function toISOStringWithTimezonePublic(
   date: Date,
-  timezone: string,
-  fallbackOffset?: number
+  timezone: string
 ): string {
-  const currentOffset = getTimeZoneOffset(timezone, date);
-  if (currentOffset <= 0) {
-    return date.toISOString();
-  }
-  // Compute the target timezone offset (in minutes) for this date.
-  const offsetMinutes = getTimeZoneOffset(timezone, date, fallbackOffset);
-  // Determine sign: note that if the target zone is behind GMT (like America/Los_Angeles),
-  // getTimeZoneOffset returns a negative number.
-  const sign = offsetMinutes >= 0 ? '+' : '-';
-  const absOffset = Math.abs(offsetMinutes);
-  const pad = (n: number) => `${n}`.padStart(2, '0');
-  const adjustedDate = new Date(date.getTime() + offsetMinutes * 60 * 1000);
-
-  return (
-    adjustedDate.getFullYear() +
-    '-' +
-    pad(adjustedDate.getMonth() + 1) +
-    '-' +
-    pad(adjustedDate.getDate()) +
-    'T' +
-    pad(adjustedDate.getHours()) +
-    ':' +
-    pad(adjustedDate.getMinutes()) +
-    ':' +
-    pad(adjustedDate.getSeconds()) +
-    sign +
-    pad(Math.floor(absOffset / 60)) +
-    ':' +
-    pad(absOffset % 60)
-  );
+  return toISOStringWithTimezone(date, timezone);
 }
 
-// Helper function to check if two time slots overlap
+// Helper: check if two time slots overlap (using millis)
 function slotsOverlap(
   slot1: { start: string; end: string },
   slot2: { start: string; end: string }
 ): boolean {
-  return (
-    new Date(slot1.start) < new Date(slot2.end) &&
-    new Date(slot2.start) < new Date(slot1.end)
-  );
+  const a0 = Date.parse(slot1.start), a1 = Date.parse(slot1.end);
+  const b0 = Date.parse(slot2.start), b1 = Date.parse(slot2.end);
+  return a0 < b1 && b0 < a1;
 }
 
 function calculateEventDuration(start: string, end: string): number {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  const durationMs = endDate.getTime() - startDate.getTime();
-  // Convert milliseconds to minutes
-  return durationMs / (1000 * 60);
+  return (Date.parse(end) - Date.parse(start)) / 60000;
 }
 
-function roundUpToNextSlot(date: Date, slotMinutes: number = 30): Date {
-  const rounded = new Date(date.getTime());
-  const minutes = rounded.getMinutes();
-  const remainder = minutes % slotMinutes;
-  if (remainder !== 0) {
-    // Increase minutes to next slot boundary.
-    rounded.setMinutes(minutes - remainder + slotMinutes);
-  }
-  // Zero out seconds and milliseconds.
-  rounded.setSeconds(0, 0);
-  return rounded;
-}
+/* ============================ MAIN ============================ */
 
 export async function findOptimalMeetingTime(
   calendar: calendar_v3.Calendar,
@@ -254,12 +265,9 @@ export async function findOptimalMeetingTime(
 
   try {
     const duration = context.duration_minutes || 30;
-    // TODO: this needs to be configurable using the WorkingHours object from gsuite
-    const workingHours = context.working_hours || {
-      start_hour: 8,
-      end_hour: 17,
-    };
+    const workingHours = context.working_hours || { start_hour: 8, end_hour: 17 };
 
+    // Build initial window (UTC instants)
     const { startTime, endTime } = calculateMeetingTime(
       context.timeframe_context,
       workingHours,
@@ -267,78 +275,51 @@ export async function findOptimalMeetingTime(
       context.timezone
     );
 
-    // *** STEP 1: Fetch events from each participant using calendar.events.list ***
-    // This returns all events, regardless of acceptance.
+    // --- STEP 1: Fetch events (events.list) ---
     const eventTimeSlots: TimeSlot[] = [];
     const participants = [...context.participants];
 
     for (const participant of participants) {
       const params = {
         calendarId: participant,
-        timeMin: toISOStringWithTimezone(startTime, context.timezone!, -420),
-        timeMax: toISOStringWithTimezone(endTime, context.timezone!, -420),
-        singleEvents: true, // Expands recurring events if needed.
+        timeMin: toISOStringWithTimezonePublic(startTime, context.timezone!),
+        timeMax: toISOStringWithTimezonePublic(endTime, context.timezone!),
+        singleEvents: true,
       };
       const eventsResponse = await calendar.events.list(params);
       const events = eventsResponse.data.items || [];
-      events.forEach((event) => {
+      for (const event of events) {
         if (
           event.status !== 'cancelled' &&
-          event.start &&
-          event.end &&
-          event.start.dateTime &&
-          event.end.dateTime
+          event.start?.dateTime &&
+          event.end?.dateTime
         ) {
-          const duration = calculateEventDuration(
-            event.start.dateTime,
-            event.end.dateTime
-          );
-          if (duration > 0) {
+          const dur = calculateEventDuration(event.start.dateTime, event.end.dateTime);
+          if (dur > 0) {
             eventTimeSlots.push({
               attendees: JSON.stringify(event.attendees),
-              id: event.iCalUID!,
+              id: event.iCalUID || `${event.id}-${event.start.dateTime}`,
               start: event.start.dateTime,
               end: event.end.dateTime,
               startLocalDate: new Date(event.start.dateTime).toString(),
               endLocalDate: new Date(event.end.dateTime).toString(),
-              duration,
+              duration: dur,
             });
           }
         }
-      });
+      }
     }
 
-    // let's init current time with now in case we are withing working hours already, this avoids meetings times that take place in the past
-    let currentTime = roundUpToNextSlot(new Date()); // startTime is in GMT
-    // if it's too early in the morning push up to start time
-    // we don't check end time because the loop below with not execute if greater than start time
-    // and end time is already to the following day as well
-    if (currentTime < startTime) {
-      currentTime = new Date(startTime);
-    }
+    // --- STEP 2: freebusy for business hours today in tz ---
+    // Compute today's working window in tz, then format with tz offset
+    const dayStart = startOfDayTZ(startTime, context.timezone!); // base day from startTime
+    const pDay = partsInTZ(dayStart, context.timezone!);
+    const startFreeBusyTime = wallClockToUTC(pDay.year, pDay.month, pDay.day, workingHours.start_hour, 0, 0, context.timezone!);
+    const lastTimeLocal = wallClockToUTC(pDay.year, pDay.month, pDay.day, workingHours.end_hour, 0, 0, context.timezone!);
 
-    // Convert currentTime (GMT) to local time for the user.
-    const userOffset = getTimeZoneOffset(context.timezone!, currentTime, -420);
-    // When the target zone is behind GMT, userOffset is negative.
-    const localCurrentTime = new Date(
-      currentTime.getTime() + userOffset * 60 * 1000
-    );
-    const localHour = localCurrentTime.getHours();
-
-    const lastTime = new Date(localCurrentTime);
-    lastTime.setHours(workingHours.end_hour, 0, 0, 0);
-
-    const startFreeBusyTime = new Date(localCurrentTime);
-    startFreeBusyTime.setHours(workingHours.start_hour, 0, 0, 0);
-
-    // *** STEP 2: Query freebusy for busy periods for the entire current day during business hours ***
     const freeBusyRequest = {
-      timeMin: toISOStringWithTimezone(
-        startFreeBusyTime,
-        context.timezone!,
-        -420
-      ),
-      timeMax: toISOStringWithTimezone(lastTime, context.timezone!, -420),
+      timeMin: toISOStringWithTimezonePublic(startFreeBusyTime, context.timezone!),
+      timeMax: toISOStringWithTimezonePublic(lastTimeLocal, context.timezone!),
       items: participants.map((email) => ({ id: email })),
       timeZone: 'UTC',
     };
@@ -349,21 +330,16 @@ export async function findOptimalMeetingTime(
 
     const busySlots: BusyPeriod[] = [];
     const calendars = freeBusyResponse.data.calendars || {};
-    const seen = new Set();
-
     for (const email in calendars) {
       const busyPeriods = calendars[email].busy || [];
-      busyPeriods.forEach((period) => {
+      for (const period of busyPeriods) {
         if (period.start && period.end) {
-          busySlots.push({
-            start: period.start,
-            end: period.end,
-          });
+          busySlots.push({ start: period.start, end: period.end });
         }
-      });
+      }
     }
 
-    // *** STEP 3: Filter out busySlots slots that overlap with events from events.list ***
+    // --- STEP 3: Filter freebusy that overlap with events.list ---
     const filteredFreeBusySlots = busySlots.filter((fbSlot) => {
       return !eventTimeSlots.some((eventSlot) =>
         slotsOverlap(
@@ -373,98 +349,75 @@ export async function findOptimalMeetingTime(
       );
     });
 
-    // Merge the events.list results with the filtered freebusy results
+    // Merge & dedupe by instant keys
+    const seen = new Set<string>();
     const allBusyTimes: BusyPeriod[] = [
-      ...eventTimeSlots, // Busy times from events.list
-      ...filteredFreeBusySlots, // Freebusy slots that didn't overlap with events
+      ...eventTimeSlots,
+      ...filteredFreeBusySlots,
     ].filter((slot) => {
-      // de-duplicate the slots
-      // we need a local date string so the start and end are the same, otherwise they can have different offsets
-      if (
-        seen.has(
-          `${new Date(slot.start).toString()}-${new Date(slot.end).toString()}`
-        )
-      ) {
-        return false;
-      }
-      seen.add(
-        `${new Date(slot.start).toString()}-${new Date(slot.end).toString()}`
-      );
+      const key = `${Date.parse(slot.start)}-${Date.parse(slot.end)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
 
-    // Sort all busy times chronologically
-    allBusyTimes.sort(
-      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
-    );
+    // Sort chronologically
+    allBusyTimes.sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
 
-    // *** STEP 4: Calculate available time slots based on merged busy times ***
-    // All dates here are in GMT. workingHours are given in local time (context.timezone)
-    // so we convert currentTime from GMT into local time before applying the working-hour check.
+    // --- STEP 4: Walk through available slots within today's business window ---
     const availableSlots: TimeSlot[] = [];
 
-    while (currentTime < lastTime) {
-      if (
-        localHour >= workingHours.start_hour &&
-        localHour < workingHours.end_hour
-      ) {
+    // currentTime starts at now (rounded) but not before startTime
+    let currentTime = roundUpToNextSlotTZ(new Date(), 30, context.timezone!);
+    if (currentTime < startTime) currentTime = new Date(startTime);
+
+    // We'll iterate within today's business window; if we need to roll over, recompute window
+    let windowStart = startFreeBusyTime;
+    let windowEnd = lastTimeLocal;
+
+    while (currentTime < windowEnd) {
+      // Recompute local hour each iteration in tz
+      const lp = partsInTZ(currentTime, context.timezone!);
+      const localHour = lp.hour;
+
+      if (localHour >= workingHours.start_hour && localHour < workingHours.end_hour) {
         const slotStart = new Date(currentTime);
         const slotEnd = new Date(currentTime.getTime() + duration * 60000);
 
         let isAvailable = true;
         for (const busy of allBusyTimes) {
-          // busy.start and busy.end are assumed to be in ISO format with proper offsets.
-          const busyStart = new Date(busy.start); // GMT instant
-          const busyEnd = new Date(busy.end);
-          if (slotStart < busyEnd && slotEnd > busyStart) {
+          const busyStart = Date.parse(busy.start);
+          const busyEnd = Date.parse(busy.end);
+          if (slotStart.getTime() < busyEnd && slotEnd.getTime() > busyStart) {
             isAvailable = false;
-            // Jump currentTime to busyEnd (still in GMT)
-            currentTime = roundUpToNextSlot(busyEnd);
+            currentTime = roundUpToNextSlotTZ(new Date(busyEnd), 30, context.timezone!);
             break;
           }
         }
 
         if (isAvailable) {
-          console.log(
-            `${LOG_PREFIX} isAvailable: ${isAvailable} currentTime: ${currentTime.toString()} toISOStringWithTimezoneL ${toISOStringWithTimezone(
-              currentTime,
-              context.timezone!,
-              -420
-            )}`
-          );
           const slot: TimeSlot = {
-            start: toISOStringWithTimezone(
-              currentTime,
-              context.timezone!,
-              -420
-            ),
-            end: toISOStringWithTimezone(slotEnd, context.timezone!, -420),
+            start: toISOStringWithTimezonePublic(slotStart, context.timezone!),
+            end: toISOStringWithTimezonePublic(slotEnd, context.timezone!),
           };
-
           slot.score = calculateTimeSlotScore(slot, allBusyTimes);
           availableSlots.push(slot);
-          // Move ahead 30 minutes in GMT.
           currentTime = new Date(currentTime.getTime() + 30 * 60000);
         }
       } else {
-        // If the local time is outside working hours, move currentTime to the next day’s working start.
-        // First, build the next day's start in local time.
-        const localNext = new Date(localCurrentTime);
-        localNext.setDate(localNext.getDate() + 1);
-        localNext.setHours(workingHours.start_hour, 0, 0, 0);
-        // Now, convert that local time back to GMT.
-        const newOffset = getTimeZoneOffset(context.timezone!, localNext, -420);
-        currentTime = new Date(localNext.getTime() - newOffset * 60 * 1000);
+        // Move to next day start in tz and recompute window
+        const nextDay0 = addDaysTZ(currentTime, 1, context.timezone!);
+        const p = partsInTZ(nextDay0, context.timezone!);
+        windowStart = wallClockToUTC(p.year, p.month, p.day, workingHours.start_hour, 0, 0, context.timezone!);
+        windowEnd = wallClockToUTC(p.year, p.month, p.day, workingHours.end_hour, 0, 0, context.timezone!);
+        currentTime = new Date(windowStart);
       }
     }
 
     const suggestedTimes = availableSlots
       .sort((a, b) => (b.score || 0) - (a.score || 0))
       .slice(0, 5)
-      .map((slot) => ({
-        ...slot,
-        score: slot.score || 0,
-      }));
+      .map((slot) => ({ ...slot, score: slot.score || 0 }));
 
     const message =
       suggestedTimes.length > 0
@@ -477,27 +430,18 @@ export async function findOptimalMeetingTime(
         null,
         2
       )}\n  timeframe: ${JSON.stringify(
-        {
-          suggested_times: suggestedTimes,
-          message,
-        },
+        { suggested_times: suggestedTimes, message },
         null,
         2
       )}`
     );
 
-    return {
-      suggested_times: suggestedTimes,
-      message,
-    };
+    return { suggested_times: suggestedTimes, message };
   } catch (error) {
     console.error(
-      `${LOG_PREFIX} Finding optimal meeting time failed:\n  message: ${
-        error instanceof Error ? error.message : error
+      `${LOG_PREFIX} Finding optimal meeting time failed:\n  message: ${error instanceof Error ? error.message : error
       }\n  stack: ${error instanceof Error ? error.stack : ''}`,
-      {
-        response: (error as any).response?.data,
-      }
+      { response: (error as any).response?.data }
     );
     throw error;
   }

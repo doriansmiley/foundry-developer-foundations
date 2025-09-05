@@ -7,3 +7,4 @@ export * from './lib/uuid';
 export * from './lib/Markdown';
 export * from './lib/Vectors';
 export * from './lib/loggingService';
+export * from './lib/utc';

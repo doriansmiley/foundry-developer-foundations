@@ -3,10 +3,19 @@ import {
   DerivedWindow,
 } from '@codestrap/developer-foundations-types';
 
+/**
+ * Derive a scheduling window from a MeetingRequest.
+ *
+ * Assumptions:
+ * - All input instants and strings are UTC.
+ * - All computations use UTC getters/setters (host-TZ agnostic).
+ *
+ * @param req Meeting request
+ * @param now "Now" (defaults to system clock; must be a UTC instant)
+ */
 export function deriveWindowFromTimeframe(
   req: MeetingRequest,
-  timezone: string,
-  now: Date = new Date()
+  now?: Date,
 ): DerivedWindow {
   const {
     timeframe_context,
@@ -16,31 +25,33 @@ export function deriveWindowFromTimeframe(
   } = req;
   const stepDefault = 30;
 
-  // Get "now" as a PT wall-clock Date (safe against host TZ)
-  const localNow = nowInTZ(timezone, now);
+  // If caller didn’t supply "now", just use the current UTC instant.
+  // Date objects are always absolute instants; we’ll only use UTC accessors below.
+  const localNow = new Date(now ?? new Date());
 
   switch (timeframe_context) {
     case 'user defined exact date/time': {
-      const candidateStr =
-        localDateString && localDateString.trim()
-          ? localDateString
-          : req.timeframe_context;
+      const candidateStr = localDateString?.trim();
 
-      // ISO without timezone (e.g., 2025-09-01T09:30 or 2025-09-01 09:30)
+      if (!candidateStr) {
+        throw new Error(
+          'timeframe_context "user defined exact date/time" requires a non-empty localDateString (UTC).'
+        );
+      }
+
+      // ISO without timezone (e.g., 2025-07-22T10:10 or 2025-07-22 10:10[:ss])
       const isoNoTZ = /^\s*\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}(?::\d{2})?\s*$/;
 
       let candidate: Date;
       if (isoNoTZ.test(candidateStr)) {
-        // Treat as wall-clock in target timezone
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        // Interpret as *UTC wall-clock*
         const m = candidateStr.match(
           /^\s*(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?\s*$/
         )!;
-        candidate = new Date(
-          Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || '0'), 0)
-        );
+        const Y = +m[1], M = +m[2], D = +m[3], h = +m[4], mm = +m[5], s = +(m[6] || '0');
+        candidate = new Date(Date.UTC(Y, M - 1, D, h, mm, s));
       } else {
-        // Let JS parse any other format (incl. "Wed Sep 03 2025 ... GMT-0700 (...)")
+        // Strings with explicit offset are real instants already
         const parsed = new Date(candidateStr);
         if (isNaN(parsed.getTime())) {
           throw new Error(
@@ -50,16 +61,19 @@ export function deriveWindowFromTimeframe(
         candidate = parsed;
       }
 
-      // Normalize seconds with UTC setters (host-agnostic)
+      // Snap seconds/millis
       candidate.setUTCSeconds(0, 0);
 
-      const windowStartLocal = new Date(candidate);
+      const windowStartLocal = candidate; // UTC instant
       const windowEndLocal = new Date(
         candidate.getTime() + duration_minutes * 60_000
       );
       const slotStepMinutes = 1;
 
-      const clampedStart = clampToWorkingInstant(windowStartLocal, working_hours);
+      const clampedStart = clampToWorkingInstant(
+        windowStartLocal,
+        working_hours
+      );
       const clampedEnd = new Date(
         Math.max(
           clampedStart.getTime() + duration_minutes * 60_000,
@@ -74,11 +88,8 @@ export function deriveWindowFromTimeframe(
       };
     }
 
-
-
     case 'as soon as possible': {
       const start = clampToWorkingInstant(localNow, working_hours);
-      // Search through end of THIS work week; if we're past Friday close, use NEXT week end
       const endOfSpan = endOfCurrentOrNextWorkWeek(start, working_hours);
       return {
         windowStartLocal: start,
@@ -88,11 +99,9 @@ export function deriveWindowFromTimeframe(
     }
 
     case 'this week': {
-      // From now (clamped) to Friday 17:00 of the current ISO week; if already past, return next week window
       const start = clampToWorkingInstant(localNow, working_hours);
       const end = endOfWorkWeek(start, working_hours);
       if (start.getTime() >= end.getTime()) {
-        // We're past business close for this week; bump to next week
         const next = startOfNextWeek(start, working_hours);
         const endNext = endOfWorkWeek(next, working_hours);
         return {
@@ -119,7 +128,6 @@ export function deriveWindowFromTimeframe(
     }
 
     default: {
-      // Fallback: treat like ASAP
       const start = clampToWorkingInstant(localNow, working_hours);
       const endOfSpan = endOfCurrentOrNextWorkWeek(start, working_hours);
       return {
@@ -131,67 +139,63 @@ export function deriveWindowFromTimeframe(
   }
 }
 
-/* ---------- date helpers (PT-safe wall-clock) ---------- */
+/* ---------- UTC helpers (no timezones) ---------- */
 
-function nowInTZ(tz: string, ref: Date): Date {
-  const dtf = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-  const p = Object.fromEntries(
-    dtf.formatToParts(ref).map((x) => [x.type, x.value])
-  );
-  return new Date(Date.UTC(
-    Number(p['year']),
-    Number(p['month']) - 1,
-    Number(p['day']),
-    Number(p['hour']),
-    Number(p['minute']),
-    Number(p['second']),
-    0
-  ));
+/**
+ * Kept name for compatibility; in UTC mode it simply returns a copy of `ref`.
+ */
+function nowInTZ(ref: Date): Date {
+  return new Date(ref);
 }
 
+/** Start of the day (00:00 UTC) */
 function startOfDayLocal(d: Date): Date {
   const x = new Date(d);
   x.setUTCHours(0, 0, 0, 0);
   return x;
 }
 
+/** Add whole days in UTC */
 function addDays(d: Date, days: number): Date {
   const x = new Date(d);
   x.setUTCDate(x.getUTCDate() + days);
   return x;
 }
 
+/** Weekend check in UTC (0 Sun .. 6 Sat) */
 function isWeekend(d: Date): boolean {
   const dow = d.getUTCDay();
   return dow === 0 || dow === 6;
 }
 
+/**
+ * Clamp an instant to working hours on that day in UTC.
+ * If before start → bump to start; if after end → next business day's start.
+ */
 function clampToWorkingInstant(
-  d: Date,
+  instant: Date,
   hours: { start_hour: number; end_hour: number }
 ): Date {
-  let x = new Date(d);
-  // If weekend, move to next Monday at start_hour
+  let x = new Date(instant);
+
   while (isWeekend(x)) {
     x = startOfDayLocal(addDays(x, 1));
   }
-  const within = new Date(x);
+
   const start = new Date(x);
   start.setUTCHours(hours.start_hour, 0, 0, 0);
+
   const end = new Date(x);
   end.setUTCHours(hours.end_hour, 0, 0, 0);
 
-  if (within >= end) {
-    // move to next business day start
+  // 🔧 If the end hour is <= start hour in UTC, it means the local “end of day”
+  // spills into the *next* UTC day (e.g., PT 17:00 → 00:00 UTC next day).
+  if (end.getTime() <= start.getTime()) {
+    end.setUTCDate(end.getUTCDate() + 1);
+  }
+
+  if (x >= end) {
+    // move to next business day start (still all-UTC)
     let y = startOfDayLocal(addDays(x, 1));
     while (isWeekend(y)) {
       y = startOfDayLocal(addDays(y, 1));
@@ -200,11 +204,13 @@ function clampToWorkingInstant(
     return y;
   }
 
-  if (within < start) return new Date(start);
+  if (x < start) return start;
 
-  return within;
+  return x;
 }
 
+
+/** Monday 00:00 UTC of the week containing d (Sun=0..Sat=6) */
 function startOfWeekMonday(d: Date): Date {
   const x = startOfDayLocal(d);
   const dow = x.getUTCDay(); // 0 Sun .. 6 Sat
@@ -212,23 +218,43 @@ function startOfWeekMonday(d: Date): Date {
   return startOfDayLocal(addDays(x, delta));
 }
 
-function startOfNextWeek(d: Date, hours: { start_hour: number }): Date {
+/** Next week's Monday at start_hour UTC */
+function startOfNextWeek(
+  d: Date,
+  hours: { start_hour: number }
+): Date {
   const nextMon = addDays(startOfWeekMonday(d), 7);
   nextMon.setUTCHours(hours.start_hour, 0, 0, 0);
   return nextMon;
 }
 
-function endOfWorkWeek(d: Date, hours: { end_hour: number }): Date {
-  // Friday of the week containing d
+/** Friday end_hour UTC of the week containing d */
+/** Friday at end_hour UTC of the week containing d (handles UTC wrap past midnight) */
+function endOfWorkWeek(
+  d: Date,
+  hours: { start_hour: number; end_hour: number }
+): Date {
   const mon = startOfWeekMonday(d);
   const fri = addDays(mon, 4); // Mon + 4 = Fri
-  fri.setUTCHours(hours.end_hour, 0, 0, 0);
-  return fri;
+
+  // End-of-day on Friday in UTC
+  const end = new Date(fri);
+  end.setUTCHours(hours.end_hour, 0, 0, 0);
+
+  // If end_hour <= start_hour in UTC, local "end of day" spills into next UTC day
+  // (e.g., local 17:00 PT -> 00:00 UTC next day). Push end forward one day.
+  const friStart = new Date(fri);
+  friStart.setUTCHours(hours.start_hour, 0, 0, 0);
+  if (end.getTime() <= friStart.getTime()) {
+    end.setUTCDate(end.getUTCDate() + 1);
+  }
+
+  return end;
 }
 
 function endOfCurrentOrNextWorkWeek(
   start: Date,
-  hours: { end_hour: number }
+  hours: { start_hour: number; end_hour: number }
 ): Date {
   const end = endOfWorkWeek(start, hours);
   if (start.getTime() >= end.getTime()) {

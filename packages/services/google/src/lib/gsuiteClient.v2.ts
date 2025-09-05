@@ -7,6 +7,7 @@ import { makeGSuiteClient } from './gsuiteClient';
 import { findOptimalMeetingTimeV2 } from './delegates/findOptimalMeetingTime.v2';
 import { deriveWindowFromTimeframe } from './delegates/deriveWindowFromTimeframe';
 import { summarizeCalendars } from './delegates/summerizeCalanders';
+import { wallClockToUTC, workingHoursUTCForDate } from '@codestrap/developer-foundations-utils';
 
 export async function makeGSuiteClientV2(
   user: string
@@ -34,23 +35,39 @@ export async function makeGSuiteClientV2(
       message: string;
       suggested_times: { start: string; end: string; score: number }[];
     }> => {
+      // TODO, get the TZ from the user profile
       const timezone = 'America/Los_Angeles';
-      const fallbackOffsetMinutes = -420;
+
+      // "now" as an absolute UTC instant (portable across machines)
+      const nowUTC = new Date();
+
+      // Compute UTC working hours for *today in the target tz* (e.g., 08:00–17:00 local)
+      const workingHours = workingHoursUTCForDate(nowUTC, timezone, 8, 17);
+
+      if (meetingRequest.timeframe_context === 'user defined exact date/time') {
+        //localDateString
+        meetingRequest.localDateString = wallClockToUTC(meetingRequest.localDateString!, timezone).toISOString();
+      }
+
+      // Ensure the request carries the UTC hours we just computed
+      const req = { ...meetingRequest, working_hours: workingHours };
+
+      console.log(`calling deriveWindowFromTimeframe`, { req, timezone, nowUTC: nowUTC.toISOString() });
 
       const { windowStartLocal, windowEndLocal, slotStepMinutes } =
-        deriveWindowFromTimeframe(meetingRequest, timezone);
+        deriveWindowFromTimeframe(req);
+      console.log(`deriveWindowFromTimeframe returned start time of ${windowStartLocal} and end time of ${windowEndLocal}`)
 
       const slots = await findOptimalMeetingTimeV2({
         calendar: v1Client.getCalendarClient(),
         attendees: meetingRequest.participants,
         timezone,
-        windowStartLocal,
-        windowEndLocal,
+        windowStartUTC: windowStartLocal,
+        windowEndUTC: windowEndLocal,
         durationMinutes: meetingRequest.duration_minutes,
-        workingHours: meetingRequest.working_hours,
+        workingHours,
         slotStepMinutes,
         skipFriday: false,
-        fallbackOffsetMinutes,
       });
 
       const suggested_times = slots.map((s) => ({
