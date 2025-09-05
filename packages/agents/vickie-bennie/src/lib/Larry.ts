@@ -17,7 +17,7 @@ import {
 } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 
-interface LarryResponse {
+export interface LarryResponse {
     status: number;
     message: string;
     executionId: string;
