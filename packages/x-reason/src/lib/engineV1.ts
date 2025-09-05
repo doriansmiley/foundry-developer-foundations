@@ -31,7 +31,8 @@ async function solve(query: string, solver: Prompt): Promise<string> {
 async function program(
   query: string,
   functionCatalog: string,
-  programmer: Prompt
+  programmer: Prompt,
+  debug = true
 ): Promise<StateConfig[]> {
   const { user, system } = await programmer(query, functionCatalog);
 
@@ -41,9 +42,11 @@ async function program(
   const value = response ?? '';
   let unwrapped = extractJsonFromBackticks(value) || value;
 
-  console.log(
-    `programmer generated the following unchecked solution: ${unwrapped}`
-  );
+  if (debug) {
+    console.log(
+      `programmer generated the following unchecked solution: ${unwrapped}`
+    );
+  }
 
   // check the quality of the result
   try {
@@ -134,14 +137,15 @@ Only respond with the updated JSON and don't be chatty! Your response will be se
 
 async function evaluate(
   input: EvaluationInput,
-  evaluate: Prompt
+  evaluate: Prompt,
+  debug = true
 ): Promise<EvaluatorResult> {
   let evaluation = {
     rating: 0,
     correct: false,
   };
   try {
-    const machine = programV1(input.states, input.tools!);
+    const machine = programV1(input.states, input.tools!, debug);
     const { user, system } = await evaluate(
       input.query,
       JSON.stringify(input.states)
@@ -206,7 +210,9 @@ async function evaluate(
     };
   }
   // TODO better evaluation. For now if it compiles we are good. When we have evaluator models we'll expand
-  console.log(`evaluator responded with: ${JSON.stringify(evaluation)}`);
+  if (debug) {
+    console.log(`evaluator responded with: ${JSON.stringify(evaluation)}`);
+  }
   return evaluation;
 }
 

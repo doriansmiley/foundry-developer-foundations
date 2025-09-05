@@ -12,6 +12,18 @@
   },
   "tags": ["type:platform"],
   "targets": {
+    "cli": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r dotenv/config -r ts-node/register -r tsconfig-paths/register packages/x-reason/src/lib/cli/cli.ts",
+        "env": {
+          "TS_NODE_PROJECT": "packages/x-reason/tsconfig.cli.json",
+          "DOTENV_CONFIG_PATH": "packages/x-reason/.env",
+          "TS_NODE_TRANSPILE_ONLY": "true",
+          "TS_NODE_TYPE_CHECK": "false"
+        }
+      }
+    },
     "build": {
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
