@@ -38,7 +38,7 @@ async function main(executionId?: string, contextUpdateInput?: string) {
       undefined,
       true,
       executionId,
-      JSON.stringify(contextUpdateInput),
+      contextUpdateInput,
       SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST // IMPORTANT: The X-Reason factory needs to be updated to support whatever key you define for this x-Reason
     );
     currentState = nextState.value;
