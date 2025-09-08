@@ -8,6 +8,7 @@ import { discoverWorkedExamples, toPracticeProblems } from '../assets/workedExam
 import { discoverEnv } from '../assets/env';
 import { assembleReadmeContext } from '../assets/context';
 import { renderReadme } from '../assets/markdown';
+import { discoverProjectConfigs } from '../assets/configs';
 
 type Ev =
     | { type: 'START' }
@@ -93,10 +94,23 @@ export const readmeMachine = Machine<Ctx, any, Ev>({
                 src: async (ctx) => {
                     ctx.env = discoverEnv(ctx.projectRoot || process.cwd());
                 },
-                onDone: 'synthesize',
+                onDone: 'discoverConfigs',
                 onError: {
                     target: 'error',
                     actions: assign({ error: (_: Ctx, e: any) => String(e.data || e) }),
+                },
+            },
+        },
+
+        discoverConfigs: {
+            invoke: {
+                src: async (ctx) => {
+                    const root = ctx.projectRoot || process.cwd();
+                    ctx.projectConfig = discoverProjectConfigs(root);
+                },
+                onDone: 'synthesize',
+                onError: {
+                    target: 'synthesize', // non-fatal if configs fail to parse
                 },
             },
         },
@@ -118,6 +132,7 @@ export const readmeMachine = Machine<Ctx, any, Ev>({
                         practice: ctx.practice,
                         exposition: { purpose: 'Auto-generated; refine with engineer input.' },
                         unknowns: [],
+                        projectConfig: ctx.projectConfig,
                     };
                     ctx.readmeInput = await assembleReadmeContext(
                         ({} as unknown) as any,

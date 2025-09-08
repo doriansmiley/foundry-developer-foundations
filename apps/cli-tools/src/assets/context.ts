@@ -1,9 +1,9 @@
 // src/analyzers/context.ts
-import type { Context as DFContext, MachineEvent, ThreadsDao } from '@codestrap/developer-foundations-types';
+import type { Context as DFContext } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import { GeminiService, TYPES } from '@codestrap/developer-foundations-types';
 import { ReadmeContext, ReadmeInputForTemplate, AssembleOptions, ExportedSymbol } from '@codestrap/developer-foundations-types';
-import { confirmUserIntent } from '@codestrap/developer-foundations-x-reason';
+import { generateToolCallingTasksLLM } from './tasksFromApi';
 
 function summarizeApi(api: ExportedSymbol[]): string {
     const rows = api.slice(0, 80).map(e => {
@@ -39,7 +39,13 @@ ENTRY SUMMARY:
 - Files (${readmeCtx.files.length}): ${readmeCtx.files.slice(0, 50).map(f => f.file).join(', ')}${readmeCtx.files.length > 50 ? ', …' : ''}
 - Env Vars (${readmeCtx.env.length}): ${readmeCtx.env.map(v => v.name).join(', ') || 'None'}
 - Nx: ${readmeCtx.nx ? `${readmeCtx.nx.projectName} deps=${readmeCtx.nx.dependencies.length} dependents=${readmeCtx.nx.dependents.length}` : 'None'}
-- Unknowns (${readmeCtx.unknowns.length}): ${readmeCtx.unknowns.join('; ') || 'None'}
+- Project Config:
+  - package.json: ${readmeCtx.projectConfig?.packageJson?.path ?? 'not found'}
+  - tsconfigs: ${(readmeCtx.projectConfig?.tsconfigs || []).map(t => t.path).join(', ') || 'none'}
+  - project.json: ${readmeCtx.projectConfig?.projectJson?.path ?? 'not found'}
+  - jest: ${(readmeCtx.projectConfig?.jestConfigs || []).join(', ') || 'none'}
+  - eslint: ${(readmeCtx.projectConfig?.eslintConfigs || []).join(', ') || 'none'}
+  - env files: ${(readmeCtx.projectConfig?.envFiles || []).join(', ') || 'none'}
 
 PUBLIC API (abbrev):
 ${summarizeApi(readmeCtx.files.flatMap(f => f.exported))}
@@ -101,19 +107,30 @@ If information is insufficient, set gapsAndQuestions with concrete questions and
                 dependents: readmeCtx.nx.dependents,
             } : null,
             gapsAndQuestions: readmeCtx.unknowns,
+            projectConfig: readmeCtx.projectConfig,
         };
     }
 
-    /*
-    TODO move to the cli tool
-    // If gaps remain and user interaction is allowed, ask targeted questions via confirmUserIntent
-    if ((opts.askUserIfInsufficient ?? true) && parsed.gapsAndQuestions && parsed.gapsAndQuestions.length) {
-        const q = `Please clarify the following to complete README synthesis:\n- ${parsed.gapsAndQuestions.join('\n- ')}`;
-        const intent = await confirmUserIntent(dfContext as any, undefined as unknown as MachineEvent, q);
-        // append the confirmation text as exposition extension
-        parsed.expositionMd = `${parsed.expositionMd}\n\n### Engineer Notes\n${intent.confirmationPrompt}`;
-        // clear gaps after asking once (state machine can loop if needed)
-    }*/
+    const includeNames =
+        (readmeCtx as any).entryExportedFunctions as string[] | undefined
+        // fall back: take function names from parsed.apiSurface
+        ?? (parsed.apiSurface || []).filter((s: any) => s.kind === 'function').map((s: any) => s.name);
+
+    const toolTasks = await generateToolCallingTasksLLM({
+        apiSurface: parsed.apiSurface || [],
+        workedSFT: parsed.workedSFT || [],
+        practiceRL: parsed.practiceRL || [],
+        expositionMd: parsed.expositionMd || '',
+        envTable: parsed.envTable || [],
+        nxSummary: parsed.nxSummary || null,
+        projectConfig: (parsed as any).projectConfig,
+        includeFunctionNames: includeNames,
+        currentUserEmail: parsed.currentUserEmail || process.env.USER_EMAIL || process.env.GMAIL_USER || undefined,
+        maxTasksPerFunction: 2,
+        totalTaskBudget: 12,
+    });
+
+    parsed.toolCallingTasks = toolTasks;
 
     return parsed;
 }

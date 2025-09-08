@@ -77,6 +77,7 @@ export type ReadmeContext = {
     practice: PracticeProblem[];
     exposition: Exposition;
     unknowns: string[];
+    projectConfig?: ProjectConfigSummary;
 };
 
 export type ReadmeInputForTemplate = {
@@ -104,6 +105,11 @@ export type ReadmeInputForTemplate = {
         notes?: string;
     } | null;
     gapsAndQuestions: string[];
+    projectConfig?: ProjectConfigSummary;
+    toolCallingTasks?: ToolCallingTask[];
+    currentUserEmail?: string;
+    entryExportedFunctions?: string[];
+    entryFile?: string;
 };
 
 export type AssembleOptions = {
@@ -129,6 +135,7 @@ export type Ctx = {
     env: EnvVar[];
     exposition: Exposition;
     unknowns: string[];
+    projectConfig?: ProjectConfigSummary;
 
     // synthesized
     readmeInput?: ReadmeInputForTemplate;
@@ -137,3 +144,57 @@ export type Ctx = {
     // execution
     error?: string;
 };
+
+// ✱ ADD these near your other types
+
+export type PackageJsonSummary = {
+    path: string;
+    name?: string;
+    version?: string;
+    private?: boolean;
+    scripts?: Record<string, string>;
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
+};
+
+export type TsConfigSummary = {
+    path: string;
+    extends?: string;
+    compilerOptions?: Partial<{
+        target: string;
+        module: string;
+        baseUrl: string;
+        rootDir: string;
+        outDir: string;
+        paths: Record<string, string[]>;
+        jsx: string;
+        moduleResolution: string;
+        strict: boolean;
+    }>;
+};
+
+export type ProjectJsonSummary = {
+    path: string;
+    name?: string;
+    sourceRoot?: string;
+    tags?: string[];
+    targets?: string[]; // just the target names
+};
+
+export type ProjectConfigSummary = {
+    packageJson?: PackageJsonSummary;
+    tsconfigs: TsConfigSummary[];
+    projectJson?: ProjectJsonSummary;
+    jestConfigs: string[];   // paths only
+    eslintConfigs: string[]; // paths only
+    envFiles: string[];      // .env, .env.local, etc (paths only)
+};
+
+export type ToolCallingTask = {
+    tool: string;
+    question: string;
+    answerCode: string;
+    notes?: string;
+};
+
