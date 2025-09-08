@@ -4,7 +4,8 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "start": "cross-env DOTENV_CONFIG_PATH=.env TS_NODE_TRANSPILE_ONLY=true TS_NODE_TYPE_CHECK=false ts-node --project tsconfig.cli.json -r dotenv/config -r tsconfig-paths/register src/main.ts"
+    "start": "cross-env DOTENV_CONFIG_PATH=.env TS_NODE_TRANSPILE_ONLY=true TS_NODE_TYPE_CHECK=false ts-node --project tsconfig.cli.json -r dotenv/config -r tsconfig-paths/register src/main.ts",
+    "generate-readme": "cross-env DOTENV_CONFIG_PATH=.env TS_NODE_TRANSPILE_ONLY=true TS_NODE_TYPE_CHECK=false ts-node --project tsconfig.cli.json -r dotenv/config -r tsconfig-paths/register src/readme-generator/main.ts"
   },
   "dependencies": {
     "@codestrap/developer-foundations-agents-vickie-bennie": "workspace:*",

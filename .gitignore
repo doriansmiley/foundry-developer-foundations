@@ -12,6 +12,8 @@ testGitWorklows.sh
 .nx/workspace-data
 /packages/**/.env
 
+project-graph.json
+
 # dev TLS certs/keys
 apps/**/certificates/*.pem
 *.key
