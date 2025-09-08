@@ -2,17 +2,34 @@ import {
   MeetingRequest,
   OfficeServiceV2,
   Summaries,
+  DriveSearchParams,
+  DriveSearchOutput,
 } from '@codestrap/developer-foundations-types';
 import { makeGSuiteClient } from './gsuiteClient';
+
 import { findOptimalMeetingTimeV2 } from './delegates/findOptimalMeetingTime.v2';
 import { deriveWindowFromTimeframe } from './delegates/deriveWindowFromTimeframe';
 import { summarizeCalendars } from './delegates/summerizeCalanders';
+import { searchDriveFiles } from './delegates/searchDriveFiles';
 import { wallClockToUTC, workingHoursUTCForDate } from '@codestrap/developer-foundations-utils';
+import { google } from 'googleapis';
+import { loadServiceAccountFromEnv, makeGoogleAuth } from '../helpers/googleAuth';
 
 export async function makeGSuiteClientV2(
   user: string
 ): Promise<OfficeServiceV2> {
   const v1Client = await makeGSuiteClient(user);
+
+  const credentials = await loadServiceAccountFromEnv();
+
+  const driveScopes = [
+    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/drive.metadata.readonly',
+  ];
+
+  const driveAuth = makeGoogleAuth(credentials, driveScopes, user);
+
+  const driveClient = google.drive({ version: 'v3', auth: driveAuth });
 
   return {
     ...v1Client,
@@ -81,5 +98,17 @@ export async function makeGSuiteClientV2(
         suggested_times,
       };
     },
+    searchDriveFiles: async (params: DriveSearchParams): Promise<DriveSearchOutput> => {
+      const result = await searchDriveFiles(driveClient, params);
+      
+      return {
+        message: `Found ${result.files.length} files matching your search criteria`,
+        files: result.files,
+        totalResults: result.files.length,
+        nextPageToken: result.nextPageToken,
+        incompleteSearch: result.incompleteSearch,
+      };
+    },
+    getDriveClient: () => driveClient,
   };
 }
