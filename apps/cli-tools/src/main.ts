@@ -3,6 +3,8 @@
 import { input } from '@inquirer/prompts';
 import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { Larry, LarryResponse } from '@codestrap/developer-foundations-agents-vickie-bennie';
 import { container } from '@codestrap/developer-foundations-di';
@@ -23,6 +25,11 @@ async function main(executionId?: string, contextUpdateInput?: string) {
   let nextState: GetNextStateResult | undefined;
   let userMessage;
   let systemResponse;
+  let readme;
+  const readmePath = path.resolve(
+    process.cwd(),
+    '../../packages/services/google/src/lib/README.LLM.md'
+  );
 
   const args = process.argv.slice(2);
   const executionIdArg = args[0];
@@ -81,8 +88,9 @@ async function main(executionId?: string, contextUpdateInput?: string) {
   const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
 
   if (!executionId) {
+    readme = await fs.readFileSync(readmePath, 'utf8');
     answer = await input({ message: 'What would you like to do today:' });
-    result = await larry.askLarry(answer, process.env.FOUNDRY_TEST_USER);
+    result = await larry.askLarry(`#Context\n${readme}# User Input:\n${answer}`, process.env.FOUNDRY_TEST_USER);
     executionId = result.executionId;
   } else {
     nextState = await larry.getNextState(

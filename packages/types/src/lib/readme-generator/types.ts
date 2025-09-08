@@ -110,6 +110,8 @@ export type ReadmeInputForTemplate = {
     currentUserEmail?: string;
     entryExportedFunctions?: string[];
     entryFile?: string;
+    testMocks?: { moduleName: string; factoryCode: string; file: string }[];
+    testMocksUnified?: string;
 };
 
 export type AssembleOptions = {
@@ -143,6 +145,11 @@ export type Ctx = {
 
     // execution
     error?: string;
+
+    testMocks?: { moduleName: string; factoryCode: string; file: string }[];
+    testMocksUnified?: string; // the combined setup file content
+
+    toolTasks?: ToolCallingTask[],
 };
 
 // ✱ ADD these near your other types

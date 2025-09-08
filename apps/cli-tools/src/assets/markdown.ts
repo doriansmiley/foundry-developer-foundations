@@ -1,5 +1,5 @@
 // src/render/markdown.ts
-import { ReadmeInputForTemplate } from '@codestrap/developer-foundations-types';
+import { Ctx } from '@codestrap/developer-foundations-types';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -10,11 +10,7 @@ function escPipes(s: string | undefined | null): string {
 
 function readTextSafe(p?: string): string | undefined {
         if (!p) return;
-        try {
-                return fs.readFileSync(p, 'utf8');
-        } catch {
-                return;
-        }
+        try { return fs.readFileSync(p, 'utf8'); } catch { return; }
 }
 
 function codeFenceFor(p: string): string {
@@ -24,23 +20,21 @@ function codeFenceFor(p: string): string {
         if (ext === '.js' || ext === '.cjs' || ext === '.mjs') return 'js';
         if (ext === '.yaml' || ext === '.yml') return 'yaml';
         if (ext === '.md') return 'md';
-        return ''; // plaintext
+        return '';
 }
 
 type EnvKey = { name: string; description?: string };
 
-// Parse .env-style content → keys only (no values), take trailing `# comment` as description if present
+// Parse .env-style content → keys (no values); take trailing `# comment` as description if present
 function parseEnvKeys(content: string): EnvKey[] {
         const out: EnvKey[] = [];
         const lines = content.split(/\r?\n/);
         for (const raw of lines) {
                 const line = raw.trim();
                 if (!line || line.startsWith('#')) continue;
-                // Allow KEY=..., KEY: ..., export KEY=...
                 const m = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*[:=]/.exec(line);
                 if (m) {
                         const name = m[1];
-                        // trailing comment after a space:  VAR=val  # desc
                         const cm = /#\s*(.+)$/.exec(line);
                         out.push({ name, description: cm ? cm[1].trim() : undefined });
                 }
@@ -48,94 +42,87 @@ function parseEnvKeys(content: string): EnvKey[] {
         return out;
 }
 
-export function renderReadme(input: ReadmeInputForTemplate): string {
-        // Optional hints (if your assembler adds them):
-        const entryFile = (input as any).entryFile as string | undefined;
-        const entryExportedFunctions =
-                (input as any).entryExportedFunctions as string[] | undefined;
+export function renderReadme(ctx: Ctx): string {
+        // Prefer synthesized fields from readmeInput if present; otherwise use raw ctx
+        const ri = ctx.readmeInput;
 
-        // Normalize with fallbacks
-        const apiSurface = Array.isArray(input.apiSurface) ? input.apiSurface : [];
-        const envTable = Array.isArray(input.envTable) ? input.envTable : [];
-        const workedSFT = Array.isArray(input.workedSFT) ? input.workedSFT : [];
-        const practiceRL = Array.isArray(input.practiceRL) ? input.practiceRL : [];
-        const synthGen = Array.isArray(input.syntheticGenerators) ? input.syntheticGenerators : [];
-        const gapsAQ = Array.isArray(input.gapsAndQuestions) ? input.gapsAndQuestions : [];
-        const nx = input.nxSummary ?? null;
-        const cfg = input.projectConfig ?? undefined;
+        const expositionMd =
+                (ri?.expositionMd?.trim())
+                || (ctx.exposition?.purpose ? String(ctx.exposition.purpose).trim() : '')
+                || '_Overview pending._';
 
-        // ---- PUBLIC API (functions exported by entry) ----
-        // Prefer exact list from `entryExportedFunctions`; else fallback to all `function` exports.
-        let publicFns = apiSurface.filter((e) => e.kind === 'function');
+        // API surface is on ctx
+        const apiSurface = Array.isArray(ctx.apiSurface) ? ctx.apiSurface : [];
 
-        if (entryExportedFunctions && entryExportedFunctions.length) {
+        // Public functions: restrict to entry exports if you’ve computed them, otherwise all function exports
+        const entryExportedFunctions = (ctx as any).entryExportedFunctions as string[] | undefined;
+        let publicFns = apiSurface.filter(e => e.kind === 'function');
+        if (entryExportedFunctions?.length) {
                 const set = new Set(entryExportedFunctions);
-                publicFns = publicFns.filter((e) => set.has(e.name));
-        } else if (entryFile) {
-                // Heuristic: include functions whose symbol ultimately flows through the entry module.
-                // If your extractor sets e.sourceFile, allow different sourceFile (re-export), but keep functions that were marked exportedViaEntry=true if present.
-                publicFns = publicFns.filter((e: any) =>
-                        e.exportedViaEntry === true ||
-                        e.sourceFile === entryFile
-                );
-                // If nothing remains after heuristic, keep all functions (so the section doesn’t go empty).
-                if (!publicFns.length) {
-                        publicFns = apiSurface.filter((e) => e.kind === 'function');
-                }
+                publicFns = publicFns.filter(e => set.has(e.name));
         }
 
-        const apiRows = publicFns
-                .map((e) => {
+        const apiRows = publicFns.length
+                ? publicFns.map(e => {
                         const sig = e.signature ? `\`${escPipes(e.signature)}\`` : '';
                         const doc = e.jsDoc ? escPipes(e.jsDoc).replace(/\s+/g, ' ') : '';
                         return `| \`${escPipes(e.name)}\` | ${escPipes(e.kind)} | ${sig} | ${doc} |`;
-                })
+                }).join('\n')
+                : '| _none_ | _ | _ | _ |';
+
+        // Worked examples & practice problems (raw ctx)
+        const worked = (ctx.worked || [])
+                .map(w => `- **${escPipes(w.title)}** — _${escPipes(w.file)}_`)
                 .join('\n');
 
-        // ---- ENV VAR TABLE (code usage) ----
-        const envRows = envTable.map((v) => {
-                const files = Array.isArray(v.files) ? v.files.map((f) => `\`${escPipes(f)}\``).join('<br/>') : '';
-                return `| \`${escPipes(v.name)}\` | ${v.required ? 'yes' : 'no'} | ${escPipes(v.defaultValue)} | ${files} | ${escPipes(v.notes)} |`;
-        }).join('\n');
+        // Synthetic generators (from readmeInput if you created them)
+        const synthGen = Array.isArray(ri?.syntheticGenerators) ? ri!.syntheticGenerators! : [];
+        const synth = synthGen.length
+                ? synthGen.map(g => {
+                        const params = Object.entries(g.params ?? {}).map(([k, v]) => `\`${escPipes(k)}\`=${escPipes(v)}`).join(', ');
+                        const oracle = g.oracleDescription ? `\n  - Oracle: ${escPipes(g.oracleDescription)}` : '';
+                        return `- **${escPipes(g.name)}** — ${escPipes(g.description)}\n  - Params: ${params}${oracle}`;
+                }).join('\n')
+                : '_No generators proposed._';
 
-        const worked = workedSFT
-                .map((w) => `- **${escPipes(w.title)}** — _${escPipes(w.file)}_`)
-                .join('\n');
+        // Env var table (from ctx.env)
+        const envRows = (ctx.env || []).length
+                ? ctx.env.map(v => {
+                        const files = Array.isArray(v.files) ? v.files.map(f => `\`${escPipes(f)}\``).join('<br/>') : '';
+                        return `| \`${escPipes(v.name)}\` | ${v.required ? 'yes' : 'no'} | ${escPipes(v.defaultValue)} | ${files} | ${escPipes(v.notes)} |`;
+                }).join('\n')
+                : '| _none_ | _ | _ | _ | _ |';
 
-        const toolTasks = Array.isArray(input.toolCallingTasks) ? input.toolCallingTasks : [];
-        const practice = `
-${toolTasks.length ? toolTasks.map(t =>
-                `**Q:** ${t.question}
+        // Nx summary from ctx.nx
+        const nx = ctx.nx || null;
+        const nxBlock = nx
+                ? `**Project:** \`${escPipes(nx.projectName)}\`
+
+- Depends on: ${nx.dependencies?.length ? nx.dependencies.map(d => `\`${escPipes(d)}\``).join(', ') : '_none_'}
+- Dependents: ${nx.dependents?.length ? nx.dependents.map(d => `\`${escPipes(d)}\``).join(', ') : '_none_'}
+`
+                : '_No Nx graph available._';
+
+        // task examples
+        const toolTasks = ctx.toolTasks || [];
+        const practiceSection = toolTasks.length
+                ? toolTasks.map(t =>
+                        `**Q:** ${t.question}
 **A:**
 \`\`\`typescript
 ${t.answerCode}
 \`\`\`
-${t.notes ? `> _${t.notes}_` : ''}`
-        ).join('\n\n')
-                        : '_No practice tasks synthesized._'
-                }
-`.trim();
+${t.notes ? `> _${t.notes}_` : ''}`).join('\n\n')
+                : (ctx.practice?.length
+                        ? ctx.practice.map(p => `- **${escPipes(p.title)}** — ${escPipes(p.description || '')}`).join('\n')
+                        : '_No practice tasks synthesized._');
 
-        const synth = synthGen.map((g) => {
-                const params = Object.entries(g.params ?? {}).map(([k, v]) => `\`${escPipes(k)}\`=${escPipes(v)}`).join(', ');
-                const oracle = g.oracleDescription ? `\n  - Oracle: ${escPipes(g.oracleDescription)}` : '';
-                return `- **${escPipes(g.name)}** — ${escPipes(g.description)}\n  - Params: ${params}${oracle}`;
-        }).join('\n');
+        // Gaps/questions
+        const gapsAQ = ri?.gapsAndQuestions ?? ctx.unknowns ?? [];
+        const gaps = gapsAQ.length ? gapsAQ.map(g => `- ${escPipes(g)}`).join('\n') : '_None_';
 
-        // ---- Nx summary ----
-        const nxBlock = nx
-                ? `**Project:** \`${escPipes(nx.projectName)}\`\n\n- Depends on: ${(nx.dependencies || []).length
-                        ? nx.dependencies.map((d) => `\`${escPipes(d)}\``).join(', ')
-                        : '_none_'
-                }\n- Dependents: ${(nx.dependents || []).length
-                        ? nx.dependents.map((d) => `\`${escPipes(d)}\``).join(', ')
-                        : '_none_'
-                }\n${nx.notes ? escPipes(nx.notes) : ''}`
-                : '_No Nx graph available._';
-
-        const gaps = gapsAQ.length ? gapsAQ.map((g) => `- ${escPipes(g)}`).join('\n') : '_None_';
-
-        // ---- Project configuration & inline contents ----
+        // Project configuration & inline contents
+        const cfg = ctx.projectConfig;
         const pkg = cfg?.packageJson;
         const depCount = pkg
                 ? Object.keys(pkg.dependencies || {}).length
@@ -150,9 +137,8 @@ ${t.notes ? `> _${t.notes}_` : ''}`
                         `- version: \`${escPipes(pkg.version) || '-'}\``,
                         `- private: \`${pkg.private ?? false}\``,
                         `- scripts: ${pkg.scripts && Object.keys(pkg.scripts).length
-                                ? Object.keys(pkg.scripts).slice(0, 12).map((s) => `\`${escPipes(s)}\``).join(', ')
-                                : '_none_'
-                        }`,
+                                ? Object.keys(pkg.scripts).slice(0, 12).map(s => `\`${escPipes(s)}\``).join(', ')
+                                : '_none_'}`,
                         `- deps: ${depCount}`,
                 ].join('\n')
                 : '_No package.json found._';
@@ -162,27 +148,28 @@ ${t.notes ? `> _${t.notes}_` : ''}`
                 ? `\n**contents**\n\`\`\`${codeFenceFor(pkg.path)}\n${pkgContents.trim()}\n\`\`\``
                 : '';
 
-        const tsBlocks = (cfg?.tsconfigs || []).map((t) => {
-                const co: any = t.compilerOptions || {};
-                const pathsKeys = co.paths ? Object.keys(co.paths).length : 0;
-                const head = `- \`${escPipes(t.path)}\`${t.extends ? ` (extends: \`${escPipes(t.extends)}\`)` : ''} — baseUrl: \`${escPipes(co.baseUrl) || '-'}\`, target: \`${escPipes(co.target) || '-'}\`, module: \`${escPipes(co.module) || '-'}\`, paths: ${pathsKeys}`;
-                const txt = readTextSafe(t.path);
-                const body = txt ? `\n\`\`\`${codeFenceFor(t.path)}\n${txt.trim()}\n\`\`\`` : '';
-                return `${head}${body}`;
-        }).join('\n') || '_No tsconfig files found._';
+        const tsBlocks = (cfg?.tsconfigs || []).length
+                ? cfg!.tsconfigs!.map(t => {
+                        const co: any = t.compilerOptions || {};
+                        const pathsKeys = co.paths ? Object.keys(co.paths).length : 0;
+                        const head = `- \`${escPipes(t.path)}\`${t.extends ? ` (extends: \`${escPipes(t.extends)}\`)` : ''} — baseUrl: \`${escPipes(co.baseUrl) || '-'}\`, target: \`${escPipes(co.target) || '-'}\`, module: \`${escPipes(co.module) || '-'}\`, paths: ${pathsKeys}`;
+                        const txt = readTextSafe(t.path);
+                        const body = txt ? `\n\`\`\`${codeFenceFor(t.path)}\n${txt.trim()}\n\`\`\`` : '';
+                        return `${head}${body}`;
+                }).join('\n')
+                : '_No tsconfig files found._';
 
         const pj = cfg?.projectJson;
         const pjHeader = pj
                 ? `**project.json**: \`${escPipes(pj.path)}\`
-- name: \`${escPipes(pj.name) || '-'}\`, sourceRoot: \`${escPipes(pj.sourceRoot) || '-'}\`, tags: ${(pj.tags || []).length ? pj.tags.map((t) => `\`${escPipes(t)}\``).join(', ') : '_none_'
-                }
-- targets: ${(pj.targets || []).length ? pj.targets.map((t) => `\`${escPipes(t)}\``).join(', ') : '_none_'}`
+- name: \`${escPipes(pj.name) || '-'}\`, sourceRoot: \`${escPipes(pj.sourceRoot) || '-'}\`, tags: ${(pj.tags || []).length ? pj.tags.map(t => `\`${escPipes(t)}\``).join(', ') : '_none_'}
+- targets: ${(pj.targets || []).length ? pj.targets.map(t => `\`${escPipes(t)}\``).join(', ') : '_none_'}`
                 : '_No project.json found._';
         const pjContents = pj?.path ? readTextSafe(pj.path) : undefined;
         const pjBlock = pjContents ? `\n**contents**\n\`\`\`${codeFenceFor(pj.path)}\n${pjContents.trim()}\n\`\`\`` : '';
 
         const jestBlocks = (cfg?.jestConfigs || []).length
-                ? cfg!.jestConfigs!.map((pth) => {
+                ? cfg!.jestConfigs!.map(pth => {
                         const txt = readTextSafe(pth);
                         const head = `- \`${escPipes(pth)}\``;
                         const body = txt ? `\n\`\`\`${codeFenceFor(pth)}\n${txt.trim()}\n\`\`\`` : '';
@@ -191,7 +178,7 @@ ${t.notes ? `> _${t.notes}_` : ''}`
                 : '_No Jest config found._';
 
         const eslintBlocks = (cfg?.eslintConfigs || []).length
-                ? cfg!.eslintConfigs!.map((pth) => {
+                ? cfg!.eslintConfigs!.map(pth => {
                         const txt = readTextSafe(pth);
                         const head = `- \`${escPipes(pth)}\``;
                         const body = txt ? `\n\`\`\`${codeFenceFor(pth)}\n${txt.trim()}\n\`\`\`` : '';
@@ -201,7 +188,7 @@ ${t.notes ? `> _${t.notes}_` : ''}`
 
         // Environment files: list keys (no values)
         const envFilesBlocks = (cfg?.envFiles || []).length
-                ? cfg!.envFiles!.map((pth) => {
+                ? cfg!.envFiles!.map(pth => {
                         const txt = readTextSafe(pth) || '';
                         const keys = parseEnvKeys(txt);
                         const table = keys.length
@@ -232,10 +219,33 @@ ${eslintBlocks}
 ${envFilesBlocks}
 `.trim();
 
-        const overview = input.expositionMd?.trim() || '_Overview pending._';
+        // Jest mocks (from ctx.testMocks)
+        const mocks = ctx.testMocks || [];
+        const mockItems = mocks.length
+                ? mocks.map(m =>
+                        `- **module:** \`${m.moduleName}\`
+  - from: \`${m.file}\`
+  - factory:
+\`\`\`ts
+${m.factoryCode}
+\`\`\``).join('\n\n')
+                : '_No jest.mock factories discovered._';
+
+        const unifiedSetup = ctx.testMocksUnified || '';
+
+        const mocksSection = `
+## Test Mock Setup (extracted from Jest) <!-- anchor: test_mocks -->
+
+${mockItems}
+
+### Unified setup (optional)
+\`\`\`ts
+${unifiedSetup || '// (empty)'}
+\`\`\`
+`.trim();
 
         return [
-                `# Overview\n\n${overview}`,
+                `# Overview\n\n${expositionMd}`,
 
                 `## Quickstart (Worked Examples) <!-- anchor: worked_examples -->
 ${worked || '_No worked examples detected._'}`,
@@ -243,15 +253,18 @@ ${worked || '_No worked examples detected._'}`,
                 `## Public API (Exports) <!-- anchor: public_api -->
 | export | kind | signature | description |
 |---|---|---|---|
-${apiRows || '| _none_ | _ | _ | _ |'}`,
+${apiRows}`,
 
                 `## Key Concepts & Data Flow <!-- anchor: concepts_flow -->
 _See Overview; expand this section as needed._`,
 
+                `## Jest Mock Examples <!-- anchor: jest_mocks -->
+${mocksSection}`,
+
                 `## Configuration & Environment <!-- anchor: configuration_env -->
 | name | required | default | files | notes |
 |---|---|---|---|---|
-${envRows || '| _none_ | _ | _ | _ | _ |'}`,
+${envRows}`,
 
                 projectConfigSection,
 
@@ -262,10 +275,10 @@ ${nxBlock}`,
 _Text-only representation intentionally omitted in this version; agents can walk files from API surface._`,
 
                 `## Practice Tasks (for Agents/RL) <!-- anchor: practice_tasks -->
-${practice || '_No practice tasks synthesized._'}`,
+${practiceSection}`,
 
                 `## Synthetic Variations <!-- anchor: synthetic_variations -->
-${synth || '_No generators proposed._'}`,
+${synth}`,
 
                 `## Guardrails & Quality <!-- anchor: guardrails_quality -->
 _Include test coverage & invariants if available (future enhancement)._`,

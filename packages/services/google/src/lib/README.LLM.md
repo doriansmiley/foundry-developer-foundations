@@ -1,6 +1,6 @@
 # Overview
 
-Auto-generated; refine with engineer input.
+_Overview pending._
 
 ## Quickstart (Worked Examples) <!-- anchor: worked_examples -->
 - **deriveWindowFromTimeframe (UTC core, TZ-aware asserts)** — _/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/lib/delegates/deriveWindowFromTimeframe.test.ts_
@@ -42,6 +42,54 @@ Auto-generated; refine with engineer input.
 
 ## Key Concepts & Data Flow <!-- anchor: concepts_flow -->
 _See Overview; expand this section as needed._
+
+## Jest Mock Examples <!-- anchor: jest_mocks -->
+## Test Mock Setup (extracted from Jest) <!-- anchor: test_mocks -->
+
+- **module:** `googleapis`
+  - from: `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/lib/delegates/findOptimalMeetingTimeV2.test.ts`
+  - factory:
+```ts
+() => ({
+  ...jest.requireActual('googleapis'),
+  google: {
+    calendar: jest.fn(() => {
+      return {
+        events: {
+          list: jest.fn(() => Promise.resolve({ data: { items: [] } })), // not used but kept
+        },
+        freebusy: {
+          query: jest.fn((params: any) => {
+            const { timeMin, timeMax } = params.requestBody;
+            return Promise.resolve({
+              data: {
+                kind: 'calendar#freeBusy',
+                timeMin,
+                timeMax,
+                calendars: currentCalendarsFixture,
+              },
+            });
+          }),
+        },
+      };
+    }),
+    auth: {
+      GoogleAuth: jest.fn().mockImplementation(() => {
+        return {
+          getClient: jest.fn().mockResolvedValue({
+            getRequestHeaders: jest.fn().mockResolvedValue({}),
+          }),
+        };
+      }),
+    },
+  },
+})
+```
+
+### Unified setup (optional)
+```ts
+// (empty)
+```
 
 ## Configuration & Environment <!-- anchor: configuration_env -->
 | name | required | default | files | notes |
@@ -275,64 +323,47 @@ _No Nx graph available._
 _Text-only representation intentionally omitted in this version; agents can walk files from API surface._
 
 ## Practice Tasks (for Agents/RL) <!-- anchor: practice_tasks -->
-**Q:** Create a GSuite client for user test@example.com
+**Q:** Make a GSuite client for user test@example.com.
 **A:**
-makeGSuiteClient(user: 'test@example.com');
+```typescript
+makeGSuiteClient( 'test@example.com' );
+```
 
 
-**Q:** Find the optimal meeting time, given calendar and context with attendees test1@example.com and test2@example.com, meeting duration 30 minutes.
+**Q:** Find the optimal meeting time for a 30-minute meeting with attendees test@example.com and test2@example.com, skipping Fridays.
 **A:**
-findOptimalMeetingTime(calendar, { attendees: ['test1@example.com', 'test2@example.com'], durationMinutes: 30 });
+```typescript
+findOptimalMeetingTime(calendar, { attendees: ['test@example.com', 'test2@example.com'], durationMinutes: 30, skipFriday: true });
+```
+> _Assuming 'calendar' is a calendar_v3.Calendar object._
 
-
-**Q:** Schedule a meeting, given calendar, with attendee test@example.com and a start and end time.
+**Q:** Schedule a meeting with test@example.com and test2@example.com for 60 minutes tomorrow at 2PM with the subject 'Team Meeting'.
 **A:**
-scheduleMeeting(calendar, { attendees: ['test@example.com'], startTime: new Date(), endTime: new Date() });
+```typescript
+scheduleMeeting(calendar, { attendees: ['test@example.com', 'test2@example.com'], startTime: 'tomorrow 2PM', durationMinutes: 60, subject: 'Team Meeting' });
+```
+> _Assuming 'calendar' is a calendar_v3.Calendar object. The actual date/time resolution depends on the underlying implementation and user timezone._
 
-
-**Q:** Send an email to test@example.com with subject 'Test' and message 'Hello'.
+**Q:** Send an email to test@example.com with the subject 'Meeting Reminder' and the message 'Don't forget our meeting!'.
 **A:**
-sendEmail({ recipients: ['test@example.com'], subject: 'Test', message: 'Hello' });
+```typescript
+sendEmail(gmail, { recipients: ['test@example.com'], subject: 'Meeting Reminder', message: 'Don't forget our meeting!' });
+```
+> _Assuming 'gmail' is a gmail_v1.Gmail object._
 
-
-**Q:** Read the email history of test@example.com.
+**Q:** Read the email history for test@example.com for the last 7 days, filtering for emails with subject 'Important Update'.
 **A:**
-readEmailHistory({ user: 'test@example.com' });
+```typescript
+readEmailHistory(gmail, { userEmail: 'test@example.com', days: 7, subject: 'Important Update' });
+```
+> _Assuming 'gmail' is a gmail_v1.Gmail object._
 
-
-**Q:** Watch emails for user test@example.com.
+**Q:** Watch for new emails for user test@example.com.
 **A:**
-watchEmails({ user: 'test@example.com' }, makeGSuiteClient);
+```typescript
+watchEmails({ userEmail: 'test@example.com' }, makeGSuiteClient);
+```
 
-
-**Q:** Find the optimal time for a meeting for 60 minutes with user test@example.com.
-**A:**
-findOptimalMeetingTime(calendar, { attendees: ['test@example.com'], durationMinutes: 60 });
-
-
-**Q:** Schedule a meeting with Dorian Smiley and Connor Deeks for tomorrow at 2pm for 30 minutes.
-**A:**
-scheduleMeeting(calendar, { attendees: ['dorian@example.com', 'connor@example.com'], startTime: new Date(new Date().getTime() + (24 * 60 * 60 * 1000)), endTime: new Date(new Date().getTime() + (24 * 60 * 60 * 1000) + (30 * 60 * 1000)) });
-
-
-**Q:** Email Connor Deeks at connor@example.com that the meeting is confirmed.
-**A:**
-sendEmail({ recipients: ['connor@example.com'], subject: 'Meeting Confirmed', message: 'Your meeting is confirmed.' });
-
-
-**Q:** Get the email history for user dorian@example.com related to project X.
-**A:**
-readEmailHistory({ user: 'dorian@example.com', query: 'project X' });
-
-
-**Q:** Start watching emails addressed to test@example.com.
-**A:**
-watchEmails({ user: 'test@example.com' }, makeGSuiteClient);
-
-
-**Q:** Make a GSuite client for dorian@example.com.
-**A:**
-makeGSuiteClient('dorian@example.com');
 
 ## Synthetic Variations <!-- anchor: synthetic_variations -->
 _No generators proposed._

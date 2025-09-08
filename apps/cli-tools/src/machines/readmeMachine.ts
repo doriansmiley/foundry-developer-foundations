@@ -9,6 +9,8 @@ import { discoverEnv } from '../assets/env';
 import { assembleReadmeContext } from '../assets/context';
 import { renderReadme } from '../assets/markdown';
 import { discoverProjectConfigs } from '../assets/configs';
+import { discoverJestMocks } from '../assets/mocks';
+import { generateToolCallingTasksLLM } from '../assets/tasksFromApi';
 
 type Ev =
     | { type: 'START' }
@@ -81,12 +83,24 @@ export const readmeMachine = Machine<Ctx, any, Ev>({
                     ctx.worked = ex;
                     ctx.practice = toPracticeProblems(ex);
                 },
-                onDone: 'discoverEnv',
+                onDone: 'discoverMocks',
                 onError: {
                     target: 'error',
                     actions: assign({ error: (_: Ctx, e: any) => String(e.data || e) }),
                 },
             },
+        },
+
+        discoverMocks: {
+            invoke: {
+                src: async (ctx) => {
+                    const root = ctx.projectRoot || process.cwd();
+                    const mocks = await discoverJestMocks(root);
+                    ctx.testMocks = mocks;
+                },
+                onDone: 'discoverEnv',
+                onError: { target: 'discoverEnv' } // non-fatal
+            }
         },
 
         discoverEnv: {
@@ -108,37 +122,40 @@ export const readmeMachine = Machine<Ctx, any, Ev>({
                     const root = ctx.projectRoot || process.cwd();
                     ctx.projectConfig = discoverProjectConfigs(root);
                 },
-                onDone: 'synthesize',
+                onDone: 'toolTasks',
                 onError: {
-                    target: 'synthesize', // non-fatal if configs fail to parse
+                    target: 'error', // non-fatal if configs fail to parse
                 },
             },
         },
 
-        synthesize: {
+        toolTasks: {
             invoke: {
                 src: async (ctx) => {
-                    const readmeCtx = {
-                        entry: {
-                            entryFile: ctx.entryFile,
-                            projectRoot: ctx.projectRoot || process.cwd(),
-                            tsconfigPath: ctx.tsconfigPath,
-                        },
-                        files: ctx.files,
-                        importTree: ctx.importTree,
-                        nx: ctx.nx || null,
-                        env: ctx.env,
-                        worked: ctx.worked,
-                        practice: ctx.practice,
-                        exposition: { purpose: 'Auto-generated; refine with engineer input.' },
-                        unknowns: [],
+                    const toolTasks = await generateToolCallingTasksLLM({
+                        apiSurface: ctx.apiSurface || [],
+                        workedSFT: ctx.worked || [],
+                        practiceRL: ctx.practice || [],
+                        expositionMd: (ctx as any).expositionMd || ctx.exposition?.purpose || '',
+                        envTable: ctx.env || [],
+                        nxSummary: ctx.nx
+                            ? {
+                                projectName: ctx.nx.projectName,
+                                dependencies: ctx.nx.dependencies || [],
+                                dependents: ctx.nx.dependents || [],
+                            }
+                            : null,
                         projectConfig: ctx.projectConfig,
-                    };
-                    ctx.readmeInput = await assembleReadmeContext(
-                        ({} as unknown) as any,
-                        readmeCtx,
-                        { askUserIfInsufficient: true }
-                    );
+                        currentUserEmail:
+                            (ctx as any).currentUserEmail ||
+                            process.env.USER_EMAIL ||
+                            process.env.GMAIL_USER ||
+                            undefined,
+                        maxTasksPerFunction: 2,
+                        totalTaskBudget: 12,
+                    });
+
+                    ctx.toolTasks = toolTasks;
                 },
                 onDone: 'render',
                 onError: {
@@ -151,7 +168,7 @@ export const readmeMachine = Machine<Ctx, any, Ev>({
         render: {
             invoke: {
                 src: async (ctx) => {
-                    ctx.readmeMarkdown = renderReadme(ctx.readmeInput!);
+                    ctx.readmeMarkdown = renderReadme(ctx);
                 },
                 onDone: 'done',
                 onError: {
