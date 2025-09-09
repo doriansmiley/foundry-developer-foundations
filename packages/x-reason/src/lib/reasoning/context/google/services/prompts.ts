@@ -160,6 +160,41 @@ PDT in effect (indicated if Pacific Daylight Time is in effect): ${isPDT}
   3. All happy paths are defined for the changes or new code to be created
   4. A test specification is loosely defined and any changes to existing tests are also defined
 
+  Additional rules from the user you must obey:
+  DO NOT ASK ME TO CLARIFY INFORMATION that was supplied in context!
+  DO NOT ASK IF WE ARE USING A DIFFERENT VERSION OF A DEPENDENCY THAT IS SPECIFIED IN CONTEXT.
+  Never ever ask questions like this: "Gmail API Library:** Just confirming, we'll be leveraging the googleapis
+  library (version ^ 149.0.0 as specified in our package.json) for interacting
+  with the Gmail API, correct?"
+  WE ALWAYS USE THE VERSION OF THE DEPENDENCY LISTED IN CONTEXT
+  NEVER ASK ME TO CLARIFY ERROR HANDLING. ERROR HANDLING IS ALWAYS IMPLEMENTED DOWNSTREAM BY THE PROGRAMMER
+  NEVER ASK ME ABOUT CONCURRENCY HANDLING UNLESS I EXPLICITLY ASK YOU TO. ITS ALWAYS IMPLEMENTED DOWNSTREAM
+
+  Never ask questions like this:
+
+    1. **Google Drive API interaction:** Since attachments will be Google Drive files,
+       what specific Google Drive API endpoints will we need to interact with? Will we
+       need to fetch file metadata (like MIME type) or directly access the file
+       content?
+    2. **Error Handling & Retry Policy:** You mentioned implementing a retry and
+       backoff policy for rate limits. What should be the maximum number of retries and
+       the initial backoff duration? Also, how should we handle errors beyond rate
+       limits (e.g., invalid file ID, permission errors)? Should these also be retried,
+       or should we fail immediately and log an error?
+    3. **Authentication:** It's very important to make sure that the correct level of
+       access is provided to the tool to interact with Google Drive files, what OAuth
+       scopes will be needed to ensure we have the correct permissions to access these
+       files? Specifically, what Google Drive API scopes will be required?
+    4. **Input Validation**: Should we validate file types (pdf and word) prior to
+       calling the Gmail API?
+
+       All of these have an obvious answer that you can solve using the supplied context or your training data and applying sane defaults.
+
+       for example, in the provided context you know the version of the google api we are using.
+       that dictates the drive api, just like it does with email import { gmail_v1 } from 'googleapis';
+
+       only ask clarifying questions that don't have an obvious answer of is just going to be standard fucking boiler plate.
+
   User Query:
   ${query}
 
@@ -379,8 +414,8 @@ export async function aiTransition(
 
   1. The current state confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654 corresponds to the first task: "Clarify Design with User".
   2.  The current state has includesLogic set to true and transitions defined as:
-    *   { "on": "confirmUserIntent", "target": "success" }
-    *   { "on": "CONTINUE", "target": "success" }
+    *   { "on": "confirmUserIntent", "target": "confirmUserIntent" }
+    *   { "on": "CONTINUE", "target": "searchDocumentation" }
     *   { "on": "ERROR", "target": "failure" }
     The user has provided some information in userResponse, but its likely not sufficient to consider all questions answered 
     and the software specification acceptable. Therefore, we should loop back to the confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654 state to gather more information from the user. 

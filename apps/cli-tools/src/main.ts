@@ -90,7 +90,13 @@ async function main(executionId?: string, contextUpdateInput?: string) {
   if (!executionId) {
     readme = await fs.readFileSync(readmePath, 'utf8');
     answer = await input({ message: 'What would you like to do today:' });
-    result = await larry.askLarry(`#Context\n${readme}# User Input:\n${answer}`, process.env.FOUNDRY_TEST_USER);
+    result = await larry.askLarry(`#Context\
+      Using the contents of the README below: 
+      ${readme}
+
+      answer the user question below
+      # User Input:
+      ${answer}`, process.env.FOUNDRY_TEST_USER);
     executionId = result.executionId;
   } else {
     nextState = await larry.getNextState(
