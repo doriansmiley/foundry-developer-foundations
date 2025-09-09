@@ -8,7 +8,7 @@ A comprehensive Google Workspace integration library providing seamless access t
 
 #### `sendEmail`
 
-- **Instruction**: "create sending email function to send an custom tempalted email"
+- **Instruction**: "create sending email function to send an custom templated email"
 
 - **Design spec**
   - **Overview**: Implement `sendEmail` delegate using `googleapis@149.0.0` to send a single-template email. Expose it only via `gsuiteClient.ts` and scaffold tests per package conventions.

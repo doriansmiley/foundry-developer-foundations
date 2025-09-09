@@ -7,6 +7,8 @@ import {
   printSubSection,
 } from './utils/cliPrintUtils';
 import { getState } from '../orchestratorV1';
+import { preflightUserTask } from '../functions/codeAssistant/architect/preflightUserTask';
+import { groundUserTask } from '../functions/codeAssistant/architect/groundUserTask';
 
 export async function gseArchitect(task: string) {
   console.clear();
@@ -15,6 +17,21 @@ export async function gseArchitect(task: string) {
   );
   console.log(colorize('gray', `Task: ${task}`));
 
+  const response = await preflightUserTask(task, '120');
+
+  if (response.shouldContinue) {
+    const groundResponse = await groundUserTask(
+      response.response,
+      response.conversationId
+    );
+    console.log(groundResponse);
+    process.exit(0);
+    // here run solver with this response
+  } else {
+    process.exit(0);
+  }
+
+  return;
   // Read files once
   const readme = await fs.readFile(
     'packages/services/google/README.md',
