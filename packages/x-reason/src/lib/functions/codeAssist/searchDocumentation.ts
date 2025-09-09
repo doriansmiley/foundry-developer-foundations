@@ -1,4 +1,4 @@
-import { Context, MachineEvent, ResearchAssistant, ThreadsDao } from '@codestrap/developer-foundations-types';
+import { CodingResearchAssistant, Context, MachineEvent, ResearchAssistant, ThreadsDao } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import {
     TYPES,
@@ -14,7 +14,7 @@ export async function searchDocumentation(
     task?: string
 ): Promise<SearchDocumentationResults> {
 
-    const researchAssistant = container.get<ResearchAssistant>(TYPES.ResearchAssistant);
+    const researchAssistant = container.get<CodingResearchAssistant>(TYPES.CodingResearchAssistant);
     const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
 
     const { messages } = await threadsDao.read(context.machineExecutionId!);
@@ -27,7 +27,7 @@ export async function searchDocumentation(
     ${task}
     ` : `${task}`;
 
-    const response = await researchAssistant(prompt);
+    const response = await researchAssistant(prompt, 2, undefined, undefined, undefined, 'b2b532a80bf4c4303');
 
     return {
         searchResults: response,

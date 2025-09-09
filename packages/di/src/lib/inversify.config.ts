@@ -28,6 +28,7 @@ import {
 import {
   makeGSuiteClientV2,
   researchAssistant,
+  researchAssistantCoding,
 } from '@codestrap/developer-foundations-services-google';
 import {
   makeRfpRequestsDao,
@@ -99,6 +100,10 @@ container
 container
   .bind(TYPES.ResearchAssistant)
   .toConstantValue(researchAssistant);
+
+container
+  .bind(TYPES.CodingResearchAssistant)
+  .toConstantValue(researchAssistantCoding);
 
 // IMPORTANT use container.getAsync when retrieving!
 container

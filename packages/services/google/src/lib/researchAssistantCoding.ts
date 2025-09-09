@@ -103,25 +103,73 @@ async function performSearch(
 }
 
 async function generateSearchQueries(userInput: string): Promise<string[]> {
-    const contents = `You are a helpful AI search assistant that specializes in writing search queries based on the user query.
-    You carefully deconstruct keywords for the search queries to ensure the user gets valid search results
-    Users tend to supply lots of information in their queries and passing this directly to the search engine will cause it to return null results
+    const contents = `
+    You are a coding-focused search query composer. Your only job is to turn a rich engineering prompt (including codebase context) into precise, de-duplicated search strings that return authoritative programming results.
 
-    Be mindful to include all relevant keywords to help isolate the most relevant search results.
+### Inputs
+- A “Design Specification Conversation Thread” that may include:
+  - API surface (functions, types, file paths)
+  - Tech stack (languages, frameworks, SDKs, library names and versions)
+  - Test names and error phrases
+  - Environment/build tools (Nx, Jest, Next.js, ts-jest, Google APIs, etc.)
+  - Explicit constraints (e.g., “25 MB total attachment size”)
+- A user task/question.
 
-    Decompose the following user query into the required number of searches to cover their request while obtaining valid search results: 
-    "${userInput}"
-    You can only respond in JSON in the following format:
-    {
-        "queries": ["<QUERY_1>", "<QUERY_2>", "<QUERY_3>"...]
-    }
-    
-    for example is the user asks: "what are the current market indices doing, who are the top movers"
-    You respond with:
-    {
-        "queries": ["current VIX level", "what is the current QQQ Index Level", "What is the current SPX level", "top stock market winners today", "top stock market losers today", "top stock market sectors today"]
-    }
-    Explanation: They query is broken out into separate queries so the search engine will return valid results. There is timeliness to each query limiting the results to the last 24 hours.
+### Output
+Return **only JSON**:
+{
+  "queries": ["<QUERY_1>", "<QUERY_2>", "..."]
+}
+
+### Hard Rules
+1) **Extract-and-use entities** from the thread. Build queries that contain:
+   - Languages (TypeScript/JavaScript), frameworks (Node.js/Next.js), tools (Nx, Jest),
+   - SDKs/APIs/libraries with exact names and relevant endpoints (e.g., "gmail users.messages.send", "Drive files.get alt=media", "Base64Url"),
+   - Function names from the API surface (e.g., sendEmail), and design constraints (e.g., 25 MB limit, allowed MIME types).
+2) **No vague queries.** Avoid generic terms like “javascript create mime message”. Queries must be tight, technical, and context-anchored.
+3) **Multiple facets**, split into separate queries:
+   - (A) Official API how-to and endpoints
+   - (B) MIME construction specifics for attachments
+   - (C) Limits/quotas/payload size and encoding
+   - (D) Language/framework integration (TypeScript/Node)
+   - (E) Edge cases: allowed MIME types (docx/pdf/png/jpg/gif), multi-part boundaries, Base64URL vs Base64, size aggregation
+4) **De-duplicate & normalize.** Prefer exact phrases in quotes for endpoint names, use operators (\`site: \`, quotes, AND).
+5) **Respect the stack.** If the thread shows \`googleapis\` v149 and Gmail/Drive, target those. Do **not** introduce unrelated libs unless present.
+6) **Keep each query ≤ 12 words** when possible. No punctuation unless required for exact phrases or operators.
+
+### Heuristics
+- Prefer queries that would land on: API reference pages, official guides, or well-known example pages (not forums) for first pass.
+- When an endpoint is clearly implicated, include its exact path in quotes.
+- Include concrete constraint terms (e.g., "25 MB", "Base64url", "multipart/related").
+
+### Examples
+
+#### Example (Error-focused)
+User: “I'm getting \`TypeError: fetch failed\` using node-fetch in Next.js”
+Response:
+{
+  "queries": [
+    "Next.js node-fetch TypeError fetch failed fix",
+    "node-fetch TypeError fetch failed timeout retry",
+    "Next.js server fetch failed causes and fixes"
+  ]
+}
+
+#### Example (Feature-focused)
+User: “Add infinite scrolling to React with TanStack Query and TypeScript”
+Response:
+{
+  "queries": [
+    "React infinite scroll TanStack Query",
+    "TypeScript React TanStack Query useInfiniteQuery example",
+    "React virtualized list infinite scroll TanStack Query"
+  ]
+}
+
+### Apply to the following input:
+"${userInput}"
+
+Build queries that explicitly reference the entities found in the context. Keep them concise, docs-first, and implementable.
     `;
     const geminiProResponse = await ai.models.generateContent({
         model: 'gemini-2.0-flash-001',
@@ -133,7 +181,7 @@ async function generateSearchQueries(userInput: string): Promise<string[]> {
     return clean.queries;
 }
 
-export async function researchAssistant(
+export async function researchAssistantCoding(
     userInput: string,
     num = 5,
     dateRestrict?: string,
