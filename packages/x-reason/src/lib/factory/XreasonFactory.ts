@@ -16,11 +16,6 @@ import {
   salesEvaluate,
   salesFunctionCatalog,
   salesSolver,
-  googleServiceExpertProgrammer,
-  googleServiceExpertAiTrasition,
-  googleServiceExpertEvaluate,
-  googleServiceExpertFunctionCatalog,
-  googleServiceExpertSolver,
   googleServiceExpertArchitectProgrammer,
   googleServiceExpertArchitectAiTrasition,
   googleServiceExpertArchitectEvaluate,
@@ -96,15 +91,6 @@ const clients = {
       evaluate: salesEvaluate,
       functionCatalog: salesFunctionCatalog,
       solver: salesSolver,
-    };
-  },
-  google_service_expert: (config: Record<string, any>) => {
-    return {
-      programmer: googleServiceExpertProgrammer,
-      aiTransition: googleServiceExpertAiTrasition,
-      evaluate: googleServiceExpertEvaluate,
-      functionCatalog: googleServiceExpertFunctionCatalog,
-      solver: googleServiceExpertSolver,
     };
   },
   google_service_expert_architect: (config: Record<string, any>) => {
