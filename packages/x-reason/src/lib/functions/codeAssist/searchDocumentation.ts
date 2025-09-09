@@ -1,4 +1,4 @@
-import { Context, MachineEvent, ResearchAssistant } from '@codestrap/developer-foundations-types';
+import { Context, MachineEvent, ResearchAssistant, ThreadsDao } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import {
     TYPES,
@@ -15,16 +15,14 @@ export async function searchDocumentation(
 ): Promise<SearchDocumentationResults> {
 
     const researchAssistant = container.get<ResearchAssistant>(TYPES.ResearchAssistant);
+    const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
 
-    // find the last instance of a resolveUnavailableAttendees state in the stack
-    const confirmUserIntentStateId = context.stack
-        ?.slice()
-        .reverse()
-        .find((item) => item.includes('confirmUserIntent'));
+    const { messages } = await threadsDao.read(context.machineExecutionId!);
 
-    const prompt = (confirmUserIntentStateId) ? `
-    Design Specification:
-    ${context[confirmUserIntentStateId]}
+    const prompt = (messages) ? `
+    Design Specification Conversation Thread:
+    ${messages}
+
     Task:
     ${task}
     ` : `${task}`;

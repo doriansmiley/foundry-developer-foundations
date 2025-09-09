@@ -426,6 +426,9 @@ export async function aiTransition(
 
   ### End training data ###
 
+  If the user orders you to move on or to proceed without answering all questions you do it.
+  you always obey the user's instructions!!! Do not ever disobey the user.
+
   Based on the following task list:
   ${taskList}
 
