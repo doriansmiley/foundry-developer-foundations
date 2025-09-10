@@ -6,8 +6,8 @@ import {
     ThreadsDao,
     TYPES,
     LoggingService,
-    User,
 } from '@codestrap/developer-foundations-types';
+import type { User } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 
 export interface LarryResponse {

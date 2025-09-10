@@ -21,8 +21,8 @@ import {
   Threads,
   Communications,
   LoggingService,
-  User,
 } from '@codestrap/developer-foundations-types';
+import type { User } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import { State } from 'xstate';
 
