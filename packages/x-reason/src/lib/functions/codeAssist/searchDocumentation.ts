@@ -27,6 +27,8 @@ export async function searchDocumentation(
     ${task}
     ` : `${task}`;
 
+    // TODO: explore how we can Promise.allSettled(researchAssistant1, researchAssistant1, ...) without killing ourselves with token cost and rate limits
+    // then use a higher end none reasoning model (or gpt with instant answer) to use the input plans and synthesize the best possible response
     const response = await researchAssistant(prompt, 2, undefined, undefined, undefined, 'b2b532a80bf4c4303');
 
     return {
