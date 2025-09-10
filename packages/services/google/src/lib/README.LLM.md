@@ -665,18 +665,6 @@ _See Overview; expand this section as needed._
 })
 ```
 
-### Unified setup (optional)
-```ts
-// (empty)
-```
-
-## Configuration & Environment <!-- anchor: configuration_env -->
-| name | required | default | files | notes |
-|---|---|---|---|---|
-| `E2E` | no |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/lib/delegates/findOptimalMeetingTimeV2.e2e.test.ts` |  |
-| `OFFICE_SERVICE_ACCOUNT` | no |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/lib/delegates/findOptimalMeetingTimeV2.e2e.test.ts` |  |
-| `TZ` | no |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/lib/delegates/deriveWindowFromTimeframe.test.ts`<br/>`/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/lib/delegates/findOptimalMeetingTimeV2.e2e.test.ts`<br/>`/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/lib/delegates/findOptimalMeetingTimeV2.test.ts` |  |
-
 ## Project Configuration <!-- anchor: project_configuration -->
 
 **package.json**: `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/package.json`
@@ -857,43 +845,42 @@ export default [
 ];
 ```
 
-### Environment Files
-- `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/.env`
-
-| variable | description |
-|---|---|
-| `FOUNDRY_STACK_URL` |  |
-| `FOUNDRY_TOKEN` |  |
-| `FOUNDRY_TEST_USER` |  |
-| `OSDK_CLIENT_SECRET` |  |
-| `OSDK_CLIENT_ID` |  |
-| `OPEN_WEATHER_API_KEY` |  |
-| `LOG_PREFIX` |  |
-| `ONTOLOGY_RID` |  |
-| `ONTOLOGY_ID` |  |
-| `GOOGLE_SEARCH_API_KEY` |  |
-| `GOOGLE_SEARCH_ENGINE_ID` |  |
-| `GOOGLE_SEARCH_ENGINE_MARKETS` |  |
-| `GEMINI_API_KEY` |  |
-| `BROWSERFY_KEY` |  |
-| `BROWSERFY_BROWSER_URL` |  |
-| `RANGR_OSDK_CLIENT_ID` |  |
-| `RANGR_OSDK_CLIENT_SECRET` |  |
-| `RANGR_FOUNDRY_STACK_URL` |  |
-| `RANGR_ONTOLOGY_RID` |  |
-| `OFFICE_SERVICE_ACCOUNT` |  |
-| `OPEN_AI_KEY` |  |
-| `SLACK_CLIENT_ID` |  |
-| `SLACK_CLIENT_SECRET` |  |
-| `SLACK_SIGNING_SECRET` |  |
-| `SLACK_BOT_TOKEN` |  |
-| `SLACK_APP_TOKEN` |  |
-| `SLACK_BASE_URL` |  |
-| `GSUITE_SERVICE_ACCOUNT` |  |
-| `EIA_API_KEY` |  |
-| `EIA_BASE_URL` |  |
-| `CA_SERIES_ID` |  |
-| `FIRECRAWL_API_KEY` |  |
+### Environment Files <!-- anchor: configuration_env -->
+| name | required | default | files | notes |
+|---|---|---|---|---|
+| `BROWSERFY_BROWSER_URL` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `BROWSERFY_KEY` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `CA_SERIES_ID` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `E2E` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string — controls running of e2e tests, defaults to false |
+| `EIA_API_KEY` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `EIA_BASE_URL` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `FOUNDRY_CLIENT_TYPE` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | SupportedFoundryClients |
+| `FOUNDRY_STACK_URL` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string — the bae url of our Foundry stack |
+| `FOUNDRY_TEST_USER` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string — the hard coded uid of the user to use for testing, defaults to CodeStrap |
+| `FOUNDRY_TOKEN` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `GEMINI_API_KEY` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `GOOGLE_SEARCH_API_KEY` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `GOOGLE_SEARCH_ENGINE_ID` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `GOOGLE_SEARCH_ENGINE_MARKETS` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `LOG_PREFIX` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `OFFICE_SERVICE_ACCOUNT` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `ONTOLOGY_ID` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `ONTOLOGY_RID` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `OPEN_AI_KEY` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `OPEN_WEATHER_API_KEY` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `OSDK_CLIENT_ID` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `OSDK_CLIENT_SECRET` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `RANGR_FOUNDRY_STACK_URL` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `RANGR_ONTOLOGY_RID` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `RANGR_OSDK_CLIENT_ID` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `RANGR_OSDK_CLIENT_SECRET` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `REDIRECT_URL` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `SLACK_APP_TOKEN` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `SLACK_BASE_URL` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `SLACK_BOT_TOKEN` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `SLACK_CLIENT_ID` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `SLACK_CLIENT_SECRET` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
+| `SLACK_SIGNING_SECRET` | yes |  | `/Users/doriansmiley/workspace/foundry-developer-foundations/packages/services/google/src/process-env.d.ts` | string |
 
 ## Dependency Topology (Nx) <!-- anchor: deps_topology -->
 **Project:** `google-service`
@@ -906,107 +893,87 @@ export default [
 _Text-only representation intentionally omitted in this version; agents can walk files from API surface._
 
 ## Practice Tasks (for Agents/RL) <!-- anchor: practice_tasks -->
-**Q:** Make a GSuite client for test@example.com.
+**Q:** Create a GSuite client for test@example.com.
 **A:**
 ```typescript
-await makeGSuiteClient(user='test@example.com')
+await makeGSuiteClient('test@example.com')
 ```
 
 
-**Q:** Find an optimal meeting time with a duration of 60 minutes.
+**Q:** Find an optimal meeting time given a calendar and context.
 **A:**
 ```typescript
-const calendar = {} as calendar_v3.Calendar;
-const context = { duration: 60 };
-await findOptimalMeetingTime(calendar, context)
+await findOptimalMeetingTime({} as calendar_v3.Calendar, { attendees: [], duration: 30 } as OptimalTimeContext)
 ```
 
 
-**Q:** Schedule a meeting with a duration of 30 minutes.
+**Q:** Schedule a meeting given a calendar and context.
 **A:**
 ```typescript
-const calendar = {} as calendar_v3.Calendar;
-const context = { duration: 30 };
-await scheduleMeeting(calendar, context)
+await scheduleMeeting({} as calendar_v3.Calendar, { attendees: [], duration: 30 } as CalendarContext)
 ```
 
 
-**Q:** Send an email to test@example.com with the subject 'Test Email'.
+**Q:** Send an email using Gmail with a given context.
 **A:**
 ```typescript
-const gmail = {} as gmail_v1.Gmail;
-const context = { to: 'test@example.com', subject: 'Test Email' };
-await sendEmail(gmail, context)
+await sendEmail({} as gmail_v1.Gmail, { to: 'test@example.com', subject: 'Hello', body: 'World' } as EmailContext)
 ```
 
 
-**Q:** Read email history from test@example.com.
+**Q:** Read the email history using Gmail with a given context.
 **A:**
 ```typescript
-const gmail = {} as gmail_v1.Gmail;
-const context = { from: 'test@example.com' };
-await readEmailHistory(gmail, context)
+await readEmailHistory({} as gmail_v1.Gmail, { query: 'from:test@example.com' } as ReadEmailHistoryContext)
 ```
 
 
-**Q:** Watch emails for user test@example.com.
+**Q:** Watch emails with a given context.
 **A:**
 ```typescript
-const context = { userId: 'test@example.com' };
-const makeClient = async (userId: string) => { return { emailClient: {} as gmail_v1.Gmail, calendarClient: {} as calendar_v3.Calendar }; };
-await watchEmails(context, makeClient)
+await watchEmails({ userId: 'test@example.com' } as WatchEmailsInput, makeGSuiteClient)
 ```
 
 
-**Q:** Find an optimal meeting time with attendees test1@example.com and test2@example.com, for a duration of 60 minutes.
+**Q:** Can you find optimal meeting time?
 **A:**
 ```typescript
-const calendar = {} as calendar_v3.Calendar;
-const context = { attendees: ['test1@example.com', 'test2@example.com'], duration: 60 };
-await findOptimalMeetingTime(calendar, context)
+await findOptimalMeetingTime({} as calendar_v3.Calendar, { attendees: [], duration: 30 } as OptimalTimeContext)
 ```
 
 
-**Q:** Schedule a meeting with attendees test1@example.com and test2@example.com, for a duration of 30 minutes, subject 'Meeting'.
+**Q:** Can you schedule a meeting?
 **A:**
 ```typescript
-const calendar = {} as calendar_v3.Calendar;
-const context = { attendees: ['test1@example.com', 'test2@example.com'], duration: 30, subject: 'Meeting' };
-await scheduleMeeting(calendar, context)
+await scheduleMeeting({} as calendar_v3.Calendar, { attendees: [], duration: 30 } as CalendarContext)
 ```
 
 
-**Q:** Send an email with the body 'Hello!' to test@example.com with the subject 'Test Email'.
+**Q:** Send an email to test2@example.com.
 **A:**
 ```typescript
-const gmail = {} as gmail_v1.Gmail;
-const context = { to: 'test@example.com', subject: 'Test Email', body: 'Hello!' };
-await sendEmail(gmail, context)
+await sendEmail({} as gmail_v1.Gmail, { to: 'test2@example.com', subject: 'Test', body: 'Test Email' } as EmailContext)
 ```
 
 
-**Q:** Read email history sent to test@example.com with the subject 'Important'.
+**Q:** Read the email history with subject 'Important'.
 **A:**
 ```typescript
-const gmail = {} as gmail_v1.Gmail;
-const context = { to: 'test@example.com', subject: 'Important' };
-await readEmailHistory(gmail, context)
+await readEmailHistory({} as gmail_v1.Gmail, { query: 'subject:Important' } as ReadEmailHistoryContext)
 ```
 
 
-**Q:** Watch emails for user another_test@example.com with a specific label filter.
+**Q:** Make a GSuite client for user another_test@example.com.
 **A:**
 ```typescript
-const context = { userId: 'another_test@example.com', labelFilter: 'INBOX' };
-const makeClient = async (userId: string) => { return { emailClient: {} as gmail_v1.Gmail, calendarClient: {} as calendar_v3.Calendar }; };
-await watchEmails(context, makeClient)
+await makeGSuiteClient('another_test@example.com')
 ```
 
 
-**Q:** Make a GSuite client for another_test@example.com.
+**Q:** Start watching emails for user another_test@example.com.
 **A:**
 ```typescript
-await makeGSuiteClient(user='another_test@example.com')
+await watchEmails({ userId: 'another_test@example.com' } as WatchEmailsInput, makeGSuiteClient)
 ```
 
 

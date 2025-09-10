@@ -192,18 +192,6 @@ ${t.notes ? `> _${t.notes}_` : ''}`).join('\n\n')
                 }).join('\n')
                 : '_No ESLint config found._';
 
-        // Environment files: list keys (no values)
-        const envFilesBlocks = (cfg?.envFiles || []).length
-                ? cfg!.envFiles!.map(pth => {
-                        const txt = readTextSafe(pth) || '';
-                        const keys = parseEnvKeys(txt);
-                        const table = keys.length
-                                ? `\n| variable | description |\n|---|---|\n${keys.map(k => `| \`${escPipes(k.name)}\` | ${escPipes(k.description) || ''} |`).join('\n')}`
-                                : '\n_No variables detected in this file._';
-                        return `- \`${escPipes(pth)}\`\n${table}`;
-                }).join('\n')
-                : '_No .env files detected._';
-
         const projectConfigSection = `
 ## Project Configuration <!-- anchor: project_configuration -->
 
@@ -221,8 +209,10 @@ ${jestBlocks}
 ### ESLint
 ${eslintBlocks}
 
-### Environment Files
-${envFilesBlocks}
+### Environment Files <!-- anchor: configuration_env -->
+| name | required | default | files | notes |
+|---|---|---|---|---|
+${envRows}
 `.trim();
 
         // Jest mocks (from ctx.testMocks)
@@ -237,24 +227,14 @@ ${m.factoryCode}
 \`\`\``).join('\n\n')
                 : '_No jest.mock factories discovered._';
 
-        const unifiedSetup = ctx.testMocksUnified || '';
-
         const mocksSection = `
 ## Test Mock Setup (extracted from Jest) <!-- anchor: test_mocks -->
 
 ${mockItems}
-
-### Unified setup (optional)
-\`\`\`ts
-${unifiedSetup || '// (empty)'}
-\`\`\`
 `.trim();
 
         return [
                 `# Overview\n\n${expositionMd}`,
-
-                `## Quickstart (Worked Examples) <!-- anchor: worked_examples -->
-${worked || '_No worked examples detected._'}`,
 
                 `## Public API (Exports) <!-- anchor: public_api -->
 | export | kind | signature | description |
@@ -264,13 +244,11 @@ ${apiRows}`,
                 `## Key Concepts & Data Flow <!-- anchor: concepts_flow -->
 _See Overview; expand this section as needed._`,
 
-                `## Jest Mock Examples <!-- anchor: jest_mocks -->
-${mocksSection}`,
+                `## Quickstart (Worked Examples from Jest Tests) <!-- anchor: worked_examples -->
+${worked || '_No worked examples detected._'}`,
 
-                `## Configuration & Environment <!-- anchor: configuration_env -->
-| name | required | default | files | notes |
-|---|---|---|---|---|
-${envRows}`,
+                `## Jest Mocks Used <!-- anchor: jest_mocks -->
+${mocksSection}`,
 
                 projectConfigSection,
 

@@ -1,60 +1,126 @@
 // src/analyzers/env.ts
 import * as fs from 'fs';
 import * as path from 'path';
+import * as ts from 'typescript';
 import { EnvVar } from '@codestrap/developer-foundations-types';
 
-function walk(dir: string, acc: string[] = []): string[] {
+// --- SHORT-CIRCUIT WALK: stop as soon as process-env.d.ts is found ---
+function walkForProcessEnvDts(dir: string): string | null {
     const ents = fs.readdirSync(dir, { withFileTypes: true });
     for (const e of ents) {
-        const p = path.join(dir, e.name);
+        // skip junk dirs
         if (e.isDirectory()) {
             if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
-            walk(p, acc);
-        } else {
-            if (/\.(t|j)sx?$/.test(p)) acc.push(p);
+            const hit = walkForProcessEnvDts(path.join(dir, e.name));
+            if (hit) return hit; // ✅ EARLY EXIT
+        } else if (e.isFile()) {
+            if (e.name === 'process-env.d.ts') {
+                return path.join(dir, e.name); // ✅ FOUND, BAIL OUT
+            }
         }
     }
-    return acc;
+    return null;
 }
 
+// --- tiny helpers for comments/types ---
+function getLeadingOrJsDoc(sf: ts.SourceFile, node: ts.Node): string | undefined {
+    const jsDocs = (node as any).jsDoc as ts.JSDoc[] | undefined;
+    if (jsDocs?.length) {
+        const c = jsDocs[0].comment;
+        if (typeof c === 'string' && c.trim()) return c.trim();
+        if (Array.isArray(c)) {
+            const s = c.map(p => (typeof p === 'string' ? p : p.text)).join('').trim();
+            if (s) return s;
+        }
+    }
+    const full = sf.getFullText();
+    const ranges = ts.getLeadingCommentRanges(full, node.pos) || [];
+    if (!ranges.length) return;
+    const out: string[] = [];
+    for (const r of ranges) {
+        const raw = full.slice(r.pos, r.end);
+        if (raw.startsWith('//')) out.push(raw.replace(/^\/\/\s?/, '').trim());
+        else if (raw.startsWith('/*')) {
+            out.push(
+                raw
+                    .replace(/^\/\*+/, '')
+                    .replace(/\*+\/$/, '')
+                    .split(/\r?\n/)
+                    .map(l => l.replace(/^\s*\*\s?/, '').trim())
+                    .join('\n')
+                    .trim()
+            );
+        }
+    }
+    return out.filter(Boolean).join('\n') || undefined;
+}
+
+function typeText(sf: ts.SourceFile, t?: ts.TypeNode): string {
+    return t ? t.getText(sf).replace(/\s+/g, ' ').trim() : 'unknown';
+}
+
+function propName(n: ts.PropertyName): string | null {
+    if (ts.isIdentifier(n) || ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) return n.text;
+    return null;
+}
+
+// --- parse the single process-env.d.ts we found ---
+function parseProcessEnvFile(dtsPath: string): EnvVar[] {
+    const src = fs.readFileSync(dtsPath, 'utf8');
+    const sf = ts.createSourceFile(dtsPath, src, ts.ScriptTarget.Latest, true);
+
+    const out: EnvVar[] = [];
+
+    function handleInterface(i: ts.InterfaceDeclaration) {
+        if (i.name.text !== 'ProcessEnv') return;
+        for (const m of i.members) {
+            if (!ts.isPropertySignature(m) || !m.name) continue;
+            const name = propName(m.name);
+            if (!name) continue;
+
+            const required = !m.questionToken;
+            const t = typeText(sf, m.type);
+            const desc = getLeadingOrJsDoc(sf, m);
+            const notes = desc ? `${t} — ${desc}` : t;
+
+            out.push({
+                name,
+                required,
+                defaultValue: undefined, // d.ts won’t have defaults
+                files: [dtsPath],
+                notes,
+            });
+        }
+    }
+
+    function visit(n: ts.Node) {
+        if (ts.isInterfaceDeclaration(n) && n.name.text === 'ProcessEnv') handleInterface(n);
+        if (ts.isModuleDeclaration(n)) {
+            const body = n.body;
+            if (body && ts.isModuleBlock(body)) {
+                for (const st of body.statements) {
+                    if (ts.isInterfaceDeclaration(st) && st.name.text === 'ProcessEnv') handleInterface(st);
+                }
+            }
+        }
+        ts.forEachChild(n, visit);
+    }
+
+    visit(sf);
+
+    // dedupe by name (last wins), sorted
+    const map = new Map<string, EnvVar>();
+    for (const v of out) map.set(v.name, v);
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// --- public API ---
 export function discoverEnv(projectRoot: string): EnvVar[] {
-    const vars = new Map<string, EnvVar>();
-    const files = walk(projectRoot);
-
-    for (const f of files) {
-        const text = fs.readFileSync(f, 'utf8');
-        const rx = /process\.env\.([A-Z0-9_]+)/g;
-        let m: RegExpExecArray | null;
-        const seenInFile = new Set<string>();
-        while ((m = rx.exec(text))) {
-            const name = m[1];
-            if (!vars.has(name)) {
-                vars.set(name, { name, required: false, files: [], notes: undefined });
-            }
-            if (!seenInFile.has(name)) {
-                vars.get(name)!.files.push(f);
-                seenInFile.add(name);
-            }
-        }
-        // naive "required" heuristic: if code throws when missing
-        if (/process\.env\.[A-Z0-9_]+\s*==\s*undefined|throw\s+new\s+Error\(.+env/i.test(text)) {
-            for (const v of seenInFile) {
-                vars.get(v)!.required = true;
-            }
-        }
+    const target = walkForProcessEnvDts(projectRoot);
+    if (!target) return [];     // no file, no envs. period.
+    try {
+        return parseProcessEnvFile(target);
+    } catch {
+        return [];                // strict: parsing failure → empty
     }
-
-    // default values heuristic: look for `?? 'value'` directly after env
-    for (const [name, ev] of vars.entries()) {
-        for (const f of ev.files) {
-            const text = fs.readFileSync(f, 'utf8');
-            const rx = new RegExp(`process\\.env\\.${name}\\s*\\?\\?\\s*(['"\`])(.*?)\\1`);
-            const m = rx.exec(text);
-            if (m) {
-                ev.defaultValue = ev.defaultValue ?? m[2];
-            }
-        }
-    }
-
-    return Array.from(vars.values()).sort((a, b) => a.name.localeCompare(b.name));
 }

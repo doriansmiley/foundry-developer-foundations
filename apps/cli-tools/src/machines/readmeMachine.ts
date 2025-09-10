@@ -6,7 +6,6 @@ import { buildProgramGraph } from '../assets/tsProgram';
 import { extractPublicApi } from '../assets/exports';
 import { discoverWorkedExamples, toPracticeProblems } from '../assets/workedExamples';
 import { discoverEnv } from '../assets/env';
-import { assembleReadmeContext } from '../assets/context';
 import { renderReadme } from '../assets/markdown';
 import { discoverProjectConfigs } from '../assets/configs';
 import { discoverJestMocks } from '../assets/mocks';
