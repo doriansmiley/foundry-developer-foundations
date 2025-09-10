@@ -4,46 +4,57 @@ import * as path from 'path';
 import { NxDeps } from '@codestrap/developer-foundations-types';
 import { execSync } from 'child_process';
 
-function findRepoRoot(start: string): string {
-    let dir = path.resolve(start);
-    for (; ;) {
-        if (fs.existsSync(path.join(dir, 'nx.json')) || fs.existsSync(path.join(dir, 'workspace.json'))) return dir;
-        const up = path.dirname(dir);
-        if (up === dir) return start;
-        dir = up;
-    }
+function exists(p: string) {
+    try { fs.accessSync(p); return true; } catch { return false; }
 }
 
-export function findOwningProject(entryFile: string): { projectName: string; projectRoot: string } | null {
-    const repo = findRepoRoot(path.dirname(entryFile));
-    const projectJsonCandidates: string[] = [];
-
-    // naive scan: go up from entry file looking for nearest project.json
-    let dir = path.dirname(path.resolve(entryFile));
+export function findRepoRoot(startDir: string): string {
+    let dir = path.resolve(startDir);
     while (true) {
-        const pj = path.join(dir, 'project.json');
-        if (fs.existsSync(pj)) {
-            projectJsonCandidates.push(pj);
-            break;
+        if (
+            exists(path.join(dir, 'nx.json')) ||
+            exists(path.join(dir, '.git')) // last-resort marker
+        ) {
+            return dir;
         }
         const up = path.dirname(dir);
-        if (up === dir || !dir.startsWith(repo)) break;
+        if (up === dir) break;
+        dir = up;
+    }
+    // fallback: cwd (better than chopping segments)
+    return process.cwd();
+}
+
+export function findOwningProject(entryFile: string): {
+    projectName: string;
+    projectRoot: string;
+    repoRoot: string;
+} | null {
+    const absEntry = path.resolve(entryFile);
+    const repoRoot = findRepoRoot(path.dirname(absEntry));
+
+    // Walk up from the entry file to locate nearest project.json
+    let dir = path.dirname(absEntry);
+    while (true) {
+        const pjPath = path.join(dir, 'project.json');
+        if (fs.existsSync(pjPath)) {
+            const pj = JSON.parse(fs.readFileSync(pjPath, 'utf8'));
+            const projectRoot = path.dirname(pjPath);
+            const projectName = pj.name ?? path.basename(projectRoot);
+            return { projectName, projectRoot, repoRoot };
+        }
+        const up = path.dirname(dir);
+        if (up === dir || !dir.startsWith(repoRoot)) break;
         dir = up;
     }
 
-    if (projectJsonCandidates.length) {
-        const pj = JSON.parse(fs.readFileSync(projectJsonCandidates[0], 'utf8'));
-        const projectRoot = path.dirname(projectJsonCandidates[0]);
-        const projectName = pj.name ?? path.basename(projectRoot);
-        return { projectName, projectRoot };
-    }
-
-    // fallback: try apps/* or packages/* inference
-    const m = /(?:apps|packages)[/\\]([^/\\]+)/.exec(entryFile);
+    // Fallback: infer from repoRoot + (apps|packages)/<name>
+    const rel = path.relative(repoRoot, absEntry);
+    const m = /^(apps|packages)[/\\]([^/\\]+)/.exec(rel);
     if (m) {
-        const projectRoot = path.join(repo, m[0]);
-        const projectName = m[1];
-        return { projectName, projectRoot };
+        const projectRoot = path.join(repoRoot, m[0]);
+        const guessName = m[2];
+        return { projectName: guessName, projectRoot, repoRoot };
     }
 
     return null;
@@ -59,7 +70,7 @@ export function readNxDeps(projectName: string, repoRoot: string): NxDeps | null
                 stdio: 'ignore',
             });
         }
-        const graph = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        const { graph } = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
         const nodes = graph.nodes || graph.projects || {};
         const deps = graph.dependencies || {};
 

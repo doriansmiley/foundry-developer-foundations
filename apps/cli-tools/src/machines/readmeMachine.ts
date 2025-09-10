@@ -32,12 +32,14 @@ export const readmeMachine = Machine<Ctx, any, Ev>({
                 src: async (ctx) => {
                     const found = findOwningProject(ctx.entryFile);
                     if (!found) throw new Error('Could not find owning Nx project for entry file.');
+
                     ctx.projectRoot = found.projectRoot;
 
-                    // crude repoRoot fallback: go two directories up from projectRoot; else cwd
-                    const repoRoot =
-                        found.projectRoot.split('/').slice(0, -2).join('/') || process.cwd();
+                    // ✅ Use the discovered repoRoot
+                    const repoRoot = found.repoRoot;
 
+                    // Whatever your implementation does, ensure it reads
+                    // `${repoRoot}/project-graph.json` or generates it.
                     ctx.nx = readNxDeps(found.projectName, repoRoot);
                 },
                 onDone: 'resolveProgram',

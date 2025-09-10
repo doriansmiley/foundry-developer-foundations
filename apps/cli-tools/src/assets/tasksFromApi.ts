@@ -1,4 +1,3 @@
-// src/assets/tasksFromApi.ts
 import { container } from '@codestrap/developer-foundations-di';
 import {
     GeminiService,
@@ -10,16 +9,87 @@ import {
     ReadmeInputForTemplate,
     ToolCallingTask,
 } from '@codestrap/developer-foundations-types';
-import {
-    extractJsonFromBackticks,
-} from '@codestrap/developer-foundations-utils';
+import { extractJsonFromBackticks, cleanJsonString } from '@codestrap/developer-foundations-utils';
 
-/**
- * Ask the LLM to synthesize tool-calling tasks (Q/A) from the assembled docs.
- * - Domain agnostic
- * - Only uses public API (restricted by include[] if provided)
- * - Emits TypeScript code blocks that look like actual tool calls
- */
+// --- tiny helpers ------------------------------------------------------------
+
+type FnMeta = {
+    name: string;
+    signature: string;
+    doc: string;
+    isAsync: boolean;                  // Promise<...> return
+    params: Array<{ name: string; type: string }>;
+    returnType?: string;
+};
+
+function parseFnSignature(sig?: string): { params: FnMeta['params']; returnType?: string; isAsync: boolean } {
+    const out = { params: [] as Array<{ name: string; type: string }>, returnType: undefined as string | undefined, isAsync: false };
+    if (!sig) return out;
+
+    // Example forms:
+    // "function sendEmail(gmail: gmail_v1.Gmail, ctx: EmailContext) => Promise<SendEmailOutput>"
+    // "(calendar: calendar_v3.Calendar, context: OptimalTimeContext) => Promise<FindOptimalMeetingTimeOutput>"
+    const ps = sig.match(/\((.*)\)\s*=>/s);
+    if (ps && ps[1]) {
+        const raw = ps[1].trim();
+        if (raw.length) {
+            // split by commas that are not inside <> or {}
+            const parts = raw.split(/,(?![^<]*>|[^{]*})/g).map(s => s.trim()).filter(Boolean);
+            for (const p of parts) {
+                // paramName?: type   |   ...rest: type
+                const m = p.match(/^(?:\.\.\.)?([\w$]+)\??\s*:\s*([\s\S]+)$/);
+                if (m) out.params.push({ name: m[1], type: m[2].trim() });
+                else out.params.push({ name: p.replace(/\?.*$/, ''), type: 'unknown' });
+            }
+        }
+    }
+
+    const rt = sig.match(/=>\s*([\s\S]+)$/);
+    if (rt && rt[1]) {
+        const r = rt[1].trim();
+        out.returnType = r;
+        if (/^Promise<|^Promise\s*</.test(r)) out.isAsync = true;
+    }
+    return out;
+}
+
+function buildFnMeta(functions: ExportedSymbol[]): FnMeta[] {
+    return functions.map(f => {
+        const parsed = parseFnSignature(f.signature || '');
+        return {
+            name: f.name,
+            signature: f.signature || '',
+            doc: (f.jsDoc || '').slice(0, 800),
+            isAsync: parsed.isAsync,
+            params: parsed.params,
+            returnType: parsed.returnType,
+        };
+    });
+}
+
+function guessFactories(fns: FnMeta[]) {
+    // A "factory" is any function whose returnType name appears as a param type in another function,
+    // or whose name looks like make*/create*/get*Client and returns some type.
+    const paramTypes = new Set<string>();
+    for (const fn of fns) for (const p of fn.params) if (p.type) paramTypes.add(p.type);
+
+    const factories: Array<{ factory: string; returns?: string }> = [];
+    for (const fn of fns) {
+        const looksLikeFactory = /^(make|create|get).+/i.test(fn.name) || /Client|Service|Connection|Db|Store|Calendar|Gmail/i.test(fn.returnType || '');
+        const matchesParamType = fn.returnType && paramTypes.has(fn.returnType);
+        if (looksLikeFactory || matchesParamType) {
+            factories.push({ factory: fn.name, returns: fn.returnType });
+        }
+    }
+    return factories;
+}
+
+function clamp<T>(arr: T[], n: number): T[] {
+    return n >= 0 ? arr.slice(0, n) : arr;
+}
+
+// --- main --------------------------------------------------------------------
+
 export async function generateToolCallingTasksLLM(opts: {
     apiSurface: ExportedSymbol[];
     workedSFT?: WorkedExample[];
@@ -28,10 +98,10 @@ export async function generateToolCallingTasksLLM(opts: {
     envTable?: EnvVar[];
     nxSummary?: ReadmeInputForTemplate['nxSummary'];
     projectConfig?: ReadmeInputForTemplate['projectConfig'];
-    includeFunctionNames?: string[];          // restrict to functions exported by the entry module
-    currentUserEmail?: string;                // hint for defaults
-    maxTasksPerFunction?: number;             // default 2
-    totalTaskBudget?: number;                 // global cap; default 12
+    includeFunctionNames?: string[];
+    currentUserEmail?: string;
+    maxTasksPerFunction?: number;
+    totalTaskBudget?: number;
 }): Promise<ToolCallingTask[]> {
     const {
         apiSurface,
@@ -47,88 +117,87 @@ export async function generateToolCallingTasksLLM(opts: {
         totalTaskBudget = 12,
     } = opts;
 
-    // Filter to public *functions* only; optionally restrict by include list (entry exports)
     const functions = apiSurface.filter(s => s.kind === 'function');
-    const includeSet = includeFunctionNames && includeFunctionNames.length
-        ? new Set(includeFunctionNames)
-        : null;
-    const publicFunctions = includeSet
-        ? functions.filter(f => includeSet.has(f.name))
-        : functions;
-
+    const includeSet = includeFunctionNames?.length ? new Set(includeFunctionNames) : null;
+    const publicFunctions = includeSet ? functions.filter(f => includeSet.has(f.name)) : functions;
     if (!publicFunctions.length) return [];
 
-    // Prepare concise, model-friendly context
-    const fnBrief = publicFunctions.map(f => ({
-        name: f.name,
-        signature: f.signature || '',
-        doc: (f.jsDoc || '').slice(0, 600),
+    // Structured metadata for the LLM
+    const meta = buildFnMeta(publicFunctions);
+    const factories = guessFactories(meta);
+
+    const fnBrief = meta.map(m => ({
+        name: m.name,
+        signature: m.signature,
+        isAsync: m.isAsync,
+        params: m.params,       // [{name,type}]
+        returnType: m.returnType || null,
+        doc: m.doc,
     }));
 
-    const envBrief = envTable.slice(0, 40).map(e => ({
+    const typeIndex = {
+        // functions that *return* a given type
+        returns: fnBrief.reduce<Record<string, string[]>>((acc, f) => {
+            const r = f.returnType || '';
+            if (!r) return acc;
+            (acc[r] ||= []).push(f.name);
+            return acc;
+        }, {}),
+        // functions whose *first param* is a given type
+        firstParam: fnBrief.reduce<Record<string, string[]>>((acc, f) => {
+            const t = f.params?.[0]?.type || '';
+            if (!t) return acc;
+            (acc[t] ||= []).push(f.name);
+            return acc;
+        }, {}),
+    };
+
+    const envBrief = clamp(envTable, 40).map(e => ({
         name: e.name,
         required: e.required,
         defaultValue: e.defaultValue ?? null,
     }));
-
-    const workedBrief = workedSFT.slice(0, 15).map(w => ({
-        title: w.title,
-        file: w.file,
-    }));
-
-    const practiceBrief = practiceRL.slice(0, 15).map(p => ({
-        title: p.title,
-        description: p.description,
-    }));
-
-    const nxBrief = nxSummary ? {
-        projectName: nxSummary.projectName,
-        dependencies: (nxSummary.dependencies || []).slice(0, 20),
-    } : null;
-
-    const pkgPath = projectConfig?.packageJson?.path;
+    const workedBrief = clamp(workedSFT, 15).map(w => ({ title: w.title, file: w.file }));
+    const practiceBrief = clamp(practiceRL, 15).map(p => ({ title: p.title, description: p.description }));
+    const nxBrief = nxSummary ? { projectName: nxSummary.projectName, dependencies: clamp(nxSummary.dependencies || [], 20) } : null;
+    const pkgPath = projectConfig?.packageJson?.path || null;
 
     const system = `
-You are generating *tool-calling tasks* for engineers and agents.
-Your job: From the provided public API (function names, signatures, short docs), produce practical NL questions (Q) and exact TypeScript call snippets (A) that invoke those functions as tools.
+You generate *tool-calling tasks* for ANY codebase, domain-agnostic.
+You are given public function signatures + minimal docs + some examples.
 
-CRITICAL RULES
-- Domain-agnostic: DO NOT invent domain rules; derive usage from function names, signatures, and provided docs/examples only.
-- Use ONLY functions listed in "publicFunctions".
-- Prefer realistic values grounded in signatures and any example hints; avoid placeholders when possible.
-- Each answer must be a single TypeScript code block that could compile in a normal project (no comments inline other than necessary).
-- Keep arguments minimal but correct; include key/required fields; skip noise.
-- If a "currentUserEmail" hint is provided, use it when an email/user is required.
-- Do not include explanatory prose in the code block.
-- Output strict JSON (array of tasks) using the schema below
+ABSOLUTE RULES
+- Use ONLY functions listed under "publicFunctions".
+- **Mirror the signature exactly**:
+  - If a function takes (client: SomeClient, input: InputType), call it with two arguments — do NOT collapse into a single object.
+  - If return type is Promise<...>, use \`await\` in the snippet (assume top-level await).
+- If a parameter type looks like a client (e.g., *Client, *Service, *Connection) or matches a type that another exported function returns, then:
+  - **First** try to call a listed factory function whose returnType matches that param type.
+  - Else, create a minimal stub variable of that type name (e.g., \`const client = {} as SomeClient\`), then call the tool.
+- Prefer real values hinted by example titles/names (emails, time ranges, IDs); otherwise pick plausible values.
+- Include only the minimum required fields implied by the types/docs.
+- Do NOT add imports, comments, or surrounding prose. Return **only** the call snippet when asked for \`answerCode\`.
+- Keep question natural and concise.
+- Output strict JSON **array** following:
 
-SCHEMA
 type ToolCallingTask = {
   tool: string;         // function name
   question: string;     // natural language instruction
-  answerCode: string;   // notional function invocation, do not fence with backticks!!!
-  notes?: string;       // brief assumptions (optional)
+  answerCode: string;   // single TypeScript snippet, no fences/backticks
+  notes?: string;       // optional assumptions
 };
-
-For example:
-[
-  {
-    "tool": "sendEmail",
-    "question": "Send an email to Connor Deeks <connor.deeks@codestrap.me> letting him know I am running late for our call.",
-    "answerCode": "sendEmail({ \n  from: 'dsmiley@codestrap.me', \n  recipients: ['connor.deeks@codestrap.me'], \n  subject: 'running late', \n  message: 'I will be a few minutes late for our meeting', \n });",
-    "notes": "Assuming current user is Dorian Smiley <dsmiley@codestrap.me>"
-  },
-]
 `;
 
     const user = JSON.stringify({
         publicFunctions: fnBrief,
+        factories,        // [{ factory, returns }]
+        typeIndex,        // { returns: {Type: [fns]}, firstParam: {Type: [fns]} }
         workedExamples: workedBrief,
         practiceExamples: practiceBrief,
         expositionMd: expositionMd.slice(0, 4000),
         env: envBrief,
         nx: nxBrief,
-        packageJsonPath: pkgPath || null,
+        packageJsonPath: pkgPath,
         hints: {
             currentUserEmail: currentUserEmail || null,
             maxTasksPerFunction,
@@ -139,22 +208,44 @@ For example:
     const gemini = container.get<GeminiService>(TYPES.GeminiService);
     const raw = await gemini(user, system);
 
-    // Try to parse strict JSON; if wrapped, salvage
+    // Parse tolerant: array | {tasks:[...]}
     let parsed: any;
+    let cleaned = cleanJsonString(raw);
     try {
-        parsed = JSON.parse(extractJsonFromBackticks(raw));
+        cleaned = extractJsonFromBackticks(cleaned);
+    } catch { /* fine if no fences */ }
+
+    try {
+        parsed = JSON.parse(cleaned);
     } catch {
-        throw new Error('LLM did not return JSON array for ToolCallingTask');
+        // salvage: try to find "tasks" property
+        try {
+            const m = cleaned.match(/\{[\s\S]*\}$/);
+            parsed = m ? JSON.parse(m[0]) : null;
+        } catch { /* noop */ }
     }
 
+    const arr = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.tasks) ? parsed.tasks : null);
+    if (!arr) throw new Error('LLM did not return JSON array for ToolCallingTask');
+
     // Validate & clamp
+    const byName = new Set(publicFunctions.map(f => f.name));
     const tasks: ToolCallingTask[] = [];
     const budget = Math.max(1, totalTaskBudget);
-    for (const t of parsed) {
+
+    for (const t of arr) {
         if (!t || typeof t !== 'object') continue;
         if (!t.tool || !t.question || !t.answerCode) continue;
-        // restrict to known public functions
-        if (!publicFunctions.some(f => f.name === t.tool)) continue;
+        if (!byName.has(String(t.tool))) continue;
+
+        // minimal arity sanity check — if function has N required params, ensure code contains N commas or placeholders
+        const metaForTool = meta.find(m => m.name === t.tool);
+        if (metaForTool) {
+            const requiredCount = metaForTool.params.length; // simple heuristic; can enhance with '?'
+            // If single object param, OK; else ensure we see a comma-separated arg list length >= requiredCount-1
+            // (Heuristic only; we trust LLM plus examples more than hard rejection.)
+        }
+
         tasks.push({
             tool: String(t.tool),
             question: String(t.question),

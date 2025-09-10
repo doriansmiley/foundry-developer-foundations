@@ -72,8 +72,14 @@ export function renderReadme(ctx: Ctx): string {
 
         // Worked examples & practice problems (raw ctx)
         const worked = (ctx.worked || [])
-                .map(w => `- **${escPipes(w.title)}** — _${escPipes(w.file)}_`)
-                .join('\n');
+                .map(w => {
+                        const header = `- **${escPipes(w.title)}** — _${escPipes(w.file)}_`;
+                        if (w.inputSnippet) {
+                                return `${header}\n\`\`\`ts\n${w.inputSnippet.trim()}\n\`\`\``;
+                        }
+                        return header;
+                })
+                .join('\n\n');
 
         // Synthetic generators (from readmeInput if you created them)
         const synthGen = Array.isArray(ri?.syntheticGenerators) ? ri!.syntheticGenerators! : [];
