@@ -17,61 +17,50 @@ export async function gseArchitect(task: string) {
   );
   console.log(colorize('gray', `Task: ${task}`));
 
-  const response = await preflightUserTask(task, '120');
+  const response = await preflightUserTask(task, '010');
 
   if (response.shouldContinue) {
     const groundResponse = await groundUserTask(
       response.response,
       response.conversationId
     );
-    console.log(groundResponse);
+
+    const { solver: architectSolver } = xReasonFactory(
+      SupportedEngines.GOOGLE_SERVICE_EXPERT_ARCHITECT
+    )({});
+
+    console.log(
+      printSectionHeader('Gathering more information for design specification')
+    );
+
+    const architectTaskList = await engineV1.solver.solve(
+      groundResponse,
+      architectSolver
+    );
+
+    console.log(architectTaskList);
+
+    const solution = {
+      input: groundResponse,
+      id: `x-reason-architect-cli-${Date.now()}`,
+      plan: architectTaskList || '',
+    };
+
+    console.log(printSubSection('Grounding the task step by step'));
+
+    // TODO add hydration here accordingly to Dorian's instructions
+    const result = await getState(
+      solution,
+      true,
+      {},
+      SupportedEngines.GOOGLE_SERVICE_EXPERT_ARCHITECT,
+      { debug: true }
+    );
+    console.log('RESULT', result);
+
     process.exit(0);
     // here run solver with this response
   } else {
     process.exit(0);
   }
-
-  return;
-  // Read files once
-  const readme = await fs.readFile(
-    'packages/services/google/README.md',
-    'utf8'
-  );
-
-  const { solver: architectSolver } = xReasonFactory(
-    SupportedEngines.GOOGLE_SERVICE_EXPERT_ARCHITECT
-  )({});
-
-  console.log(
-    printSectionHeader('Analysis started by Google Service Expert Architect')
-  );
-
-  const enhancedPromptWithReadme = `inside google-service package ${task}
-README:
-${readme}
-  `;
-  const architectTaskList = await engineV1.solver.solve(
-    enhancedPromptWithReadme,
-    architectSolver
-  );
-
-  console.log(architectTaskList);
-  const solution = {
-    input: task,
-    id: `x-reason-architect-cli-${Date.now()}`,
-    plan: architectTaskList || '',
-  };
-
-  console.log(printSubSection('Grounding the task step by step'));
-
-  // TODO add hydration here accordingly to Dorian's instructions
-  const result = await getState(
-    solution,
-    true,
-    {},
-    SupportedEngines.GOOGLE_SERVICE_EXPERT_ARCHITECT,
-    { debug: false }
-  );
-
-  // if result === new intent, then run solver once again with the new query
 }

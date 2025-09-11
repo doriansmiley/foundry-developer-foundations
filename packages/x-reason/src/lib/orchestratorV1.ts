@@ -302,7 +302,7 @@ export async function getState(
   // this effectively acts as a timeout. Be sure to adjust if you have long running functions in your states!
   const MAX_ITERATIONS = 60;
   while (!done() && iterations < MAX_ITERATIONS) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 100000));
 
     log(solution.id, `awaiting results`);
     if (debug) {

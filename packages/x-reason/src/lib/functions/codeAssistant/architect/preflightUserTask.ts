@@ -176,7 +176,6 @@ const result = await officeService.sendEmail({
   ]);
 
   if (jsonResult.followUp) {
-    console.log(jsonResult.response);
     await appendMessages(convoId, [
       {
         role: 'assistant',

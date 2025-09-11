@@ -94,8 +94,12 @@ export async function appendMessages(
 }
 
 export async function readConversation(
-  conversationId: string
+  conversationId?: string
 ): Promise<ConversationMessage[]> {
+  if (!conversationId) {
+    return [];
+  }
+
   await ensureInitialized();
   const rows = await all<{
     role: ConversationRole;

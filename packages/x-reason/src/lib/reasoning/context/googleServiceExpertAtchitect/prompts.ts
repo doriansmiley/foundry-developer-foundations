@@ -14,416 +14,126 @@ export async function getSolverTrainingData() {
   const data = `
 
 If the query is:
-"inside google-service package create drive listing function
+\`\`\`markdown
+- **Instruction**: "create sending email function with ability to attach files from google drive. New function name should be \`sendEmailWithAttachments\`"
 
-List of existing functions:
-# Google Service Package 🚀
+- **Design spec**
+  - **Overview**: Implement \`sendEmailWithAttachments\` delegate using \`googleapis@149.0.0\` to send a single-template email with attachments, including files from Google Drive. Expose it only via \`gsuiteClient.ts\` and scaffold tests per package conventions. This will be a new function, separate from the existing \`sendEmail\` function.
+  - **Constraints**
+    - **Language**: TypeScript
+    - **Library**: \`googleapis@149.0.0\` preferred; REST fallback allowed. Use the Drive API to fetch the file content if a Drive file ID is provided.
+    - **Exposure**: Only through \`gsuiteClient.ts\`
+    - **Package conventions**:
+      - Delegates under \`src/lib/delegates/\`
+      - Tests under \`src/lib/tests/\`
+      - Public API exposed via \`gsuiteClient.ts\`
+  - **Auth scopes required** (must be added in \`gsuiteClient.ts\` mail and drive scopes):
+    - \`https://mail.google.com/\`
+    - \`https://www.googleapis.com/auth/gmail.modify\`
+    - \`https://www.googleapis.com/auth/gmail.compose\`
+    - \`https://www.googleapis.com/auth/gmail.send\`
+    - \`https://www.googleapis.com/auth/drive.readonly\` (for fetching Drive file content)
+  - **External API references**:
+    - \`users.messages.send\` — \`https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send\`
+    - \`files.get\` (Drive API) - \`https://developers.google.com/drive/api/v3/reference/files/get\`
+  - **Inputs and outputs**
+    - **Input type**: \`EmailContextWithAttachments\`
+      \`\`\`typescript
+      interface EmailAttachment {
+        filename: string;
+        contentType: string;
+        content?: string; // base64 encoded
+        driveFileId?: string; // Google Drive File ID (optional) - if present, content is ignored and fetched from Drive
+      }
 
-A comprehensive Google Workspace integration library providing seamless access to Gmail and Google Calendar APIs. This package offers both v1 and v2 clients with enhanced functionality for email management, calendar operations, and intelligent meeting scheduling.
-
-## 📋 Available Functions
-
-### Email Operations
-
-#### \`sendEmail\`
-
-- **Input**:
+      interface EmailContextWithAttachments {
+        from: string;
+        recipients: string | string[];
+        subject: string;
+        message: string; //HTML allowed; plain text is auto-derived
+        attachments?: EmailAttachment[]; // Optional attachments
+      }
+      \`\`\`
+      - \`from: string\` (required)
+      - \`recipients: string | string[]\` (required)
+      - \`subject: string\` (required)
+      - \`message: string\` (required; HTML allowed; plain-text auto-derived)
+      - \`attachments?: EmailAttachment[]\` (optional; array of attachment objects)
+        - \`filename: string\` (required)
+        - \`contentType: string\` (required)
+        - \`content?: string\` (optional; base64 encoded content of the attachment. Required if \`driveFileId\` is not present)
+        - \`driveFileId?: string\` (optional; Google Drive file ID. If present, the file content will be fetched from Google Drive, and the content property is ignored.)
+    - **Output type**: \`SendEmailOutput\`
+      - \`id: string\`, \`threadId: string\`, \`labelIds?: string[]\`
+  - **Functional behavior**
+    - Validate \`from\`, \`recipients\`, \`subject\`, and \`message\`.
+    - For each attachment:
+      - If \`driveFileId\` is present:
+        - Fetch the file content from Google Drive using the Drive API (\`files.get\` with \`alt=media\`).
+        - Base64 encode the file content.
+      - Otherwise:
+        - Use the provided \`content\` (ensure it is base64 encoded).
+      - Construct a \`multipart/mixed\` MIME message:
+        - The first part is the \`multipart/alternative\` body with \`text/plain\` (derived) and \`text/html\` (provided + footer).
+        - Subsequent parts are the attachments, each with its \`filename\`, \`contentType\`, and \`content\` (base64 encoded).
+    - If no \`attachments\` are present, construct \`multipart/alternative\` MIME as in the original \`sendEmail\` function.
+    - Base64url encode the complete MIME message and call \`gmail.users.messages.send({ userId: 'me', requestBody: { raw } })\`.
+    - Return \`{ id, threadId, labelIds }\`.
+  - **Error handling**
+    - Throw on invalid input or if the Gmail/Drive response is missing \`id\` and \`threadId\`.
+    - Log minimal context; include \`.response.data\` when present; rethrow errors.
+    - Validate the structure and encoding of attachments.
+    - Handle errors during Drive file fetching gracefully.
+  - **Security and privacy**
+    - Never log credentials.
+    - Avoid logging full message content and attachment content.
+    - When fetching from Drive, ensure the user has the necessary permissions to access the file.
+  - **Acceptance criteria**
+    - Returns \`{ id, threadId }\` on success.
+    - The MIME message is well-formed and properly encoded.
+    - Attachments are correctly included in the email, whether provided directly or fetched from Google Drive.
+    - Exposed only through \`gsuiteClient.ts\`.
+  - **Usage (via client)**
 
 \`\`\`typescript
-{
-  from: "sender@company.com",
-  recipients: ["recipient1@example.com", "recipient2@example.com"],
-  subject: "Project Update Meeting",
-  message: "Hi team, let's schedule our weekly sync. Please review the agenda attached."
-}
-\`\`\`
+import { makeGSuiteClient } from './lib/gsuiteClient';
 
-- **Output**:
+const client = await makeGSuiteClient('user@company.com');
 
-\`\`\`typescript
-{
-  id: "18e2c3f4a5b6c7d8",
-  threadId: "18e2c3f4a5b6c7d8",
-  labelIds: ["SENT", "INBOX"]
-}
-\`\`\`
-
-- **Description**: Sends an email through Gmail API with support for multiple recipients. Returns the message ID and thread information for tracking and follow-up operations.
-
-#### \`readEmailHistory\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  email: "user@company.com",
-  publishTime: "2024-01-15T10:30:00Z",
-  labels: ["INBOX", "IMPORTANT"]
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  messages: [
+await client.sendEmailWithAttachments({
+  from: 'user@company.com',
+  recipients: ['team@company.com'],
+  subject: 'Weekly Update with Attachments',
+  message: '<p>Here is this week’s summary with attachments…</p>',
+  attachments: [
     {
-      subject: 'Re: Project Timeline',
-      from: 'client@example.com',
-      body: 'Thanks for the update. The timeline looks good.',
-      id: '18e2c3f4a5b6c7d8',
-      threadId: '18e2c3f4a5b6c7d8',
+      filename: 'summary.pdf',
+      contentType: 'application/pdf',
+      content: 'JVBERi0xLjIgCj...' // Base64 encoded PDF content
     },
-  ];
-}
+    {
+      filename: 'data.csv',
+      contentType: 'text/csv',
+      content: 'column1,column2\nvalue1,value2' // Base64 encoded CSV content
+    },
+    {
+      filename: 'report.docx',
+      contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      driveFileId: 'DRIVE_FILE_ID' // Fetch content from Google Drive
+    }
+  ]
+});
 \`\`\`
-
-- **Description**: Retrieves email history from a specific timestamp with optional label filtering. Perfect for processing incoming emails and extracting relevant communication data.
 "
 
 Your response is:
-1. Confirm user intent to "create" new function "listDriveFiles" in module "drive".
-2. Search for the the documentation
-3. Confirm detailed implementation plan
-4. Scaffold new function files
-5. Read provided documentation
-6. Implement the function
-7. Create unit tests for the implemented function
-8. Expose function via latest version of the gSuiteClient
-
-
-If the query is:
-"inside google-service package implement google doc service
-
-List of existing functions:
-# Google Service Package 🚀
-
-A comprehensive Google Workspace integration library providing seamless access to Gmail and Google Calendar APIs. This package offers both v1 and v2 clients with enhanced functionality for email management, calendar operations, and intelligent meeting scheduling.
-
-## 📋 Available Functions
-
-### Email Operations
-
-#### \`sendEmail\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  from: "sender@company.com",
-  recipients: ["recipient1@example.com", "recipient2@example.com"],
-  subject: "Project Update Meeting",
-  message: "Hi team, let's schedule our weekly sync. Please review the agenda attached."
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  id: "18e2c3f4a5b6c7d8",
-  threadId: "18e2c3f4a5b6c7d8",
-  labelIds: ["SENT", "INBOX"]
-}
-\`\`\`
-
-- **Description**: Sends an email through Gmail API with support for multiple recipients. Returns the message ID and thread information for tracking and follow-up operations.
-
-#### \`readEmailHistory\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  email: "user@company.com",
-  publishTime: "2024-01-15T10:30:00Z",
-  labels: ["INBOX", "IMPORTANT"]
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  messages: [
-    {
-      subject: 'Re: Project Timeline',
-      from: 'client@example.com',
-      body: 'Thanks for the update. The timeline looks good.',
-      id: '18e2c3f4a5b6c7d8',
-      threadId: '18e2c3f4a5b6c7d8',
-    },
-  ];
-}
-\`\`\`
-
-- **Description**: Retrieves email history from a specific timestamp with optional label filtering. Perfect for processing incoming emails and extracting relevant communication data.
-"
-
-Your response is:
-1. Confirm user intent, what exactly user want to implement
-2. Search for the the documentation
-3. Confirm detailed implementation plan
-4. Scaffold new function files
-5. Read provided documentation
-6. Implement the function
-7. Create unit tests for the implemented function
-8. Expose function via latest version of the gSuiteClient
-
-If the query is:
-"inside google-service package Create drive listing, update, add functionlities
-
-List of existing functions:
-# Google Service Package 🚀
-
-A comprehensive Google Workspace integration library providing seamless access to Gmail and Google Calendar APIs. This package offers both v1 and v2 clients with enhanced functionality for email management, calendar operations, and intelligent meeting scheduling.
-
-## 📋 Available Functions
-
-### Email Operations
-
-#### \`sendEmail\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  from: "sender@company.com",
-  recipients: ["recipient1@example.com", "recipient2@example.com"],
-  subject: "Project Update Meeting",
-  message: "Hi team, let's schedule our weekly sync. Please review the agenda attached."
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  id: "18e2c3f4a5b6c7d8",
-  threadId: "18e2c3f4a5b6c7d8",
-  labelIds: ["SENT", "INBOX"]
-}
-\`\`\`
-
-- **Description**: Sends an email through Gmail API with support for multiple recipients. Returns the message ID and thread information for tracking and follow-up operations.
-
-#### \`readEmailHistory\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  email: "user@company.com",
-  publishTime: "2024-01-15T10:30:00Z",
-  labels: ["INBOX", "IMPORTANT"]
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  messages: [
-    {
-      subject: 'Re: Project Timeline',
-      from: 'client@example.com',
-      body: 'Thanks for the update. The timeline looks good.',
-      id: '18e2c3f4a5b6c7d8',
-      threadId: '18e2c3f4a5b6c7d8',
-    },
-  ];
-}
-\`\`\`
-
-- **Description**: Retrieves email history from a specific timestamp with optional label filtering. Perfect for processing incoming emails and extracting relevant communication data.
-"
-
-Your response is:
-1. Confirm with user intent to "create" new function "listDriveFiles" in module "drive".
-2. Search for the documentation
-3. Confirm with user intent to "create" new function "updateDriveFile" in module "drive".
-4. Search for the documentation
-5. Confirm with user intent to "create" new function "addDriveFile" in module "drive".
-6. Search for the documentation
-7. Confirm detailed implementation plan
-8. Scaffold listDriveFiles function files
-9. Read documentation for listDriveFiles function
-10. Implement listDriveFiles function
-11. Create unit tests for the implemented listDriveFiles function
-12. Expose listDriveFiles function via latest version of the gSuiteClient
-13. Run human review of the implementation
-14. Scaffold updateDriveFile function files
-15. Read documentation for updateDriveFile function
-16. Implement updateDriveFile function
-17. Create unit tests for the implemented updateDriveFile function
-18. Expose updateDriveFile function via latest version of the gSuiteClient
-19. Run human review of the implementation
-20. Scaffold addDriveFile function files
-21. Read documentation for addDriveFile function
-22. Implement addDriveFile function
-23. Create unit tests for the implemented addDriveFile function
-24. Expose addDriveFile function via latest version of the gSuiteClient
-25. Run human review of the implementation
-
-
-If the query is:
-"inside google-service package create sendEmail function
-
-List of existing functions:
-# Google Service Package 🚀
-
-A comprehensive Google Workspace integration library providing seamless access to Gmail and Google Calendar APIs. This package offers both v1 and v2 clients with enhanced functionality for email management, calendar operations, and intelligent meeting scheduling.
-
-## 📋 Available Functions
-
-### Email Operations
-
-#### \`sendEmail\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  from: "sender@company.com",
-  recipients: ["recipient1@example.com", "recipient2@example.com"],
-  subject: "Project Update Meeting",
-  message: "Hi team, let's schedule our weekly sync. Please review the agenda attached."
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  id: "18e2c3f4a5b6c7d8",
-  threadId: "18e2c3f4a5b6c7d8",
-  labelIds: ["SENT", "INBOX"]
-}
-\`\`\`
-
-- **Description**: Sends an email through Gmail API with support for multiple recipients. Returns the message ID and thread information for tracking and follow-up operations.
-
-#### \`readEmailHistory\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  email: "user@company.com",
-  publishTime: "2024-01-15T10:30:00Z",
-  labels: ["INBOX", "IMPORTANT"]
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  messages: [
-    {
-      subject: 'Re: Project Timeline',
-      from: 'client@example.com',
-      body: 'Thanks for the update. The timeline looks good.',
-      id: '18e2c3f4a5b6c7d8',
-      threadId: '18e2c3f4a5b6c7d8',
-    },
-  ];
-}
-\`\`\`
-
-- **Description**: Retrieves email history from a specific timestamp with optional label filtering. Perfect for processing incoming emails and extracting relevant communication data.
-"
-
-Your response is:
-1. Confirm user intent as function "sendEmail" already exists under given path, ask user if he want to proceed with the modification or would like to create new function or just explain.
-2. If user want to proceed with the modification, search for function usage in codebase.
-2. Search for documentation.
-3. Confirm detailed implementation plan
-4. Scaffold new function files
-5. Read provided documentation
-6. Implement the function
-7. Create unit tests for the implemented function
-8. Expose function via latest version of the gSuiteClient
-9. Run human review of the implementation
-
-
-If the query is:
-"inside google-service package update sendEmail function to support multiple templates
-
-List of existing functions:
-# Google Service Package 🚀
-
-A comprehensive Google Workspace integration library providing seamless access to Gmail and Google Calendar APIs. This package offers both v1 and v2 clients with enhanced functionality for email management, calendar operations, and intelligent meeting scheduling.
-
-## 📋 Available Functions
-
-### Email Operations
-
-#### \`sendEmail\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  from: "sender@company.com",
-  recipients: ["recipient1@example.com", "recipient2@example.com"],
-  subject: "Project Update Meeting",
-  message: "Hi team, let's schedule our weekly sync. Please review the agenda attached."
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  id: "18e2c3f4a5b6c7d8",
-  threadId: "18e2c3f4a5b6c7d8",
-  labelIds: ["SENT", "INBOX"]
-}
-\`\`\`
-
-- **Description**: Sends an email through Gmail API with support for multiple recipients. Returns the message ID and thread information for tracking and follow-up operations.
-
-#### \`readEmailHistory\`
-
-- **Input**:
-
-\`\`\`typescript
-{
-  email: "user@company.com",
-  publishTime: "2024-01-15T10:30:00Z",
-  labels: ["INBOX", "IMPORTANT"]
-}
-\`\`\`
-
-- **Output**:
-
-\`\`\`typescript
-{
-  messages: [
-    {
-      subject: 'Re: Project Timeline',
-      from: 'client@example.com',
-      body: 'Thanks for the update. The timeline looks good.',
-      id: '18e2c3f4a5b6c7d8',
-      threadId: '18e2c3f4a5b6c7d8',
-    },
-  ];
-}
-\`\`\`
-
-- **Description**: Retrieves email history from a specific timestamp with optional label filtering. Perfect for processing incoming emails and extracting relevant communication data.
-"
-
-Your response is:
-1. Confirm user intent to "modify" function "sendEmail" and clarify functionality
-2. Search for function usage in codebase.
-3. Search for documentation.
-4. Confirm detailed implementation plan
-5. Run function modification with new functionality
-6. Run unit tests to make sure that regression is not introduced
-7. Expose function via latest version of the gSuiteClient if needed
-8. Run human review of the implementation
+1. Search and confirm documentations and auth scopes
+2. Ask user to approve design spec or refine plan
+3. Scaffold new function files
+4. Create unit tests based on design spec
+5. Implement function to pass tests
+6. Ask user to approve the function implementation
+7. Expose function via latest version of the gSuiteClient
 
 If the query is:
 "I need a TPS report emailed to John"
@@ -746,7 +456,7 @@ async function getEvaluationTrainingData() {
 export async function solver(query: string) {
   // Pull the catalog for the Google Service Expert engine
   const { functionCatalog } = xReasonFactory(
-    SupportedEngines.GOOGLE_SERVICE_EXPERT
+    SupportedEngines.GOOGLE_SERVICE_EXPERT_ARCHITECT
   )({});
   const functions = functionCatalog((action: ActionType) => console.log(''));
   const toolsCatalog = Array.from(functions.entries()).map((item) => {
