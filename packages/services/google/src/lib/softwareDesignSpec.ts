@@ -1,41 +1,4 @@
-import { GenerateContentResponse, GoogleGenAI } from '@google/genai';
-
-function addCitations(response: GenerateContentResponse) {
-    let text = response.text;
-    const supports = response.candidates?.[0].groundingMetadata?.groundingSupports;
-    const chunks = response.candidates?.[0].groundingMetadata?.groundingChunks;
-
-    // Sort supports by end_index in descending order to avoid shifting issues when inserting.
-    const sortedSupports = [...supports || []].sort(
-        (a, b) => (b.segment?.endIndex ?? 0) - (a.segment?.endIndex ?? 0),
-    );
-
-    for (const support of sortedSupports) {
-        const endIndex = support.segment?.endIndex;
-        if (endIndex === undefined || !support.groundingChunkIndices?.length) {
-            continue;
-        }
-
-        const citationLinks = support.groundingChunkIndices
-            .map(i => {
-                const uri = chunks?.[i]?.web?.uri;
-                if (uri) {
-                    return `[${i + 1}](${uri})`;
-                }
-                return null;
-            })
-            .filter(Boolean);
-
-        if (citationLinks.length > 0) {
-            const citationString = citationLinks.join(", ");
-            text = text?.slice(0, endIndex) + citationString + text?.slice(endIndex);
-        }
-    }
-
-    return text;
-}
-
-export async function googleSoftwareDesignSpec(
+export async function softwareDesignSpec(
     userInput: string,
     num = 5,
     dateRestrict?: string,
@@ -94,28 +57,80 @@ Include optional suggested enhancements over the v0 solution
 ${userInput}
   `;
 
-    // Configure the client
-    const ai = new GoogleGenAI({});
-
-    // Define the grounding tool
-    const groundingTool = {
-        googleSearch: {},
-    };
-
-    // Configure generation settings
-    const config = {
-        tools: [groundingTool],
-    };
-
-    // Make the request
-    const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: `${system}\n${user}`,
-        config,
+    const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.OPEN_AI_KEY}`,
+        },
+        body: JSON.stringify({
+            model: 'gpt-5-mini',
+            input: [
+                { role: 'system', content: [{ type: 'input_text', text: system }] },
+                { role: 'user', content: [{ type: 'input_text', text: user }] },
+            ],
+            reasoning: { "effort": "low" },
+            text: { verbosity: 'low' },
+            tools: [
+                {
+                    type: 'web_search',
+                    user_location: { type: 'approximate', country: 'US' },
+                },
+            ],
+            store: true,
+        }),
     });
 
-    const answer = addCitations(response);
+    const data = (await response.json()) as any;
 
-    return answer ?? "Could not synthesize an answer."
+    // Robustly collect all assistant text from the new Responses API shape
+    const outputItems: any[] = Array.isArray(data?.output) ? data.output : [];
+    const textChunks: string[] = [];
+    const annotations: any[] = [];
+
+    for (const item of outputItems) {
+        if (item?.type === 'message' && Array.isArray(item.content)) {
+            for (const c of item.content) {
+                if (typeof c?.text === 'string') textChunks.push(c.text);
+                if (Array.isArray(c?.annotations)) annotations.push(...c.annotations.filter(Boolean));
+            }
+        }
+    }
+
+    // Some SDKs expose a convenience concatenation; use as a fallback if present
+    const mainText = (typeof data?.output_text === 'string' && data.output_text.trim().length > 0)
+        ? data.output_text
+        : textChunks.join('\n\n').trim();
+
+    // Extract URL citations from annotations (GPT-5 emits `type: "url_citation"`)
+    type UrlCitation = { type?: string; url?: string; title?: string | null | undefined };
+    const urlCitations: UrlCitation[] = annotations.filter(
+        (a: UrlCitation) => (a?.type ?? '').toLowerCase() === 'url_citation' && a?.url
+    );
+
+    // Dedupe by URL
+    const deduped = Array.from(new Map(urlCitations.map((c) => [c.url!, c])).values());
+
+    // Build "Sources" markdown
+    const sourcesMd =
+        deduped.length > 0
+            ? `\n\n---\n### Sources\n${deduped
+                .map((c, i) => {
+                    const url = c.url!;
+                    let title = (c.title || '').trim();
+                    if (!title) {
+                        try {
+                            const { hostname } = new URL(url);
+                            title = hostname.replace(/^www\./, '');
+                        } catch {
+                            title = url;
+                        }
+                    }
+                    return `${i + 1}. [${title}](${url})`;
+                })
+                .join('\n')}\n`
+            : '';
+
+    return `${mainText}${sourcesMd}`;
 
 }

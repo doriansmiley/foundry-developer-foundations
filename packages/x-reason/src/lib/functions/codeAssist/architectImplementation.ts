@@ -12,17 +12,27 @@ export async function architectImplementation(
     const architect = container.get<CodingArchitect>(TYPES.CodingArchitect);
     const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
     // we use the thread because it should not aonly contain the design specification but user comments as well
-    const thread = await threadsDao.read(context.machineExecutionId!);
+    const { messages } = await threadsDao.read(context.machineExecutionId!);
 
     const prompt = `
     The complete conversation thread which includes the design specification:
-    ${thread}
+    ${messages}
 
     Task:
     ${task}
     `;
 
     const response = await architect(prompt);
+
+    try {
+        const parsedMessages = JSON.parse(messages!) as { user?: string, system: string }[];
+        parsedMessages.push({
+            system: response,
+        });
+
+        await threadsDao.upsert(JSON.stringify(parsedMessages), 'cli-tool', context.machineExecutionId!);
+
+    } catch { /* empty */ }
 
     return {
         confirmationPrompt: `# The Architect's Response

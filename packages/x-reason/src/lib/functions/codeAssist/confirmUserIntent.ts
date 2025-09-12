@@ -111,6 +111,19 @@ Output the remaining items that require clarification based on the message threa
 
     const response = await geminiService(user, system);
 
+    try {
+        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+        const { messages } = await threadsDao.read(context.machineExecutionId!);
+
+        const parsedMessages = JSON.parse(messages!) as { user?: string, system: string }[];
+        parsedMessages.push({
+            system: response,
+        });
+
+        await threadsDao.upsert(JSON.stringify(parsedMessages), 'cli-tool', context.machineExecutionId!);
+
+    } catch { /* empty */ }
+
     return {
         confirmationPrompt: response,
     }

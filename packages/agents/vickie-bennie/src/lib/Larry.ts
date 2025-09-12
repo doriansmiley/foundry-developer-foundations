@@ -152,10 +152,12 @@ export class Larry extends Text2Action {
         // persist the constructed response to the the threads object
         const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
 
-        const messages = `### User Query:
-        ${query}
-        
-        ${result}`;
+        const messages = JSON.stringify([
+            {
+                user: query,
+                system: result,
+            }
+        ]);
         // create or update with a summary of the results
         // if there is an existing thread messages are appended to the existing history
         await threadsDao.upsert(messages, 'bennie', threadId);

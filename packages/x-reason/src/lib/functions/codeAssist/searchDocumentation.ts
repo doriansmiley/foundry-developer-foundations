@@ -31,6 +31,16 @@ export async function searchDocumentation(
     // then use a higher end none reasoning model (or gpt with instant answer) to use the input plans and synthesize the best possible response
     const response = await researchAssistant(prompt, 2, undefined, undefined, undefined, 'b2b532a80bf4c4303');
 
+    try {
+        const parsedMessages = JSON.parse(messages!) as { user?: string, system: string }[];
+        parsedMessages.push({
+            system: response,
+        });
+
+        await threadsDao.upsert(JSON.stringify(parsedMessages), 'cli-tool', context.machineExecutionId!);
+
+    } catch { /* empty */ }
+
     return {
         searchResults: response,
     }

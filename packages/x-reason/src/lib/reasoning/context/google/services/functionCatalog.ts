@@ -77,7 +77,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log('dispatching CONTINUE from architectImplementation');
 
                     dispatch({
-                        type: 'CONTINUE',
+                        type: 'pause',
                         payload,
                     });
                 },

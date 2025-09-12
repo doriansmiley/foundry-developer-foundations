@@ -17,13 +17,12 @@ import {
 } from '@codestrap/developer-foundations-types';
 import { SupportedEngines } from '@codestrap/developer-foundations-x-reason';
 import 'dotenv/config';
+import { uuidv4 } from '@codestrap/developer-foundations-utils';
 
 async function main(executionId?: string, contextUpdateInput?: string) {
   const larry = new Larry();
   let result: LarryResponse | undefined;
   let answer;
-  let nextState: GetNextStateResult | undefined;
-  let userMessage;
   let systemResponse;
   let readme;
   const readmePath = path.resolve(
@@ -99,7 +98,7 @@ async function main(executionId?: string, contextUpdateInput?: string) {
       ${answer}`, process.env.FOUNDRY_TEST_USER);
     executionId = result.executionId;
   } else {
-    nextState = await larry.getNextState(
+    await larry.getNextState(
       undefined,
       true,
       executionId,
@@ -107,34 +106,36 @@ async function main(executionId?: string, contextUpdateInput?: string) {
       SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST // IMPORTANT: The X-Reason factory needs to be updated to support whatever key you define for this x-Reason
     );
 
-    const lastStateExecuted = nextState.orderTheTasksWereExecutedIn.pop();
-
-    if (lastStateExecuted.includes('confirmUserIntent')) {
-      userMessage = nextState.theResultOfEachTask[0].taskOutput.userResponse;
-      systemResponse = nextState.theResultOfEachTask[0].taskOutput.confirmationPrompt;
-    }
-
-    const { messages } = await threadsDao.read(executionId);
-    // the getNextState is not a conversation endpoint so we have to manually update the thread, boo!
-    await threadsDao.upsert(`${messages}\nThe user responded with: ${userMessage}\nAnd the system responded with: ${systemResponse}`, 'larry', executionId)
   }
 
   const { state } = await machineDao.read(executionId);
   const { messages } = await threadsDao.read(executionId);
-
   // get the target stateId to apply the contextual update to, in this case where we left off
   const { context } = JSON.parse(state!) as { context: Context };
+  const lastState = context.stack?.pop();
+
+  let parsedMessages: { user: string, system: string }[] = [];
+
+  try {
+    parsedMessages = JSON.parse(messages) as { user: string, system: string }[];
+    // the last system response is the question to the user
+    systemResponse = parsedMessages.pop().system;
+  } catch { /* empty */ }
 
   const markdown = marked((systemResponse) ? systemResponse : messages) as string;
+
+  if (lastState.includes('success') || lastState.includes('error')) {
+    // write the spec file
+    const p = path.join(process.cwd(), `${uuidv4()}-spec-output.md`);
+    await fs.promises.writeFile(p, systemResponse, 'utf8');
+    return;
+  }
 
   // context.stateId is the id of the state where we left off, not the final state in the machine which in pause, success, or fail
   if (context.stateId.includes('confirmUserIntent') || context.stateId.includes('architectImplementation')) {
     const userResponse = await input({
       message: `${markdown}`,
     });
-
-    // update the thread so the user response is persisted. This ensures it's factored in in the transition logic
-    await threadsDao.upsert(`${messages}\nThe user responded with: ${userResponse}\n`, 'larry', executionId);
 
     const contextUpdate = {
       [context.stateId]: { userResponse: userResponse }, // I chose to name the key userResponse, but you can choose any key you like, but it needs to make sense to the LLM

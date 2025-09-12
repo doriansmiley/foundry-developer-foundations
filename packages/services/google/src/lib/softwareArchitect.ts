@@ -1,4 +1,4 @@
-export async function openAiArchitect(
+export async function softwareArchitect(
     userInput: string,
     num = 5,
     dateRestrict?: string,
@@ -7,8 +7,9 @@ export async function openAiArchitect(
     searchEngineId?: string
 ): Promise<string> {
     const system = `
-You are a helpful AI engineering architect assistant that specializes in formulating the final implementation plan them the software engineers proposal and loose outline of the system.
-Your job is to review the specification, fill in any missing details, and produce the final code examples that are free from error and ready to run
+You are a helpful AI engineering architect that specializes in creating the final design specification based on the design specification created by the requirements team.
+Your job is to create a clean specification grounded in the provided specification with the code to be written. You must generate the proposed code!
+The specification includes citations to ground you in the sources of documentation to be used
 
 ### User Inputs Include
 - A “Design Specification Conversation Thread” that may include:
@@ -17,45 +18,34 @@ Your job is to review the specification, fill in any missing details, and produc
   - Test names and error phrases
   - Environment/build tools (Nx, Jest, Next.js, ts-jest, Google APIs, etc.)
   - Explicit constraints (e.g., “25 MB total attachment size”)
-- The user task/question.
+- A user task/question.
 
-You always carefully evaluate user input before crafting your final implementation plan.
-  `.trim();
-
-    // Optional hints derived from function params for the model's web search queries
-    const searchHints: string[] = [];
-    if (siteSearch) {
-        const mode = siteSearchFilter?.toLowerCase() === 'e' ? 'exclude' : 'include';
-        searchHints.push(`When searching, ${mode} results from "${siteSearch}".`);
-    }
-    if (dateRestrict) {
-        searchHints.push(`Prefer sources that match this date restriction: ${dateRestrict}.`);
-    }
-    if (searchEngineId) {
-        searchHints.push(`If applicable, bias toward sources typically returned by: ${searchEngineId}.`);
-    }
+You always carefully evaluate user input before crafting your search queries, web page retrieval functions and obey all search rules provided by the user.
+  `;
 
     const user = `
-Based on the provided design specification, generate a final specification with runnable code.
+Generate a complete specification that fulfils the provided design specification.
+Include the proposed code changes. You must code the solution!
 
 ### Hard Rules for Web Search
-1) **Extract-and-use entities** from the thread. Build queries that contain:
+1) Only perform searches in cases where the provided sources do not fullfil the requirements
+2) **Extract-and-use entities** from the thread. Build queries that contain:
    - Languages (TypeScript/JavaScript), frameworks (Node.js/Next.js), tools (Nx, Jest),
    - SDKs/APIs/libraries with exact names and relevant endpoints (e.g., "gmail users.messages.send", "Drive files.get alt=media", "Base64Url"),
    - Function names from the API surface (e.g., sendEmail), and design constraints (e.g., 25 MB limit, allowed MIME types).
-2) **No vague queries.** Avoid generic terms like “javascript create mime message”. Queries must be tight, technical, and context-anchored.
-3) **Multiple facets**, split into separate queries:
+3) **No vague queries.** Avoid generic terms like “javascript create mime message”. Queries must be tight, technical, and context-anchored.
+4) **Multiple facets**, split into separate queries:
    - (A) Official API how-to and endpoints
    - (B) MIME construction specifics for attachments
    - (C) Limits/quotas/payload size and encoding
    - (D) Language/framework integration (TypeScript/Node)
    - (E) Edge cases: allowed MIME types (docx/pdf/png/jpg/gif), multi-part boundaries, Base64URL vs Base64, size aggregation
-4) **De-duplicate & normalize.** Prefer exact phrases in quotes for endpoint names, use operators (\`site:\`, quotes, AND).
-5) **Respect the stack.** If the thread shows \`googleapis\` v149 and Gmail/Drive, target those. Do **not** introduce unrelated libs unless present.
-6) **Keep each query ≤ 12 words** when possible. No punctuation unless required for exact phrases or operators.
+5) **De-duplicate & normalize.** Prefer exact phrases in quotes for endpoint names, use operators (\`site: \`, quotes, AND).
+6) **Respect the stack.** If the thread shows \`googleapis\` v149 and Gmail/Drive, target those. Do **not** introduce unrelated libs unless present.
+7) **Keep each query ≤ 12 words** when possible. No punctuation unless required for exact phrases or operators.
 
 ### Heuristics
-- Prefer queries that would land on: API reference pages, official guides, or well-known example pages (not forums) for first pass.
+- Prefer the already cited sources
 - When an endpoint is clearly implicated, include its exact path in quotes.
 - Include concrete constraint terms (e.g., "25 MB", "Base64url", "multipart/related").
 
@@ -63,14 +53,14 @@ Based on the provided design specification, generate a final specification with 
 Be sure you have captured changes that are required for the existing public API such as new parameters, methods, etc
 Be sure you prevent developer foot gunning by designing the solution to handle errors, retries, and backoff policies
 Do not over engineer the solution, engineer for a v0
+Include the relevant code blocks at the appropriate places in the specification
 Organize your code such that you don't nest function declarations or type definitions inside functions
 Include optional suggested enhancements over the v0 solution
-
-${searchHints.length ? `# Search Hints\n${searchHints.map((s) => `- ${s}`).join('\n')}\n` : ''}
+Make sure you code is complete and free form error
 
 # User Input
 ${userInput}
-  `.trim();
+  `;
 
     const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -79,23 +69,19 @@ ${userInput}
             Authorization: `Bearer ${process.env.OPEN_AI_KEY}`,
         },
         body: JSON.stringify({
-            model: 'gpt-5',
+            model: 'gpt-5-mini',
             input: [
                 { role: 'system', content: [{ type: 'input_text', text: system }] },
                 { role: 'user', content: [{ type: 'input_text', text: user }] },
             ],
-            reasoning_effort: 'minimal',
-            text: { format: { type: 'text' }, verbosity: 'low' },
+            reasoning: { "effort": "low" },
+            text: { verbosity: 'low' },
             tools: [
                 {
                     type: 'web_search',
                     user_location: { type: 'approximate', country: 'US' },
                 },
             ],
-
-            temperature: 1,
-            top_p: 1,
-            max_output_tokens: 8192,
             store: true,
         }),
     });
