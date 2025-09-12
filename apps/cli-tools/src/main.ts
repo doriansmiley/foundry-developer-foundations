@@ -27,7 +27,7 @@ async function main(executionId?: string, contextUpdateInput?: string) {
   let readme;
   const readmePath = path.resolve(
     process.cwd(),
-    '../../packages/services/google/src/lib/README.LLM.md'
+    '../../packages/services/google/src/lib/README.LLM.v2.md'
   );
 
   const args = process.argv.slice(2);
