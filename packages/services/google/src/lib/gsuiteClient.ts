@@ -1,10 +1,9 @@
 import { google } from 'googleapis';
-import { Buffer } from 'buffer';
 import {
   CalendarContext,
   EmailContext,
   FindOptimalMeetingTimeOutput,
-  GSuiteCalendarService,
+  OfficeServiceV1,
   MeetingRequest,
   ReadEmailHistoryContext,
   ScheduleMeetingOutput,
@@ -28,39 +27,12 @@ export enum GSUITE_SCOPES {
   GMAIL_MODIFY = 'https://www.googleapis.com/auth/gmail.modify',
 }
 
-export type ServiceAccountCredentials = {
-  type: string;
-  project_id: string;
-  private_key_id: string;
-  private_key: string;
-  client_email: string;
-  client_id: string;
-  auth_uri: string;
-  token_uri: string;
-  auth_provider_x509_cert_url: string;
-  client_x509_cert_url: string;
-  universe_domain: string;
-};
-
-async function loadServiceAccount() {
-  if (!process.env['GSUITE_SERVICE_ACCOUNT']) {
-    throw new Error('GSUITE_SERVICE_ACCOUNT environment variable not set');
-  }
-
-  const jsonString = Buffer.from(
-    process.env['GSUITE_SERVICE_ACCOUNT'],
-    'base64'
-  ).toString('utf8');
-  const credentials = JSON.parse(jsonString) as ServiceAccountCredentials;
-
-  console.log('✅ Service account file loaded successfully');
-  return credentials;
-}
+import { loadServiceAccountFromEnv, makeGoogleAuth } from '../helpers/googleAuth';
 
 async function makeClient(user: string) {
   console.log(`Creating client for user: ${user}`);
   // load the service account one time
-  const credentials = await loadServiceAccount();
+  const credentials = await loadServiceAccountFromEnv();
 
   const mailScopes: GSUITE_SCOPES[] = [
     GSUITE_SCOPES.GMAIL_SEND,
@@ -75,17 +47,8 @@ async function makeClient(user: string) {
     GSUITE_SCOPES.CALENDAR_WRITE,
   ];
 
-  const emailAuth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: mailScopes,
-    clientOptions: { subject: user },
-  });
-
-  const calAuth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: calendarScopes,
-    clientOptions: { subject: user },
-  });
+  const emailAuth = makeGoogleAuth(credentials, mailScopes, user);
+  const calAuth = makeGoogleAuth(credentials, calendarScopes, user);
 
   const mailClient = await emailAuth.getClient();
   const calClient = await calAuth.getClient();
@@ -96,13 +59,13 @@ async function makeClient(user: string) {
 
   const calendarClient = google.calendar({ version: 'v3', auth: calAuth });
   const emailClient = google.gmail({ version: 'v1', auth: emailAuth });
-
+  
   return { emailClient, calendarClient };
 }
 
 export async function makeGSuiteClient(
   user: string
-): Promise<GSuiteCalendarService> {
+): Promise<OfficeServiceV1> {
   const { emailClient, calendarClient } = await makeClient(user);
 
   return {
