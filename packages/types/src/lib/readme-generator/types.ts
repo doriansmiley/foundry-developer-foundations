@@ -205,3 +205,8 @@ export type ToolCallingTask = {
     notes?: string;
 };
 
+export type UserIntent = {
+    confirmationPrompt: string;
+    userResponse?: string;
+}
+

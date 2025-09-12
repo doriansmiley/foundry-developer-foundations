@@ -1,13 +1,10 @@
-import { Context, MachineEvent, ThreadsDao } from '@codestrap/developer-foundations-types';
+import { Context, MachineEvent, ThreadsDao, UserIntent } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import {
     GeminiService,
     TYPES,
 } from '@codestrap/developer-foundations-types';
 
-export type UserIntent = {
-    confirmationPrompt: string;
-}
 
 export async function confirmUserIntent(
     context: Context,

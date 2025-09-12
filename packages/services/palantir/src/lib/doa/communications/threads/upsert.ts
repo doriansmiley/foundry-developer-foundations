@@ -42,8 +42,6 @@ export async function upsertThread(
     throw new Error('Failed to upsert thread message to the ontology.');
   }
 
-  console.log(`upsert thread action returned: ${result?.edits?.edits?.[0]}`);
-
   const threadId = result.edits.edits[0].primaryKey as string;
 
   const getUrl = `${url}/api/v2/ontologies/${ontologyRid}/objects/Threads/${threadId}`;
@@ -53,9 +51,6 @@ export async function upsertThread(
   });
 
   const thread = (await machineFetchResults.json()) as Threads;
-  console.log(
-    `the thread execution ontology returned: ${JSON.stringify(thread)}`
-  );
 
   return thread;
 }

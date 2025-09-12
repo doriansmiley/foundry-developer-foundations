@@ -21,6 +21,7 @@ export const TYPES = {
   RangrRfpRequestsDao: Symbol.for('RangrRfpRequestsDao'),
   ResearchAssistant: Symbol.for('ResearchAssistant'),
   CodingResearchAssistant: Symbol.for('CodingResearchAssistant'),
+  CodingArchitect: Symbol.for('CodingArchitect'),
   MemoryRecallDao: Symbol.for('MemoryRecallDao'),
   ContactsDao: Symbol.for('ContactsDao'),
   GeminiService: Symbol.for('GeminiService'),
@@ -44,6 +45,16 @@ export type ResearchAssistant = (
 ) => Promise<string>
 
 export type CodingResearchAssistant = (
+  userInput: string,
+  num?: number,
+  dateRestrict?: string,
+  siteSearch?: string,
+  siteSearchFilter?: string,
+  searchEngineId?: string
+
+) => Promise<string>
+
+export type CodingArchitect = (
   userInput: string,
   num?: number,
   dateRestrict?: string,

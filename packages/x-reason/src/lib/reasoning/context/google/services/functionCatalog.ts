@@ -5,7 +5,7 @@ import {
     ActionType,
 } from '@codestrap/developer-foundations-types';
 
-import { confirmUserIntent, searchDocumentation } from '../../../../functions';
+import { confirmUserIntent, searchDocumentation, architectImplementation } from '../../../../functions';
 
 
 function getPayload(context: Context, result: Record<string, any>) {
@@ -56,6 +56,25 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const payload = getPayload(context, result);
                     console.log(`searchDocumentation returned: ${JSON.stringify(result)}`);
                     console.log('dispatching CONTINUE from searchDocumentation');
+
+                    dispatch({
+                        type: 'CONTINUE',
+                        payload,
+                    });
+                },
+            },
+        ],
+        [
+            "architectImplementation",
+            {
+                description:
+                    "Use this tool to search documentation once the design specification has been clarified with the developer.",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    console.log('architectImplementation implementation in function catalog called');
+                    const result = await architectImplementation(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`architectImplementation returned: ${JSON.stringify(result)}`);
+                    console.log('dispatching CONTINUE from architectImplementation');
 
                     dispatch({
                         type: 'CONTINUE',

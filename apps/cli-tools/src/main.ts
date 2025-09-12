@@ -128,12 +128,10 @@ async function main(executionId?: string, contextUpdateInput?: string) {
   const markdown = marked((systemResponse) ? systemResponse : messages) as string;
 
   // context.stateId is the id of the state where we left off, not the final state in the machine which in pause, success, or fail
-  if (context.stateId.indexOf('confirmUserIntent') >= 0) {
+  if (context.stateId.includes('confirmUserIntent') || context.stateId.includes('architectImplementation')) {
     const userResponse = await input({
       message: `${markdown}`,
     });
-
-    console.log(answer);
 
     // update the thread so the user response is persisted. This ensures it's factored in in the transition logic
     await threadsDao.upsert(`${messages}\nThe user responded with: ${userResponse}\n`, 'larry', executionId);
