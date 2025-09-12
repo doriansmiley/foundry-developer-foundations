@@ -65,7 +65,8 @@ export async function preflightUserTask(task: string, conversationId?: string) {
 
   shouldContinue flag should break conitnuity of unreleated topic which are not connected to Google service package.
 
-  You should return response in enhanced version of user prompt with the name of the function that should be created or already exists.
+  You should return response in enhanced version of user prompt with the name of the function that should be created or already exists or should be modified.
+  
   Example:
   User task: "Create a function to send an email"
   Response: {
@@ -121,6 +122,13 @@ const result = await officeService.sendEmail({
 ",
   followUp: "Do you want to modify this function to add something else or you would like to create v2 send email function?",
   shouldContinue: true
+  }
+
+  User task: "Proceed with implementation" 
+  Response: {
+    response: "I'm proceeding to the next step",
+    followUp: null,
+    shouldContinue: true
   }
 
   User task: "Create function to get drive files"

@@ -17,7 +17,7 @@ export async function gseArchitect(task: string) {
   );
   console.log(colorize('gray', `Task: ${task}`));
 
-  const response = await preflightUserTask(task, '010');
+  const response = await preflightUserTask(task, '012');
 
   if (response.shouldContinue) {
     const groundResponse = await groundUserTask(

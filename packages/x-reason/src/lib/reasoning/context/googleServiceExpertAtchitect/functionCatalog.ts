@@ -52,7 +52,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
           task?: string
         ) => {
           // TODO: get conversationId from context
-          const conversationId = '010';
+          const conversationId = '012';
           let links = [];
 
           try {

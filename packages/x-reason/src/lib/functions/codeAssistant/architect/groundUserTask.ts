@@ -42,6 +42,7 @@ export async function groundUserTask(task: string, conversationId?: string) {
   Repository is using Nx to manage the workspace. google-service is the Nx package name to run commands e.g nx run google-service:test - to run tests.
   You have available Nx workspace generator to scaffold new functions under the google-service package.
   You are to create a draft of the design spec for the user task.
+  Always include Overview at the begining of the design spec. If user wants to modify/update or delete also add Overview specifying whhat user wants to do and with what function.
 
   ${
     previous.length > 0
