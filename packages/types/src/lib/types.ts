@@ -2,7 +2,7 @@ import { ComputeModule } from '@palantir/compute-module';
 import type { Client } from '@osdk/client';
 import { Type, Static } from '@sinclair/typebox';
 import { StateValue } from 'xstate';
-import { calendar_v3, gmail_v1 } from 'googleapis';
+import { calendar_v3, gmail_v1, drive_v3 } from 'googleapis';
 import { User as FoundryUser } from '@osdk/foundry.admin';
 
 export const TYPES = {
@@ -762,16 +762,157 @@ export type OfficeServiceV2 = {
     windowStartLocal: Date;
     windowEndLocal: Date;
   }) => Promise<Summaries>;
-} & OfficeService;
+  searchDriveFiles: (params: DriveSearchParams) => Promise<DriveSearchOutput>;
+  getDriveClient: () => drive_v3.Drive;
+} & OfficeServiceV1;
 
-export type GSuiteCalendarService = {
+// V1 Google Workspace service surface (Calendar + Gmail operations and raw clients)
+export type OfficeServiceV1 = {
   getCalendarClient: () => calendar_v3.Calendar;
   getEmailClient: () => gmail_v1.Gmail;
 } & OfficeService;
 
+// Backward-compatible alias (historical name kept to avoid breaking imports)
+export type GSuiteCalendarService = OfficeServiceV1;
+
 export type MessageService = {
   sendMessage: (message: Message) => Promise<MessageResponse>;
 };
+
+// Service Account Credentials for Google APIs
+export type ServiceAccountCredentials = {
+  type: string;
+  project_id: string;
+  private_key_id: string;
+  private_key: string;
+  client_email: string;
+  client_id: string;
+  auth_uri: string;
+  token_uri: string;
+  auth_provider_x509_cert_url: string;
+  client_x509_cert_url: string;
+  universe_domain: string;
+};
+
+// Google Drive Search Types
+
+/**
+ * Common MIME types for Google Drive files
+ * Use these constants instead of file extensions for more accurate results
+ */
+export const DRIVE_MIME_TYPES = {
+  // Documents
+  PDF: 'application/pdf',
+  DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  DOC: 'application/msword',
+  TXT: 'text/plain',
+  
+  // Spreadsheets
+  XLSX: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  XLS: 'application/vnd.ms-excel',
+  CSV: 'text/csv',
+  
+  // Presentations
+  PPTX: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  PPT: 'application/vnd.ms-powerpoint',
+  
+  // Images
+  JPG: 'image/jpeg',
+  JPEG: 'image/jpeg',
+  PNG: 'image/png',
+  GIF: 'image/gif',
+  SVG: 'image/svg+xml',
+  
+  // Google Workspace Files
+  GOOGLE_DOC: 'application/vnd.google-apps.document',
+  GOOGLE_SHEET: 'application/vnd.google-apps.spreadsheet',
+  GOOGLE_SLIDE: 'application/vnd.google-apps.presentation',
+  GOOGLE_FORM: 'application/vnd.google-apps.form',
+  GOOGLE_DRAWING: 'application/vnd.google-apps.drawing',
+  
+  // Archives
+  ZIP: 'application/zip',
+  RAR: 'application/x-rar-compressed',
+  
+  // Audio/Video
+  MP4: 'video/mp4',
+  MP3: 'audio/mpeg',
+  WAV: 'audio/wav',
+} as const;
+
+/**
+ * Date field types for Google Drive search
+ */
+export enum DriveDateField {
+  CREATED_TIME = 'createdTime',
+  MODIFIED_TIME = 'modifiedTime',
+}
+
+/**
+ * Safe ordering fields and formats for Drive file queries.
+ */
+export type DriveOrderField =
+  | 'modifiedTime'
+  | 'createdTime'
+  | 'viewedByMeTime'
+  | 'name';
+export type SortDir = 'asc' | 'desc';
+export type DriveOrderBy = DriveOrderField | `${DriveOrderField} ${SortDir}`;
+
+// DriveFile interface 
+export interface DriveFile {
+  id: string;                    // Unique file ID
+  name: string;                  // File name
+  mimeType: string;              // File MIME type
+  size?: string;                 // File size in bytes
+  createdTime?: string;          // Creation timestamp
+  modifiedTime?: string;         // Last modification timestamp
+  webViewLink?: string;          // Link to view file in Drive
+  webContentLink?: string;       // Direct download link
+  owners?: Array<{               // File owners
+    displayName?: string;
+    emailAddress?: string;
+  }>;
+  lastModifyingUser?: {          // Last user who modified
+    displayName?: string;
+    emailAddress?: string;
+  };
+  parents?: string[];            // Parent folder IDs
+  description?: string;          // File description
+  starred?: boolean;             // Whether file is starred
+  trashed?: boolean;             // Whether file is trashed
+}
+
+export interface DriveSearchParams {
+  keywords?: string[];
+  dateRange?: {
+    startDate?: Date;
+    endDate?: Date;
+    field?: DriveDateField;
+  };
+  mimeType?: string;
+  owner?: string;
+  sharedWithMe?: boolean;
+  trashed?: boolean;
+  pageSize?: number;
+  pageToken?: string;
+  orderBy?: DriveOrderBy;
+  fields?: string;
+}
+
+export interface DriveSearchResult {
+  files: DriveFile[];
+  nextPageToken?: string;
+  incompleteSearch?: boolean;
+}
+
+export interface DriveSearchOutput {
+  message: string;
+  files: DriveFile[];
+  totalResults: number;
+  nextPageToken?: string;
+  incompleteSearch?: boolean;
+}
 
 export type LoggingService = {
   getLog: (executionId: string) => string;
