@@ -53,7 +53,8 @@ function generateStateConfig(
   functionCatalog: Map<string, Task>,
   context: Context,
   parallel = false,
-  isNestedState = false
+  isNestedState = false,
+  debug = true
 ): Partial<StateNode<Context, any, MachineEvent>> {
   if (parallel) {
     const stateConfig: any = {};
@@ -108,7 +109,9 @@ function generateStateConfig(
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       entry: (context: Context, event: MachineEvent) => {
-        console.log('Received Event:', event.type);
+        if (debug) {
+          console.log('Received Event:', event.type);
+        }
         context.stack?.push(state.id);
       },
       type: state.type,
@@ -125,32 +128,42 @@ function generateStateConfig(
   const stateConfig: any = !isNestedState
     ? {
         entry: (context: Context, event: MachineEvent) => {
-          console.log('Received Event:', event.type);
+          if (debug) {
+            console.log('Received Event:', event.type);
+          }
           context.stack?.push(state.id);
           // if the function is async, we ignore the promise as this is fire and forget.
           // it's up to the function to dispatch the CONTINUE event on the machine to capture results
           // in the vent payload and continue execution
-          console.log('Executing function:', functionName);
+          if (debug) {
+            console.log('Executing function:', functionName);
+          }
           retrievedFunction.implementation(context, event, state.task);
         },
       }
     : {
         invoke: {
           src: async (context: Context, event: MachineEvent) => {
-            console.log('Received Event:', event.type);
+            if (debug) {
+              console.log('Received Event:', event.type);
+            }
             context.stack?.push(state.id);
             // if the function is async, we ignore the promise as this is fire and forget.
             // it's up to the function to dispatch the CONTINUE event on the machine to capture results
             // in the vent payload and continue execution
-            console.log('Executing nested state function:', functionName);
+            if (debug) {
+              console.log('Executing nested state function:', functionName);
+            }
             const result = await retrievedFunction.implementation(
               context,
               event,
               state.task
             );
-            console.log(
-              `received result from nested state function: ${result}`
-            );
+            if (debug) {
+              console.log(
+                `received result from nested state function: ${result}`
+              );
+            }
             const returnValue = {
               stateId: state.id,
               [state.id]: {
@@ -230,7 +243,8 @@ function generateStateConfig(
 
 function generateStateMachineConfig(
   statesArray: StateConfig[],
-  functionCatalog: Map<string, Task>
+  functionCatalog: Map<string, Task>,
+  debug = true
 ) {
   const states: {
     [key: string]: Partial<StateNode<Context, any, MachineEvent>>;
@@ -255,7 +269,8 @@ function generateStateMachineConfig(
       state,
       functionCatalog,
       context,
-      state.type === 'parallel'
+      state.type === 'parallel',
+      debug
     );
   });
 
@@ -270,11 +285,13 @@ function generateStateMachineConfig(
 
 function program(
   statesArray: StateConfig[],
-  functionCatalog: Map<string, Task>
+  functionCatalog: Map<string, Task>,
+  debug = true
 ) {
   const states = generateStateMachineConfig(
     statesArray,
-    functionCatalog
+    functionCatalog,
+    debug
   ) as MachineConfig<Context, any, MachineEvent>;
   return createMachine<Context, MachineEvent>(states, {
     actions: {

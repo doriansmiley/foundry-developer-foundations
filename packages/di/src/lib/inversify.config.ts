@@ -96,9 +96,7 @@ container
   // globalBytes 64 MB max size
   .toConstantValue(createLoggingService(1 * 1024 * 1024, 64 * 1024 * 1024));
 
-container
-  .bind(TYPES.ResearchAssistant)
-  .toConstantValue(researchAssistant);
+container.bind(TYPES.ResearchAssistant).toConstantValue(researchAssistant);
 
 // IMPORTANT use container.getAsync when retrieving!
 container
@@ -110,5 +108,4 @@ container
   .toConstantValue(
     makeSlackClient(process.env.SLACK_BASE_URL, process.env.SLACK_BOT_TOKEN)
   );
-
 export { container };
