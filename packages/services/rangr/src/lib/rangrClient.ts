@@ -14,13 +14,6 @@ export function getRangrClient(): RangrClient {
 }
 
 function createRangrClient(): RangrClient {
-  // log ENV vars
-  console.log('Environment variable keys:');
-  Object.keys(process.env).forEach((key) => {
-    if (key.indexOf('RANGR_FOUNDRY') >= 0 || key.indexOf('RANGR_OSDK') >= 0) {
-      console.log(`- ${key}`);
-    }
-  });
 
   if (
     !process.env['RANGR_OSDK_CLIENT_ID'] ||

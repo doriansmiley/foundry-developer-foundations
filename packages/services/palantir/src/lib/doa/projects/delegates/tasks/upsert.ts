@@ -8,8 +8,8 @@ export async function upsertTicket(
   alertTitle: string,
   alertType: string,
   description: string,
-  severity: string = 'Low',
-  status: string = 'Open',
+  severity = 'Low',
+  status = 'Open',
   points?: number,
   assignees?: string
 ): Promise<Tickets> {
@@ -63,9 +63,5 @@ export async function upsertTicket(
   });
 
   const ticket = (await ticketFetchResults.json()) as Tickets;
-  console.log(
-    `the ticket execution ontology returned: ${JSON.stringify(ticket)}`
-  );
-
   return ticket;
 }

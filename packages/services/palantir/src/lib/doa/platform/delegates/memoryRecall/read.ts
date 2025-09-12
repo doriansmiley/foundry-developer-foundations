@@ -35,9 +35,5 @@ export async function readMemoryRecall(
     );
   }
 
-  console.log(
-    `the machine execution ontology returned: ${JSON.stringify(apiResponse)}`
-  );
-
   return apiResponse as MemoryRecall;
 }

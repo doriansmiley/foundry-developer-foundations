@@ -32,7 +32,5 @@ export async function readThread(
     );
   }
 
-  console.log(`the threads ontology returned: ${JSON.stringify(apiResponse)}`);
-
   return apiResponse as Threads;
 }
