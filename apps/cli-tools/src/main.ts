@@ -9,9 +9,7 @@ import * as path from 'path';
 import { Larry, LarryResponse } from '@codestrap/developer-foundations-agents-vickie-bennie';
 import { container } from '@codestrap/developer-foundations-di';
 import {
-  ApplyResult,
   Context,
-  GetNextStateResult,
   MachineDao,
   ThreadsDao,
   TYPES,
