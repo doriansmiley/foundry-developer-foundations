@@ -9,6 +9,7 @@ import * as path from 'path';
 import { Larry, LarryResponse } from '@codestrap/developer-foundations-agents-vickie-bennie';
 import { container } from '@codestrap/developer-foundations-di';
 import {
+  ApplyResult,
   Context,
   GetNextStateResult,
   MachineDao,
@@ -122,8 +123,6 @@ async function main(executionId?: string, contextUpdateInput?: string) {
     systemResponse = parsedMessages.pop().system;
   } catch { /* empty */ }
 
-  const markdown = marked((systemResponse) ? systemResponse : messages) as string;
-
   if (lastState.includes('success') || lastState.includes('error')) {
     // write the spec file
     const p = path.join(process.cwd(), `${uuidv4()}-spec-output.md`);
@@ -131,8 +130,29 @@ async function main(executionId?: string, contextUpdateInput?: string) {
     return;
   }
 
+  if (context.stateId.includes('generateEditMachine')) {
+    // TODO call the code editor once the user approves the changes
+    const p = path.join(process.cwd(), `${uuidv4()}-ops.json`);
+    await fs.promises.writeFile(p, JSON.stringify(systemResponse, null, 2), 'utf8');
+
+    const userResponse = await input({
+      message: `# REVIEW EDIT PLAN
+\`\`\`JSON
+${systemResponse}
+\`\`\`  
+      `,
+    });
+
+    const contextUpdate = {
+      [context.stateId]: { userResponse: userResponse }, // I chose to name the key userResponse, but you can choose any key you like, but it needs to make sense to the LLM
+    };
+
+    await main(executionId, JSON.stringify(contextUpdate));
+  }
+
   // context.stateId is the id of the state where we left off, not the final state in the machine which in pause, success, or fail
   if (context.stateId.includes('confirmUserIntent') || context.stateId.includes('architectImplementation')) {
+    const markdown = marked((systemResponse) ? systemResponse : messages) as string;
     const userResponse = await input({
       message: `${markdown}`,
     });

@@ -5,7 +5,7 @@ import {
     ActionType,
 } from '@codestrap/developer-foundations-types';
 
-import { confirmUserIntent, searchDocumentation, architectImplementation } from '../../../../functions';
+import { confirmUserIntent, searchDocumentation, architectImplementation, generateEditMachine } from '../../../../functions';
 
 
 function getPayload(context: Context, result: Record<string, any>) {
@@ -75,6 +75,25 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const payload = getPayload(context, result);
                     console.log(`architectImplementation returned: ${JSON.stringify(result)}`);
                     console.log('dispatching CONTINUE from architectImplementation');
+
+                    dispatch({
+                        type: 'pause',
+                        payload,
+                    });
+                },
+            },
+        ],
+        [
+            "generateEditMachine",
+            {
+                description:
+                    "Use this tool to execute the approved architecture plan.",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    console.log('generateEditMachine implementation in function catalog called');
+                    const result = await generateEditMachine(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`generateEditMachine returned: ${JSON.stringify(result)}`);
+                    console.log('dispatching CONTINUE from generateEditMachine');
 
                     dispatch({
                         type: 'pause',

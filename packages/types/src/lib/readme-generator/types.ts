@@ -210,3 +210,127 @@ export type UserIntent = {
     userResponse?: string;
 }
 
+/** Keep this union small, explicit, and auditable for v0 */
+export type EditOp =
+    // Imports
+    | {
+        kind: 'ensureImport';
+        file: string;
+        from: string;                 // module specifier, e.g. 'zod'
+        names?: string[];             // named imports: ['z']; no duplicates added
+        defaultName?: string;         // default import: 'React'
+        isTypeOnly?: boolean;         // import type { Foo }
+    }
+    | {
+        kind: 'removeImportNames';
+        file: string;
+        from: string;
+        names?: string[];             // remove specific named imports
+        defaultName?: boolean;        // remove default import if true
+    }
+
+    // Exports
+    | {
+        kind: 'ensureExport';
+        file: string;
+        name: string;                 // ensure symbol is exported (adds 'export' or `export { name }`)
+    }
+
+    // Functions (module-level)
+    | {
+        kind: 'replaceFunctionBody';
+        file: string;
+        exportName: string;           // exported function name
+        body: string;                 // TS code inside braces, or whole `{ ... }` — both accepted
+    }
+    | {
+        kind: 'updateFunctionReturnType';
+        file: string;
+        exportName: string;
+        returnType: string;           // e.g. 'Promise<User>'
+    }
+
+    // Class methods
+    | {
+        kind: 'replaceMethodBody';
+        file: string;
+        className: string;
+        methodName: string;
+        body: string;
+    }
+
+    // Types & interfaces
+    | {
+        kind: 'addUnionMember';
+        file: string;
+        typeName: string;             // Type alias that is a union
+        member: string;               // e.g. "'NewCase'" or 'NewCase'
+    }
+    | {
+        kind: 'updateTypeProperty';
+        file: string;
+        typeName: string;             // interface or type literal alias
+        property: string;
+        newType: string;              // e.g. 'string & Brand<"Email">'
+    }
+    | {
+        kind: 'insertInterfaceProperty';
+        file: string;
+        interfaceName: string;        // interface Foo { ... }
+        propertySig: string;          // full property sig, e.g. 'email: string'
+    }
+    | {
+        kind: 'replaceTypeAlias';
+        file: string;
+        typeName: string;
+        typeText: string;             // replaces the entire alias body
+    }
+    | {
+        kind: 'replaceInterface';
+        file: string;
+        interfaceName: string;
+        interfaceText: string;        // full interface text: 'export interface Foo { ... }' or 'interface Foo { ... }'
+    }
+
+    // Enums
+    | {
+        kind: 'insertEnumMember';
+        file: string;
+        enumName: string;
+        memberName: string;           // 'Draft'
+        initializer?: string;         // e.g. '"DRAFT"' or '1'
+    }
+
+    // Object literals (common for config & env maps)
+    | {
+        kind: 'upsertObjectProperty';
+        file: string;
+        exportName: string;           // exported const name holding an object literal
+        key: string;                  // property key (identifier or string literal)
+        valueExpr: string;            // initializer text, e.g. '{ enabled: true }' or '"v1"'
+    }
+
+    // Symbol rename (scoped)
+    | {
+        kind: 'renameSymbol';
+        file: string;
+        oldName: string;
+        newName: string;
+        scope?: 'exported' | 'local'; // default exported
+    };
+
+export type ApplyOptions = {
+    tsconfigPath?: string;      // default 'tsconfig.json'
+    baseDir?: string;           // resolve relative file paths
+    dryRun?: boolean;           // show diffs; no writes
+    format?: boolean;           // default true
+    write?: boolean;            // default true (ignored if dryRun)
+    onLog?: (msg: string) => void;
+};
+
+export type ApplyResult = {
+    changedFiles: string[];
+    diffByFile: Record<string, string>;
+    diagnosticsText: string | null;
+};
+
