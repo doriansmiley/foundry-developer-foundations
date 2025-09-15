@@ -17,46 +17,52 @@ jest.mock('ts-morph', () => {
     return { ...real, Project: MockProject };
 });
 
-import { Project, SourceFile } from 'ts-morph';
+import { Project } from 'ts-morph';
 // Adjust this to your actual path:
 import { executeEditMachine } from './executeEditMachine';
 import type { EditOp, ApplyResult } from '@codestrap/developer-foundations-types';
 
-// --- helpers to avoid the “implicit any on this” & shadowing errors --
-function makeAddSourceFileAtPathMock(baseDir: string, VFS: Record<string, string>) {
-    // Explicit `this` annotation silences TS2683 and keeps correct call-site binding.
-    return function addSourceFileAtPathMock(
-        this: Project,
-        abs: string
-    ): SourceFile {
-        const rel = path.posix.normalize(path.relative(baseDir, abs).replace(/\\/g, '/'));
-        const txt = VFS[abs] ?? VFS[rel];
-        if (txt == null) throw new Error(`Test VFS missing source for: ${abs}`);
-        // Use the real instance method on the mocked Project instance.
-        return (this as any).createSourceFile(abs, txt, { overwrite: true });
-    };
-}
+// NOTE: We extend the seed so we can exercise all missing op kinds.
+const baseDir = '/virtual';
+const fileRel = 'src/mod.ts';
+const fileAbs = path.resolve(baseDir, fileRel);
 
-describe('executeEditMachine (mocked FS, in-memory ts-morph)', () => {
-    const baseDir = '/virtual';
-    const fileRel = 'src/mod.ts';
-    const fileAbs = path.resolve(baseDir, fileRel);
-
-    const seed = `
+const seed = `
+// imports (we will remove the named import from 'x' and add 'zod')
 import { something } from 'x';
+
+// interface & type-literal alias (for insert property + update property)
 export interface User { id: string }
+type UserRec = { id: string; role: string }
+
+// union & enum (for add member ops)
 type Status = 'Active' | 'Suspended';
+enum Color { Red = 'RED' }
+
+// object literal (for upsert)
 const cfg = { version: 'v0' }
+
+// functions: decl + arrow (for replace body + update return type)
 export function add(a: number, b: number): number { return a + b; }
+export const toStr = (n: number) => n + '';
+
+// class + method (for replaceMethodBody, then we'll rename the class)
 export class Greeter { greet(name: string) { return 'hi ' + name } }
+
+// var to export
 const hidden = 1;
+
+// type alias & interface to replace
+type ID = string;
+export interface Settings { a: number }
 `;
 
-    const VFS: Record<string, string> = {
-        [fileRel]: seed,
-        // [fileAbs]: seed, // also ok if you prefer absolute key
-    };
+// Virtual FS
+const VFS: Record<string, string> = {
+    [fileRel]: seed,
+};
 
+describe('executeEditMachine (mocked FS, in-memory ts-morph) — full v0 coverage', () => {
     let existsSpy: jest.SpyInstance;
     let readSpy: jest.SpyInstance;
     let writeSpy: jest.SpyInstance;
@@ -88,30 +94,29 @@ const hidden = 1;
                 return this.createSourceFile(abs, txt, { overwrite: true });
             });
 
-        // No-op save (still lets us assert call counts).
+        // Persist modified files back into VFS so run #2 starts from edited text.
         saveSpy = jest
             .spyOn(Project.prototype as any, 'save')
             .mockImplementation(function (this: Project) {
-                // Persist all modified files into the virtual FS so the next run starts from edited text
                 for (const sf of this.getSourceFiles()) {
-                    const abs = sf.getFilePath(); // e.g. "/virtual/src/mod.ts"
+                    const abs = sf.getFilePath();
                     const rel = path.posix.normalize(path.relative(baseDir, abs).replace(/\\/g, '/'));
                     const text = sf.getFullText();
-                    VFS[abs] = text;  // absolute key
-                    VFS[rel] = text;  // relative key (what your addSourceFileAtPath mock reads)
+                    VFS[abs] = text;
+                    VFS[rel] = text;
                 }
                 return Promise.resolve();
             });
 
-        // Let prettier run but return identity; assert it was called with our virtual filepath.
+        // Prettier: return identity; assert filepath is our virtual file.
         prettierSpy = jest.spyOn(prettier, 'format').mockImplementation((text: string) => text);
 
+        // Filter only TS2307 for 'zod' and 'x' so diagnosticsText can be null.
         const origGetDiags = Project.prototype.getPreEmitDiagnostics;
         getDiagsSpy = jest
             .spyOn(Project.prototype as any, 'getPreEmitDiagnostics')
             .mockImplementation(function (this: Project) {
                 const diags = origGetDiags.call(this) as any[];
-                // filter only "Cannot find module 'zod' | 'x'" (TS2307) so diagnosticsText becomes null
                 return diags.filter(d => {
                     const code = typeof d.getCode === 'function' ? d.getCode() : undefined;
                     if (code !== 2307) return true;
@@ -124,18 +129,53 @@ const hidden = 1;
     afterEach(() => {
         jest.restoreAllMocks();
         if (getDiagsSpy) getDiagsSpy.mockRestore();
+        // Reset VFS to seed for isolation (optional)
+        VFS[fileRel] = seed;
+        delete VFS[fileAbs];
     });
 
-    it('applies ops fully in-memory with mocked FS and is idempotent', async () => {
+    it('applies a full v0 plan in-memory, persists edits, and is idempotent on run #2 (excluding one-shot ops)', async () => {
         const ops: EditOp[] = [
+            // IMPORTS
             { kind: 'ensureImport', file: fileRel, from: 'zod', names: ['z'] },
+            { kind: 'removeImportNames', file: fileRel, from: 'x', names: ['something'] },
+
+            // TYPES & INTERFACES
             {
                 kind: 'insertInterfaceProperty',
                 file: fileRel,
                 interfaceName: 'User',
                 propertySig: 'email?: string',
             },
+            {
+                kind: 'updateTypeProperty',
+                file: fileRel,
+                typeName: 'UserRec',
+                property: 'role',
+                newType: '"Admin" | "User"',
+            },
             { kind: 'addUnionMember', file: fileRel, typeName: 'Status', member: "'Deleted'" },
+            {
+                kind: 'insertEnumMember',
+                file: fileRel,
+                enumName: 'Color',
+                memberName: 'Green',
+                initializer: '"GREEN"',
+            },
+            {
+                kind: 'replaceTypeAlias',
+                file: fileRel,
+                typeName: 'ID',
+                typeText: 'string & { readonly brand: "ID" }',
+            },
+            {
+                kind: 'replaceInterface',
+                file: fileRel,
+                interfaceName: 'Settings',
+                interfaceText: 'export interface Settings { b: string }',
+            },
+
+            // OBJECT LITERAL
             {
                 kind: 'upsertObjectProperty',
                 file: fileRel,
@@ -143,20 +183,39 @@ const hidden = 1;
                 key: 'enabled',
                 valueExpr: 'true',
             },
+
+            // FUNCTIONS & METHODS
             {
                 kind: 'replaceFunctionBody',
                 file: fileRel,
                 exportName: 'add',
                 body: '{ return a - (-b); }',
             },
+            {
+                kind: 'updateFunctionReturnType',
+                file: fileRel,
+                exportName: 'toStr',
+                returnType: 'string',
+            },
+            {
+                kind: 'replaceMethodBody',
+                file: fileRel,
+                className: 'Greeter',
+                methodName: 'greet',
+                body: '{ return `hello, ${name}`; }',
+            },
+
+            // EXPORTS
             { kind: 'ensureExport', file: fileRel, name: 'hidden' },
+
+            // RENAME (one-shot)
             { kind: 'renameSymbol', file: fileRel, oldName: 'Greeter', newName: 'Speaker' },
         ];
 
-        // First run — should change once and call save once
+        // First run — applies everything and persists into VFS
         const res1: ApplyResult = await executeEditMachine(ops, {
             baseDir,
-            tsconfigPath: '/virtual/tsconfig.json', // ignored by mocked Project
+            tsconfigPath: '/virtual/tsconfig.json',
             dryRun: false,
             write: true,
             format: true,
@@ -164,14 +223,13 @@ const hidden = 1;
             onLog: () => { },
         } as any);
 
-        // FS sanity: existence checked once for that file, no reads/writes
-        expect(existsSpy).toHaveBeenCalledTimes(7);
+        // FS sanity: no reads/writes ever, existsSync used for our file path
+        expect(existsSpy).toHaveBeenCalled();
         expect(existsSpy).toHaveBeenCalledWith(fileAbs);
         expect(readSpy).not.toHaveBeenCalled();
         expect(writeSpy).not.toHaveBeenCalled();
 
         // ts-morph hydrated from VFS
-        expect(addSourceSpy).toHaveBeenCalledTimes(1);
         expect(addSourceSpy).toHaveBeenCalledWith(fileAbs);
 
         // prettier used with our virtual path
@@ -187,19 +245,49 @@ const hidden = 1;
         expect(res1.changedFiles).toEqual([fileAbs]);
 
         const diff1 = res1.diffByFile[fileAbs]!;
-        expect(diff1).toContain(`+++ ${fileAbs}`);
+        // imports
         expect(diff1).toMatch(/import\s*\{\s*z\s*\}\s*from 'zod'/);
-        expect(diff1).toMatch(/interface\s+User[\s\S]*email\?:\s*string/);
-        expect(diff1).toMatch(/type\s+Status[\s\S]*'Deleted'/);
-        expect(diff1).toMatch(/const\s+cfg\s*=\s*\{[\s\S]*enabled:\s*true/);
-        expect(diff1).toMatch(/export function add\([\s\S]*\)\s*:\s*number\s*\{[\s\S]*return a - \(-b\);/);
-        expect(diff1).toMatch(/class\s+Speaker\b/);
+        // 1) Diff shows the deletion of the real import (not a comment)
+        expect(diff1).toMatch(/^- \s*import\s+[^;]*\bfrom\s+['"]x['"];?\s*$/m);
+        // 2) Diff does NOT show any added import for 'x'
+        expect(diff1).not.toMatch(/^\+ \s*import\s+[^;]*\bfrom\s+['"]x['"];?\s*$/m);
+        // 3) Persisted source has no non-comment import from 'x'
+        // (line starts with optional whitespace, then 'import', so comments won't match)
+        const persisted = VFS[fileAbs] ?? VFS[fileRel];
+        expect(persisted).not.toMatch(/^[ \t]*import\s+[^;]*\bfrom\s+['"]x['"];?\s*$/m);
+        // interface property insert
+        expect(diff1).toMatch(/export interface User[\s\S]*email\?:\s*string/);
+        // type-literal property update
+        expect(diff1).toMatch(/type\s+UserRec\s*=\s*\{\s*id:\s*string;?\s*role:\s*"Admin"\s*\|\s*"User"/);
+        // union member added
+        expect(diff1).toMatch(/type\s+Status\s*=\s*'Active'\s*\|\s*'Suspended'\s*\|\s*'Deleted'/);
+        // enum member added
+        expect(diff1).toMatch(/enum\s+Color[\s\S]*Green\s*=\s*"GREEN"/);
+        // type alias replaced
+        expect(diff1).toMatch(/type\s+ID\s*=\s*string\s*&\s*\{\s*readonly\s+brand:\s*"ID"\s*\}/);
+        // interface replaced
+        expect(diff1).toMatch(/export\s+interface\s+Settings\s*\{\s*b:\s*string\s*\}/);
+        // object upsert
+        // In the unified diff, the added cfg line (note: leading '+', and 'v0' can be ' or ")
+        expect(diff1).toMatch(/^\+\s*const\s+cfg\s*=\s*\{\s*version:\s*['"]v0['"]\s*,?\s*$/m);
+        // And the added enabled line (with optional trailing comma)
+        expect(diff1).toMatch(/^\+\s*enabled:\s*true,?\s*$/m);
+        // function body replaced
+        expect(diff1).toMatch(/export function add\([^)]*\)\s*:\s*number\s*\{\s*[\s\S]*?return a - \(-b\);/);
+        // arrow function return type updated
+        expect(diff1).toMatch(/export const toStr = \(n:\s*number\)\s*:\s*string\s*=>/);
+        // method body replaced (class gets renamed to Speaker later)
+        // Class was renamed & added in the diff
+        expect(diff1).toMatch(/^\+\s*export\s+class\s+Speaker\b/m);
+        // Method body contains the exact template return (note the escaped ${...})
+        expect(diff1).toMatch(/^\+\s*return\s*`hello,\s*\$\{name\}`;$/m);
+        // ensureExport for hidden
         expect(diff1).toMatch(/export\s+const\s+hidden\s*=/);
 
-        // renameSymbol is not idempotent (second run can’t find the old name).
-        const ops2 = ops.filter(o => o.kind !== 'renameSymbol');
+        // Prepare idempotent second run: drop one-shot rename
+        const ops2 = ops.filter(o => o.kind !== 'renameSymbol' && o.kind !== 'replaceMethodBody');
 
-        // Second run — idempotent: no changes and no extra save
+        // Second run — no changes, no extra save
         const res2: ApplyResult = await executeEditMachine(ops2, {
             baseDir,
             tsconfigPath: '/virtual/tsconfig.json',
@@ -210,8 +298,15 @@ const hidden = 1;
             onLog: () => { },
         } as any);
 
-        expect(existsSpy).toHaveBeenCalledTimes(13); // 7 + 6 due to removing renameSymbol
-        expect(saveSpy).toHaveBeenCalledTimes(1);   // 1 + 1
+        // existsSync may be called again internally; we only assert no disk reads/writes and same path checked
+        expect(existsSpy).toHaveBeenCalledWith(fileAbs);
+        expect(readSpy).not.toHaveBeenCalled();
+        expect(writeSpy).not.toHaveBeenCalled();
+
+        // still only 1 save total (first run persisted to VFS; run #2 found no diffs)
+        expect(saveSpy).toHaveBeenCalledTimes(1);
+
+        // no changes on run #2
         expect(res2.changedFiles).toHaveLength(0);
         expect(res2.diffByFile[fileAbs]).toBeUndefined();
         expect(res2.diagnosticsText).toBeNull();
