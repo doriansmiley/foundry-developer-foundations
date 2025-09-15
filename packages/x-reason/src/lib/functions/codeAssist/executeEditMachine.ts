@@ -236,7 +236,7 @@ function removeImportNames(
 ) {
     const decl = sf.getImportDeclaration(d => d.getModuleSpecifierValue() === op.from);
     if (!decl) return;
-    if (op.defaultName) decl.setDefaultImport(undefined);
+    if (op.defaultName) decl.removeDefaultImport();
     const toRemove = new Set(op.names ?? []);
     decl.getNamedImports().forEach(ni => {
         if (toRemove.has(ni.getName())) ni.remove();

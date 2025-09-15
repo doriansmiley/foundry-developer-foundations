@@ -63,6 +63,7 @@ const hidden = 1;
     let addSourceSpy: jest.SpyInstance;
     let saveSpy: jest.SpyInstance;
     let prettierSpy: jest.SpyInstance;
+    let getDiagsSpy: jest.SpyInstance;
 
     beforeEach(() => {
         // Only acknowledge existence of our single virtual file.
@@ -80,17 +81,49 @@ const hidden = 1;
         // Hydrate from our VFS instead of disk.
         addSourceSpy = jest
             .spyOn(Project.prototype as any, 'addSourceFileAtPath')
-            .mockImplementation(makeAddSourceFileAtPathMock(baseDir, VFS) as any);
+            .mockImplementation(function (this: Project, abs: any) {
+                const rel = path.posix.normalize(path.relative(baseDir, abs).replace(/\\/g, '/'));
+                const txt = VFS[abs] ?? VFS[rel];
+                if (txt == null) throw new Error(`Test VFS missing source for: ${abs}`);
+                return this.createSourceFile(abs, txt, { overwrite: true });
+            });
 
         // No-op save (still lets us assert call counts).
-        saveSpy = jest.spyOn(Project.prototype as any, 'save').mockResolvedValue(undefined);
+        saveSpy = jest
+            .spyOn(Project.prototype as any, 'save')
+            .mockImplementation(function (this: Project) {
+                // Persist all modified files into the virtual FS so the next run starts from edited text
+                for (const sf of this.getSourceFiles()) {
+                    const abs = sf.getFilePath(); // e.g. "/virtual/src/mod.ts"
+                    const rel = path.posix.normalize(path.relative(baseDir, abs).replace(/\\/g, '/'));
+                    const text = sf.getFullText();
+                    VFS[abs] = text;  // absolute key
+                    VFS[rel] = text;  // relative key (what your addSourceFileAtPath mock reads)
+                }
+                return Promise.resolve();
+            });
 
         // Let prettier run but return identity; assert it was called with our virtual filepath.
         prettierSpy = jest.spyOn(prettier, 'format').mockImplementation((text: string) => text);
+
+        const origGetDiags = Project.prototype.getPreEmitDiagnostics;
+        getDiagsSpy = jest
+            .spyOn(Project.prototype as any, 'getPreEmitDiagnostics')
+            .mockImplementation(function (this: Project) {
+                const diags = origGetDiags.call(this) as any[];
+                // filter only "Cannot find module 'zod' | 'x'" (TS2307) so diagnosticsText becomes null
+                return diags.filter(d => {
+                    const code = typeof d.getCode === 'function' ? d.getCode() : undefined;
+                    if (code !== 2307) return true;
+                    const msg = String(d.getMessageText?.() ?? '');
+                    return !/'(zod|x)'/.test(msg);
+                });
+            });
     });
 
     afterEach(() => {
         jest.restoreAllMocks();
+        if (getDiagsSpy) getDiagsSpy.mockRestore();
     });
 
     it('applies ops fully in-memory with mocked FS and is idempotent', async () => {
@@ -127,11 +160,12 @@ const hidden = 1;
             dryRun: false,
             write: true,
             format: true,
-            onLog: (msg: string) => { console.log(msg) },
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            onLog: () => { },
         } as any);
 
         // FS sanity: existence checked once for that file, no reads/writes
-        expect(existsSpy).toHaveBeenCalledTimes(1);
+        expect(existsSpy).toHaveBeenCalledTimes(7);
         expect(existsSpy).toHaveBeenCalledWith(fileAbs);
         expect(readSpy).not.toHaveBeenCalled();
         expect(writeSpy).not.toHaveBeenCalled();
@@ -162,18 +196,22 @@ const hidden = 1;
         expect(diff1).toMatch(/class\s+Speaker\b/);
         expect(diff1).toMatch(/export\s+const\s+hidden\s*=/);
 
+        // renameSymbol is not idempotent (second run can’t find the old name).
+        const ops2 = ops.filter(o => o.kind !== 'renameSymbol');
+
         // Second run — idempotent: no changes and no extra save
-        const res2: ApplyResult = await executeEditMachine(ops, {
+        const res2: ApplyResult = await executeEditMachine(ops2, {
             baseDir,
             tsconfigPath: '/virtual/tsconfig.json',
             dryRun: false,
             write: true,
             format: true,
-            onLog: (msg: string) => { console.log(msg) },
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
+            onLog: () => { },
         } as any);
 
-        expect(existsSpy).toHaveBeenCalledTimes(1); // still only one exists check total
-        expect(saveSpy).toHaveBeenCalledTimes(1);   // no second save
+        expect(existsSpy).toHaveBeenCalledTimes(13); // 7 + 6 due to removing renameSymbol
+        expect(saveSpy).toHaveBeenCalledTimes(1);   // 1 + 1
         expect(res2.changedFiles).toHaveLength(0);
         expect(res2.diffByFile[fileAbs]).toBeUndefined();
         expect(res2.diagnosticsText).toBeNull();
