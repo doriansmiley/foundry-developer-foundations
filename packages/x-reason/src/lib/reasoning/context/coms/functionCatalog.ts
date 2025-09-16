@@ -19,6 +19,7 @@ import {
     readWebPage,
     sendSlackMessage,
     writeSlackMessage,
+    searchTranscripts,
 } from '../../../functions';
 
 
@@ -315,6 +316,23 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log('sendSlackMessage function catalog implementation called');
                     const result = await sendSlackMessage(context, event, task);
                     const payload = getPayload(context, result);
+                    dispatch({
+                        type: 'CONTINUE',
+                        payload,
+                    });
+                },
+            },
+        ],
+        [
+            "searchTranscripts",
+            {
+                description:
+                    "Searches for meeting transcripts and notes in Google Drive based on time frame and topic keywords.",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    console.log('searchTranscripts implementation in function catalog called');
+                    const result = await searchTranscripts(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`searchTranscripts returned: ${JSON.stringify(result)}`);
                     dispatch({
                         type: 'CONTINUE',
                         payload,
