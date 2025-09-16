@@ -5,4 +5,6 @@ export * from './lib/researchAssistant';
 export * from './lib/researchAssistantCoding';
 export * from './lib/openAiSoftwareDesignSpec';
 export * from './lib/softwareDesignSpec';
+export * from './lib/googleCodingSpecSearcher';
+export * from './lib/googleCodingArchitect';
 export * from './lib/softwareArchitect';
