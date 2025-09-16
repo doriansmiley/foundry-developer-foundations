@@ -15,6 +15,7 @@ testGitWorklows.sh
 project-graph.json
 
 **/*-spec-output.md
+**/*-ops.json
 
 # dev TLS certs/keys
 apps/**/certificates/*.pem

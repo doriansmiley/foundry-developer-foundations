@@ -131,7 +131,8 @@ async function main(executionId?: string, contextUpdateInput?: string) {
   if (context.stateId.includes('generateEditMachine')) {
     // TODO call the code editor once the user approves the changes
     const p = path.join(process.cwd(), `${uuidv4()}-ops.json`);
-    await fs.promises.writeFile(p, JSON.stringify(systemResponse, null, 2), 'utf8');
+    const parsed = JSON.parse(systemResponse);
+    await fs.promises.writeFile(p, JSON.stringify(parsed, null, 2), 'utf8');
 
     const userResponse = await input({
       message: `# REVIEW EDIT PLAN

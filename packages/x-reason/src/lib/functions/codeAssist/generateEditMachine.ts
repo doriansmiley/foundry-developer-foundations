@@ -176,21 +176,25 @@ export const schema = {
                 ]
             }
         },
+        "non_applicable": {
+            "type": ["array", "null"],
+            "items": { "type": "string" }
+        }
     },
-    "required": ["version", "ops"]
+    "required": ["version", "ops", "non_applicable"]
 }
 
 export async function generateEditMachine(context: Context, event?: MachineEvent, task?: string) {
     const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
-    let messageThread: string | undefined;
 
-    try {
-        const { messages } = await threadsDao.read(context.machineExecutionId!);
-        messageThread = messages;
-    } catch { /* empty */ }
+    const { messages } = await threadsDao.read(context.machineExecutionId!);
+
+    const parsedMessages = JSON.parse(messages || '[]') as { user?: string, system: string }[];
+    const architectImplementationId = context.stack?.slice().reverse().find(item => item.includes('architectImplementation')) || '';
+    const plan = (context[architectImplementationId] as UserIntent)?.confirmationPrompt;
 
     const system = `You are a senior TypeScript AST surgeon.
-Your ONLY job is to read a design spec and a repo snapshot and produce a precise, JSON edit plan (“ops”) that a TS-Morph executor will run.
+Your ONLY job is to read a design spec and a repo snapshot and produce a precise, minimal JSON edit plan (“ops”) that a TS-Morph executor will run.
 
 Rules:
 - Output MUST be valid JSON matching the provided JSON Schema (strict).
@@ -203,13 +207,14 @@ Rules:
 Output fields:
 - \`version\`: "v0"
 - \`ops\`: array of edit ops (see schema)
+- \`non_applicable\`: optional string array of items that require a human or a future opcode.
 
 Never include prose outside the JSON.
 `;
 
     const user = `
-## MESSAGE THREAD THAT INCLUDES THE DESIGN SPEC
-${messageThread}
+## THE DESIGN SPEC
+${plan}
 
 ## TASK
 Produce the v0 edit plan to implement the spec in this repo.
@@ -219,101 +224,6 @@ Produce the v0 edit plan to implement the spec in this repo.
 - If the spec asks for behavior outside v0 op coverage (e.g., create new file), write a brief note in \`non_applicable\`.
 
 Return ONLY JSON.
-
-Below is an example of valid output:
-[
-  {
-    "kind": "ensureImport",
-    "file": "src/mod.ts",
-    "from": "zod",
-    "names": [
-      "z"
-    ]
-  },
-  {
-    "kind": "removeImportNames",
-    "file": "src/mod.ts",
-    "from": "x",
-    "names": [
-      "something"
-    ]
-  },
-  {
-    "kind": "insertInterfaceProperty",
-    "file": "src/mod.ts",
-    "interfaceName": "User",
-    "propertySig": "email?: string"
-  },
-  {
-    "kind": "updateTypeProperty",
-    "file": "src/mod.ts",
-    "typeName": "UserRec",
-    "property": "role",
-    "newType": "\\"Admin\\" | \\"User\\""
-  },
-  {
-    "kind": "addUnionMember",
-    "file": "src/mod.ts",
-    "typeName": "Status",
-    "member": "\'Deleted\'"
-  },
-  {
-    "kind": "insertEnumMember",
-    "file": "src/mod.ts",
-    "enumName": "Color",
-    "memberName": "Green",
-    "initializer": "\\"GREEN\\""
-  },
-  {
-    "kind": "replaceTypeAlias",
-    "file": "src/mod.ts",
-    "typeName": "ID",
-    "typeText": "string & { readonly brand: \\"ID\\" }"
-  },
-  {
-    "kind": "replaceInterface",
-    "file": "src/mod.ts",
-    "interfaceName": "Settings",
-    "interfaceText": "export interface Settings { b: string }"
-  },
-  {
-    "kind": "upsertObjectProperty",
-    "file": "src/mod.ts",
-    "exportName": "cfg",
-    "key": "enabled",
-    "valueExpr": "true"
-  },
-  {
-    "kind": "replaceFunctionBody",
-    "file": "src/mod.ts",
-    "exportName": "add",
-    "body": "{ return a - (-b); }"
-  },
-  {
-    "kind": "updateFunctionReturnType",
-    "file": "src/mod.ts",
-    "exportName": "toStr",
-    "returnType": "string"
-  },
-  {
-    "kind": "replaceMethodBody",
-    "file": "src/mod.ts",
-    "className": "Greeter",
-    "methodName": "greet",
-    "body": "{ return \`hello, \${name}\`; }"
-  },
-  {
-    "kind": "ensureExport",
-    "file": "src/mod.ts",
-    "name": "hidden"
-  },
-  {
-    "kind": "renameSymbol",
-    "file": "src/mod.ts",
-    "oldName": "Greeter",
-    "newName": "Speaker"
-  }
-]
 `;
     const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -322,7 +232,7 @@ Below is an example of valid output:
             Authorization: `Bearer ${process.env.OPEN_AI_KEY}`,
         },
         body: JSON.stringify({
-            model: 'gpt-5',
+            model: 'gpt-5-mini',
             input: [
                 { role: 'system', content: [{ type: 'input_text', text: system }] },
                 { role: 'user', content: [{ type: 'input_text', text: user }] },
@@ -351,20 +261,10 @@ Below is an example of valid output:
         throw new Error('No message block found in output');
     }
     const parsed = JSON.parse(msg) as EditOp[];
-    let parsedMessages: any = [];
 
-    try {
-        // if we can parse the message array push new
-        parsedMessages = JSON.parse(messageThread!) as { user?: string, system: string }[];
-        parsedMessages.push({
-            system: JSON.stringify(msg),
-        });
-    } catch {
-        // otherwise just push
-        parsedMessages.push({
-            system: JSON.stringify(msg),
-        });
-    }
+    parsedMessages.push({
+        system: JSON.stringify(msg),
+    });
 
     await threadsDao.upsert(JSON.stringify(parsedMessages), 'cli-tool', context.machineExecutionId!);
 
