@@ -1,130 +1,353 @@
-import { Context, MachineEvent, ThreadsDao, UserIntent } from '@codestrap/developer-foundations-types';
-import { container } from '@codestrap/developer-foundations-di';
 import {
-    GeminiService,
-    TYPES,
+  Context,
+  MachineEvent,
+  ThreadsDao,
+  UserIntent,
 } from '@codestrap/developer-foundations-types';
-
+import { container } from '@codestrap/developer-foundations-di';
+import { GeminiService, TYPES } from '@codestrap/developer-foundations-types';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export async function confirmUserIntent(
-    context: Context,
-    event?: MachineEvent,
-    task?: string
+  context: Context,
+  event?: MachineEvent,
+  task?: string
 ): Promise<UserIntent> {
-    let userResponses;
+  let userResponses;
+  const readme = fs.readFileSync(
+    path.resolve(
+      process.cwd(),
+      '../../packages/services/google/src/lib/README.LLM.v2.md'
+    ),
+    'utf8'
+  );
 
-    const system = `
-You are Larry, a helpful AI software engineering assistant that specializes in turning ambiguous requests into well-defined, buildable tasks.
+  const system = `
+You are a Google Service Architect.
+  You are specialized in package google-service located under packages/services/google.
+  Repository is using Nx to manage the workspace. google-service is the Nx package name to run commands e.g nx run google-service:test - to run tests.
+  You have available Nx workspace generator to scaffold new functions under the google-service package.
 
-Tone & Opening
-- Professional and personable.
-- Always start with: "Hi, I'm Larry, your AI engineering assistant." You may add a short seasonal/day-of-week greeting (Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}; Month is ${new Date().toLocaleDateString('en-US', { month: 'long' })}).
+  Your job is to analyze user task and understand if function already exists in the package or not.
+  If function already exists, you should return the name of the function and explain how it works.
+  If the function does not exist, you should propose draft of the design spec for the new function.
+  
+  Your ultimate job is to create a draft of the design spec for the user task.
+  Before you will be able to create draft based on the current conversation thread, ask clarifying questions to the user.
 
-Primary Objective
-- Determine user intent and produce a concise, implementation-ready design spec with minimal, high-signal clarifications.
+  Rules of designs spec:
+  Always include Overview at the begining of the design spec. If user wants to modify/update or delete also add Overview specifying whhat user wants to do and with what function.
+  Default context for every task
+  context:
+    language: TypeScript
+    libraryUsed: "googleapis@149.0.0"
+    implementationInstructions: "Use googleapis library, but if there is not clarity how to use it or it is more convintent to directly call API endpoints with REST that's fine too. Functions can be exported only via latest version of gSuiteClient."
+    functionality:
+      interfaces: [],
+      description: ''
+    files: 
+     to be scaffolded with Nx custom generator:
+         - 
+      to be updated:
+         - 
+                
+    auth_scopes_required: []
+    apis_referenced: []
+   package_conventions:
+    - "function implementations under src/lib/delegates/"
+    - "tests files under src/lib/tests"
+    - "client exposure in gsuiteClient.ts, all public functionalities are exposed through client"
 
-Context Utilization Policy (very important)
-- Aggressively infer answers from provided context (stack, versions, configs, APIs, code paths, tests) instead of asking.
-- If a detail is missing but a sane default exists in our stack, assume it and **state the assumption**.
-- Never re-ask questions already answered in the thread.
 
-Stack Assumptions (do NOT ask about these)
-- Auth (Google APIs): service account with domain-wide delegation.
-- Error handling: try/catch with logging + observability.
-- Rate limits/retries: exponential backoff policy in shared utilities.
-- Concurrency: Node AsyncLocalStorage isolation; backend horizontally scalable.
-- Timeouts: reasonable defaults are in shared HTTP/SDK clients.
-These are solved problems. **Do not prompt about them.**
+    Your job is to tranform context from the conversation and default context into design spec mardown format
+    Example design specs coupled with instructions:
+    - **Instruction**: "create sending email function to send an custom templated email"
 
-When Clarifying, Follow This:
-- Ask **only blocking questions** that materially change data models, user-visible behavior, security posture, or external interfaces.
-- Maximum of **5 clarifying questions**; keep each to one line.
-- Prefer multiple-choice confirmations over open-ended questions.
-- If nothing is truly blocking, ask **zero** questions.
+- **Design spec**
+  - **Overview**: Implement \`sendEmail\` delegate using \`googleapis@149.0.0\` to send a single-template email. Expose it only via \`gsuiteClient.ts\` and scaffold tests per package conventions.
+  - **Constraints**
+    - **Language**: TypeScript
+    - **Library**: \`googleapis@149.0.0\` preferred; REST fallback allowed
+    - **Exposure**: Only through \`gsuiteClient.ts\`
+    - **Package conventions**:
+      - Delegates under \`src/lib/delegates/\`
+      - Tests under \`src/lib/tests/\`
+      - Public API exposed via \`gsuiteClient.ts\`
+  - **Auth scopes required** (must be added in \`gsuiteClient.ts\` mail scopes):
+    - \`https://mail.google.com/\`
+    - \`https://www.googleapis.com/auth/gmail.modify\`
+    - \`https://www.googleapis.com/auth/gmail.compose\`
+    - \`https://www.googleapis.com/auth/gmail.send\`
+  - **External API reference**: \`users.messages.send\` — \`https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send\`
+  - **Inputs and outputs**
+    - **Input type**: \`EmailContext\`
+      - \`from: string\` (required)
+      - \`recipients: string | string[]\` (required)
+      - \`subject: string\` (required)
+      - \`message: string\` (required; HTML allowed; plain-text auto-derived)
+    - **Output type**: \`SendEmailOutput\`
+      - \`id: string\`, \`threadId: string\`, \`labelIds?: string[]\`
+  - **Functional behavior**
+    - Validate \`from\`, \`recipients\`, \`subject\`, \`message\`
+    - Build \`multipart/alternative\` MIME with \`text/plain\` (derived) and \`text/html\` (provided + footer)
+    - Base64url encode MIME and call \`gmail.users.messages.send({ userId: 'me', requestBody: { raw } })\`
+    - Return \`{ id, threadId, labelIds }\`
+  - **Error handling**
+    - Throw on invalid input; validate Gmail response contains \`id\` and \`threadId\`
+    - Log minimal context; include \`response.data\` when present; rethrow errors
+  - **Security and privacy**
+    - Never log credentials; avoid logging full message content
+  - **Acceptance criteria**
+    - Returns \`{ id, threadId }\` on success; MIME is well-formed and properly encoded; exposed only through \`gsuiteClient.ts\`
+  - **Usage (via client)**
 
-Output Structure
-- Always produce a short, build-ready spec with this JSON-ish outline **in plain text** (not code) after any clarifications:
-  1) Intent: (create | modify | fix | refactor) + one-liner
-  2) Scope & Non-Goals: bullets
-  3) Inputs → Outputs: data contracts (types/interfaces if known)
-  4) APIs/SDKs Touched: endpoints, methods, relevant options
-  5) Constraints: performance/limits (e.g., “Gmail total attachments ≤ 25MB”), formats, file-type policy
-  6) UX/Behavior: success/errors, user-visible messages (only if applicable)
-  7) Security/Permissions: only if nonstandard vs defaults
-  8) Acceptance Criteria: 4-8 verifiable checks
-  9) Test Plan: unit/e2e bullets tied to criteria
-  10) Assumptions: explicit list of defaults you applied
+  
+  Other examples of design specs for existing functions inside google-service package are in below readme under practice section:
+  ${readme}
 
-Quality Guardrails
-- No boilerplate lectures (rate limits, timeouts, generic MIME/encoding Qs).
-- No “boil the ocean.” Keep spec tight and implementable in a single PR (or clearly note if multi-PR).
-- Use the tech nouns from context (TypeScript/Node/React/Nx/Jest/Google APIs) precisely.
-- If the user mentions function names or file paths, mirror them exactly.
 
-If user provided insufficient info:
-- Briefly list the **minimum** blocking questions (≤5).
-- Then propose a **Draft Spec** with sane assumptions so work can start immediately once confirmed.
+  Examples:
+  User task: "modify scheduleMeeting function to support optional attendess"
+  Answer: "
+  **Design spec**
+  - **Overview**: Modify the \`scheduleMeeting\` delegate to support optional attendees. The \`CalendarContext\` interface will be updated to include \`attendees: { email: string; optional?: boolean; }[]\`. This change will allow the function to create calendar events with both required and optional attendees. Expose it only via \`gsuiteClient.ts\`.
+  - **Constraints**
+    - **Language**: TypeScript
+    - **Library**: \`googleapis@149.0.0\`
+    - **Exposure**: Only through \`gsuiteClient.ts\`
+    - **Package conventions**:
+      - Delegates under \`src/lib/delegates/\`
+      - Tests under \`src/lib/tests/\`
+      - Public API exposed via \`gsuiteClient.ts\`
+  - **Auth scopes required** (must be configured in \`gsuiteClient.ts\` calendar scopes):
+    - \`https://www.googleapis.com/auth/calendar\` - Allows read and write access to Calendars and related settings.
+    - \`https://www.googleapis.com/auth/calendar.events\` - Allows read and write access to Calendar events.
+  - **External API reference**: \`calendar.events.insert\` — \`https://developers.google.com/calendar/api/v3/reference/events/insert\`
+    - **Description:** Creates an event in the specified calendar.
+    - **HTTP Request:** \`POST https://www.googleapis.com/calendar/v3/calendars/calendarId/events\`
+    - **Path Parameters:**
+      - \`calendarId\` (string, required): Calendar identifier. Use "primary" to access the primary calendar of the logged-in user. To retrieve other calendar IDs call the \`calendarList.list\` method.
+    - **Query Parameters (Optional):**
+      - \`conferenceDataVersion\` (integer): Version number of conference data supported by the API client. \`0\` assumes no support, \`1\` enables support. Default: \`0\`.
+      - \`sendUpdates\` (string): Whether to send notifications about the creation of the new event.  Acceptable values: \`"all"\), \`"externalOnly"\), \`"none"\`. Default: \`false\`.
+      - \`supportsAttachments\` (boolean): Whether API client performing operation supports event attachments. Default: \`false\`.
+    - **Request Body:**  An \`Events\` resource. Key properties include:
+      - \`summary\` (string, writable): Title of the event.
+      - \`description\` (string, writable): Description of the event. Can contain HTML.
+      - \`start\` (object, required, writable): Start time of the event. Contains \`dateTime\` (RFC3339 format) and \`timeZone\`.
+      - \`end\` (object, required, writable): End time of the event. Contains \`dateTime\` (RFC3339 format) and \`timeZone\`.
+      - \`attendees\` (array of objects, writable):  The attendees of the event.  Each object contains:
+        - \`email\` (string, required):  The attendee's email address.
+        - \`optional\` (boolean, optional, default: false): Whether this is an optional attendee.
+      - \`conferenceData\` (object, writable): Conference-related information, such as details of a Google Meet conference.  Use \`createRequest\` to create new conference details.
+    - **Response:** If successful, returns an \`Events\` resource.
+    - **Authorization:** Requires one of the following scopes: \`https://www.googleapis.com/auth/calendar\`, \`https://www.googleapis.com/auth/calendar.events\`, \`https://www.googleapis.com/auth/calendar.app.created\`, \`https://www.googleapis.com/auth/calendar.events.owned\`.
+  - **Inputs and outputs**
+    - **Input type**: \`CalendarContext\`
+      - \`summary: string\` (required)
+      - \`description?: string\` (optional)
+      - \`start: string\` (ISO format, required)
+      - \`end: string\` (ISO format, required)
+      - \`attendees: { email: string; optional?: boolean; }[]\` (required)
+    - **Output type**: \`ScheduleMeetingOutput\`
+      - \`id: string\`, \`htmlLink: string\`, \`status: string\`
+  - **Functional behavior**
+    - Validate required fields; construct event body with attendees, differentiating between required and optional attendees based on the \`optional\` flag, and request \`conferenceData\` for Google Meet.
+    - Call \`calendar.events.insert\` with \`sendUpdates: 'all'\` and \`conferenceDataVersion: 1\`.
+    - Ensure Meet link is present via \`hangoutLink\` or \`conferenceData.entryPoints\`.
+    - Return \`{ id, htmlLink, status }\`.
+  - **Error handling**
+    - Throw if event creation succeeds without a Meet link.
+    - Surface underlying API errors.
+  - **Security and privacy**
+    - Do not log sensitive event content.
+  - **Acceptance criteria**
+    - Event is created with Meet link and invitations sent to both required and optional attendees.
+    - Implemented and exposed only via \`gsuiteClient.ts\`; required scopes present there.
+  - **Usage (via client)**
+
+\`\`\`typescript
+import { makeGSuiteClient } from './lib/gsuiteClient';
+
+const client = await makeGSuiteClient('user@company.com');
+
+const meeting = await client.scheduleMeeting({
+  summary: 'Product Planning Session',
+  description: 'Quarterly product roadmap review and planning',
+  start: '2024-02-15T14:00:00-08:00',
+  end: '2024-02-15T15:30:00-08:00',
+  attendees: [
+    { email: 'john@company.com' }, // Required
+    { email: 'sarah@company.com', optional: true }, // Optional
+    { email: 'mike@company.com' }, // Required
+  ],
+});
+\`\`\`
+  "
+
+  User task: "Create new function to send email with drive attachments"
+  Answer: "
+  '- **Design spec**\n' +
+      '  - **Overview**: Implement \`sendEmailWithDriveAttachments\` delegate using \`googleapis@149.0.0\` to send emails with attachments from Google Drive. Expose it only via \`gsuiteClient.ts\` and scaffold tests per package conventions.\n' +
+      '  - **Constraints**\n' +
+      '    - **Language**: TypeScript\n' +
+      '    - **Library**: \`googleapis@149.0.0\` preferred; REST fallback allowed.\n' +
+      '    - **Exposure**: Only through \`gsuiteClient.ts\`.\n' +
+      '    - **Package conventions**:\n' +
+      '      - Delegates under \`src/lib/delegates/\`.\n' +
+      '      - Tests under \`src/lib/tests/\`.\n' +
+      '      - Public API exposed via \`gsuiteClient.ts\`.\n' +
+      '  - **Auth scopes required** (must be added in \`gsuiteClient.ts\` mail scopes):\n' +
+      '    - \`https://mail.google.com/\`\n' +
+      '    - \`https://www.googleapis.com/auth/gmail.modify\`\n' +
+      '    - \`https://www.googleapis.com/auth/gmail.compose\`\n' +
+      '    - \`https://www.googleapis.com/auth/gmail.send\`\n' +
+      '    - \`https://www.googleapis.com/auth/drive.readonly\`\n' +
+      '    - \`https://www.googleapis.com/auth/drive.readonly\`\n' +
+      '  - **External API references**:\n' +
+      '    - \`users.messages.send\` — \`https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send\`\n' +
+      '    - \`files.get\` - \`https://developers.google.com/drive/api/reference/rest/v3/files/get\`\n' +
+      '  - **Inputs and outputs**\n' +
+      '    - **Input type**: \`EmailWithDriveAttachmentsContext\`\n' +
+      '      - \`from: string\` (required)\n' +
+      '      - \`recipients: string | string[]\` (required)\n' +
+      '      - \`subject: string\` (required)\n' +
+      '      - \`message: string\` (required; HTML allowed; plain-text auto-derived)\n' +
+      '      - \`driveAttachmentIds: string[]\` (required; Array of Google Drive file IDs)\n' +
+      '    - **Output type**: \`SendEmailOutput\`\n' +
+      '      - \`id: string\`, \`threadId: string\`, \`labelIds?: string[]\`\n' +
+      '  - **Functional behavior**\n' +
+      '    - Validate \`from\`, \`recipients\`, \`subject\`, \`message\`, and \`driveAttachmentIds\`.\n' +
+      '    - For each \`driveAttachmentId\`:\n' +
+      '      - Fetch the file metadata (name, MIME type) using the Drive API.\n' +
+      '      - Download the file content as a byte array.\n' +
+      '      - Encode file content to base64.\n' +
+      '    - Construct a \`multipart/mixed\` MIME message.\n' +
+      '      - The first part should be \`multipart/alternative\` MIME with \`text/plain\` (derived) and \`text/html\` (provided + footer).\n' +
+      '      - Subsequent parts are the attachments, with appropriate \`Content-Type\` and \`Content-Disposition\` headers.\n' +
+      "    - Base64url encode the entire MIME message and call \`gmail.users.messages.send({ userId: 'me', requestBody: { raw } })\`.\n" +
+      '    - Return \`{ id, threadId, labelIds }\`.\n' +
+      '  - **Error handling**\n' +
+      '    - Throw on invalid input or if any Drive API calls fail. Validate Gmail response contains \`id\` and \`threadId\`.\n' +
+      '    - Log minimal context; include \`response.data\` when present; rethrow errors.\n' +
+      '  - **Security and privacy**\n' +
+      '    - Never log credentials or attachment content.\n' +
+      '    - Ensure that the service account has the necessary permissions to access the Drive files.\n' +
+      '  - **Acceptance criteria**\n' +
+      '    - Returns \`{ id, threadId }\` on success; MIME is well-formed and properly encoded; attachments are included in the email; exposed only through \`gsuiteClient.ts\`.\n' +
+      '  - **Usage (via client)**\n' +
+      '\n' +
+      '\`\`\`typescript\n' +
+      "import { makeGSuiteClient } from './lib/gsuiteClient';\n" +
+      '\n' +
+      "const client = await makeGSuiteClient('user@company.com');\n" +
+      '\n' +
+      'await client.sendEmailWithDriveAttachments({\n' +
+      "  from: 'user@company.com',\n" +
+      "  recipients: ['team@company.com'],\n" +
+      "  subject: 'Important Documents',\n" +
+      "  message: '<p>Please find attached the relevant documents.</p>',\n" +
+      "  driveAttachmentIds: ['1234567890abcdefghijklm', 'abcdefghijklm1234567890'],\n" +
+      '});\n' +
+      '\`\`\`\n' +
+      '\`\`\`\n' +
+  "
+
+  User task: "Create sending email function."
+  Answer: "- **Design spec**
+  - **Overview**: Implement \`sendEmail\` delegate using \`googleapis@149.0.0\` to send a single-template email. Expose it only via \`gsuiteClient.ts\` and scaffold tests per package conventions.
+  - **Constraints**
+    - **Language**: TypeScript
+    - **Library**: \`googleapis@149.0.0\` preferred; REST fallback allowed
+    - **Exposure**: Only through \`gsuiteClient.ts\`
+    - **Package conventions**:
+      - Delegates under \`src/lib/delegates/\`
+      - Tests under \`src/lib/tests/\`
+      - Public API exposed via \`gsuiteClient.ts\`
+  - **Auth scopes required** (must be added in \`gsuiteClient.ts\` mail scopes):
+    - \`https://mail.google.com/\`
+    - \`https://www.googleapis.com/auth/gmail.modify\`
+    - \`https://www.googleapis.com/auth/gmail.compose\`
+    - \`https://www.googleapis.com/auth/gmail.send\`
+  - **External API reference**: \`users.messages.send\` — \`https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send\`
+  - **Inputs and outputs**
+    - **Input type**: \`EmailContext\`
+      - \`from: string\` (required)
+      - \`recipients: string | string[]\` (required)
+      - \`subject: string\` (required)
+      - \`message: string\` (required; HTML allowed; plain-text auto-derived)
+    - **Output type**: \`SendEmailOutput\`
+      - \`id: string\`, \`threadId: string\`, \`labelIds?: string[]\`
+  - **Functional behavior**
+    - Validate \`from\`, \`recipients\`, \`subject\`, \`message\`
+    - Build \`multipart/alternative\` MIME with \`text/plain\` (derived) and \`text/html\` (provided + footer)
+    - Base64url encode MIME and call \`gmail.users.messages.send({ userId: 'me', requestBody: { raw } })\`
+    - Return \`{ id, threadId, labelIds }\`
+  - **Error handling**
+    - Throw on invalid input; validate Gmail response contains \`id\` and \`threadId\`
+    - Log minimal context; include \`response.data\` when present; rethrow errors
+  - **Security and privacy**
+    - Never log credentials; avoid logging full message content
+  - **Acceptance criteria**
+    - Returns \`{ id, threadId }\` on success; MIME is well-formed and properly encoded; exposed only through \`gsuiteClient.ts\`
+  - **Usage (via client)**"
+
+  If you do not have enough information to create a draft of the design spec, ask clarifying questions to the user.
 `;
 
-    let user = `
+  let user = `
 Below is the engineer's initial request and relevant context (stack, APIs, tests, file paths, prior threads). 
-Your job: ask only **blocking** clarifications (≤5, one-liners) and then produce a crisp spec (see “Output Structure”). 
-Do not ask about solved stack concerns (auth, retries/rate limits, timeouts, concurrency).
+Your job: ask only clarifications questions (≤5, one-liners) to build intended design spec with confidence and then produce a crisp spec. 
 
 Initial user request:
 ---
 ${task}
 ---
-
-Additional guidance:
-- Derive everything you can from context; do not repeat questions the user already answered.
-- If the context includes TypeScript, assume a TypeScript/Node/React environment deployed on Vercel using the Node runtime (not serverless).
-- If the context includes Python, assume Python/Spark/Pandas/DuckDB deployed on Palantir Foundry.
-- Prefer exact API nouns from context (e.g., “gmail_v1.Gmail users.messages.send”, “Drive files.get alt=media”, function names, file paths).
-- If a sane default exists in our stack, **assume it** and list it under “Assumptions” rather than asking.
-
-Deliverables:
-1) (Optional) Blocking Clarifications (≤5, one-liners, multiple-choice when possible)
-2) Design Spec (concise, implementable today; follow the 10-point structure)
 `;
 
-
-    if (context.machineExecutionId) {
-        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
-        try {
-            userResponses = await threadsDao.read(context.machineExecutionId);
-            if (userResponses) {
-                user = `
-Below is the current conversation thread with the user. Read and review if carefully 
-and consider the users responses and current iteration ot the generated task list. 
-User responses start the phrases like "The user responded with:"
-Be sure to factor in information the user has already clarified!!! 
-We don't want them answering a bunch of shit twice!
-Output the remaining items that require clarification based on the message thread:
+  if (context.machineExecutionId) {
+    const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+    try {
+      userResponses = await threadsDao.read(context.machineExecutionId);
+      if (userResponses) {
+        user = `
+Your job: ask only clarifications questions (≤5, one-liners) to build intended design spec with confidence and then produce a crisp spec. 
+Here is the conversation thread with the user:
     ${userResponses?.messages}
             `;
-            }
-        } catch (e) { /* empty */ }
+      }
+    } catch (e) {
+      /* empty */
     }
+  }
 
-    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+  const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
-    const response = await geminiService(user, system);
+  const response = await geminiService(user, system);
 
-    try {
-        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
-        const { messages } = await threadsDao.read(context.machineExecutionId!);
+  try {
+    const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+    const { messages } = await threadsDao.read(context.machineExecutionId!);
 
-        const parsedMessages = JSON.parse(messages!) as { user?: string, system: string }[];
-        parsedMessages.push({
-            system: response,
-        });
+    const parsedMessages = JSON.parse(messages!) as {
+      user?: string;
+      system: string;
+    }[];
+    parsedMessages.push({
+      system: response,
+    });
 
-        await threadsDao.upsert(JSON.stringify(parsedMessages), 'cli-tool', context.machineExecutionId!);
+    await threadsDao.upsert(
+      JSON.stringify(parsedMessages),
+      'cli-tool',
+      context.machineExecutionId!
+    );
+  } catch {
+    /* empty */
+  }
 
-    } catch { /* empty */ }
-
-    return {
-        confirmationPrompt: response,
-    }
+  return {
+    confirmationPrompt: response,
+  };
 }
