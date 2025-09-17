@@ -112,9 +112,9 @@ container.bind(TYPES.ResearchAssistant).toConstantValue(researchAssistant);
 
 container
   .bind(TYPES.CodingResearchAssistant)
-  .toConstantValue(googleCodingSpecSearcher);
+  .toConstantValue(softwareDesignSpec);
 
-container.bind(TYPES.CodingArchitect).toConstantValue(googleCodingArchitect);
+container.bind(TYPES.CodingArchitect).toConstantValue(softwareArchitect);
 
 // IMPORTANT use container.getAsync when retrieving!
 container

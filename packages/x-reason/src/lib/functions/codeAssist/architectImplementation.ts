@@ -13,26 +13,36 @@ export async function architectImplementation(
     const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
     // we use the thread because it should not aonly contain the design specification but user comments as well
     const { messages } = await threadsDao.read(context.machineExecutionId!);
+    const parsedMessages = JSON.parse(messages || '[]') as { user?: string, system?: string }[];
+    // get any user response that is incoming from the cli
+    const searchDocumentationId = context.stack?.slice().reverse().find(item => item.includes('architectImplementation')) || '';
+    const userResponse = (context[searchDocumentationId] as UserIntent)?.userResponse;
+
+    if (userResponse) {
+        parsedMessages.push({
+            user: userResponse,
+        });
+    } else {
+        // this should only happen on the first iteration,
+        // but there may be edge cases where this task was reentered without asking the user a question
+        parsedMessages.push({
+            user: task,
+        });
+    }
 
     const prompt = `
-    The complete conversation thread which includes the design specification:
+    The complete message thread including the README that explains our current codebase and the proposed plan
+    As well as the user's request and follow up answers
     ${messages}
-
-    Task:
-    ${task}
     `;
 
     const response = await architect(prompt);
 
-    try {
-        const parsedMessages = JSON.parse(messages!) as { user?: string, system: string }[];
-        parsedMessages.push({
-            system: response,
-        });
+    parsedMessages.push({
+        system: response,
+    });
 
-        await threadsDao.upsert(JSON.stringify(parsedMessages), 'cli-tool', context.machineExecutionId!);
-
-    } catch { /* empty */ }
+    await threadsDao.upsert(JSON.stringify(parsedMessages), 'cli-tool', context.machineExecutionId!);
 
     return {
         confirmationPrompt: `# The Architect's Response

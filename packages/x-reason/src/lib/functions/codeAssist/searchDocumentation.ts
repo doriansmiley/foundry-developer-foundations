@@ -17,29 +17,29 @@ export async function searchDocumentation(
     const researchAssistant = container.get<CodingResearchAssistant>(TYPES.CodingResearchAssistant);
     const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
 
-    const { messages } = await threadsDao.read(context.machineExecutionId!);
+    const { messages } = await threadsDao.read(context.machineExecutionId || '');
+    const parsedMessages = JSON.parse(messages || '[]') as { user?: string, system: string }[];
 
-    const prompt = (messages) ? `
+    const prompt = `
     Design Specification Conversation Thread:
     ${messages}
 
     Task:
     ${task}
-    ` : `${task}`;
+    `
 
     // TODO: explore how we can Promise.allSettled(researchAssistant1, researchAssistant1, ...) without killing ourselves with token cost and rate limits
     // then use a higher end none reasoning model (or gpt with instant answer) to use the input plans and synthesize the best possible response
     const response = await researchAssistant(prompt, 2, undefined, undefined, undefined, 'b2b532a80bf4c4303');
 
-    try {
-        const parsedMessages = JSON.parse(messages!) as { user?: string, system: string }[];
-        parsedMessages.push({
-            system: response,
-        });
+    parsedMessages.push({
+        user: task,
+        system: response,
+    });
 
-        await threadsDao.upsert(JSON.stringify(parsedMessages), 'cli-tool', context.machineExecutionId!);
-
-    } catch { /* empty */ }
+    if (context.machineExecutionId) {
+        await threadsDao.upsert(JSON.stringify(parsedMessages), 'cli-tool', context.machineExecutionId);
+    }
 
     return {
         searchResults: response,

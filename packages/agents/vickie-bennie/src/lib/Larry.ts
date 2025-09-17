@@ -103,6 +103,12 @@ export class Larry extends Text2Action {
             SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST
         );
 
+        // get thread messages
+        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+        const { messages } = await threadsDao.read(threadId || '');
+        const parsedMessages = JSON.parse(messages || '[]') as { user?: string, system: string }[];
+
+
         // construct the response
         const system = `You are a helpful AI coding assistant named Larry.
         You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Larry, Code's AI Coding Assistant" or similar.
@@ -150,17 +156,14 @@ export class Larry extends Text2Action {
         }
 
         // persist the constructed response to the the threads object
-        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+        parsedMessages.push({
+            user: query,
+            system: result,
+        });
 
-        const messages = JSON.stringify([
-            {
-                user: query,
-                system: result,
-            }
-        ]);
         // create or update with a summary of the results
         // if there is an existing thread messages are appended to the existing history
-        await threadsDao.upsert(messages, 'bennie', threadId);
+        await threadsDao.upsert(JSON.stringify(parsedMessages), 'bennie', threadId);
 
         // return the structured response
         return {
