@@ -16,15 +16,22 @@ export async function confirmUserIntent(
 ): Promise<UserIntent> {
   let messages;
 
-  const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+  const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
   // we use the thread because it should not aonly contain the design specification but user comments as well
   try {
     messages = await threadsDao.read(context.machineExecutionId!);
-  } catch {/**empty */ }
+  } catch {
+    /**empty */
+  }
 
   // get the contextual update if any that contains the laatest user response
-  const confirmUserIntentId = context.stack?.slice().reverse().find(item => item.includes('confirmUserIntent')) || '';
-  const userResponse = (context[confirmUserIntentId] as UserIntent)?.userResponse;
+  const confirmUserIntentId =
+    context.stack
+      ?.slice()
+      .reverse()
+      .find((item) => item.includes('confirmUserIntent')) || '';
+  const userResponse = (context[confirmUserIntentId] as UserIntent)
+    ?.userResponse;
   const parsedMessages = JSON.parse(messages?.messages || '[]') as {
     user?: string;
     system: string;
@@ -55,8 +62,8 @@ Your ultimate job is to create a draft of the design spec for the user task.
 - Acceptance criteria
 `;
 
-  const user = userResponse ?
-    `
+  const user = userResponse
+    ? `
     # Instructions
     Review the user response in the message thread and determine if a spec can be generated. 
     You can ask clarifying questions that align with your rules and user instruction as long as the user had not already answered them (either in the message history or their latest response)

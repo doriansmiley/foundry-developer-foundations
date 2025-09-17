@@ -33,3 +33,5 @@ apps/**/certificates/*.pem
 # Next.js
 .next
 out
+
+/apps/cli-tools/db

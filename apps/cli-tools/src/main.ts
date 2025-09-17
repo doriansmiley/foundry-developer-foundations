@@ -88,7 +88,7 @@ async function main(executionId?: string, contextUpdateInput?: string) {
   });
 
   const machineDao = container.get<MachineDao>(TYPES.MachineDao);
-  const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+  const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
 
   if (!executionId) {
     readme = await fs.readFileSync(readmePath, 'utf8');
@@ -100,7 +100,7 @@ async function main(executionId?: string, contextUpdateInput?: string) {
       # Repo and Environment Setup
       Use the documentation from the README below to understand the current package and environment setup, programming language, and libraries use as well as current public apis, tests, etc
 ${readme}
-      `
+      `;
     // TODO replace with a scoped context
     globalThis.initialMessage = initialMessage;
 
@@ -108,7 +108,7 @@ ${readme}
       `# User Question
       ${answer}
       `,
-      process.env.FOUNDRY_TEST_USER,
+      process.env.FOUNDRY_TEST_USER
     );
     executionId = result.executionId;
   } else {
@@ -178,7 +178,11 @@ ${formatted}
     if (context.stateId.includes('architectImplementation')) {
       // write the spec file
       const p = path.join(process.cwd(), `${uuidv4()}-spec-output.md`);
-      await fs.promises.writeFile(p, context[context.stateId]?.confirmationPrompt || '# No results found', 'utf8');
+      await fs.promises.writeFile(
+        p,
+        context[context.stateId]?.confirmationPrompt || '# No results found',
+        'utf8'
+      );
     }
 
     await main(executionId, JSON.stringify(contextUpdate));

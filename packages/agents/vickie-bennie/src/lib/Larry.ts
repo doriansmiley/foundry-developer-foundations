@@ -2,129 +2,131 @@ import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundati
 import { SupportedEngines } from '@codestrap/developer-foundations-x-reason';
 import { Text2Action } from './Text2Action';
 import {
-    GeminiService,
-    ThreadsDao,
-    TYPES,
-    LoggingService,
+  GeminiService,
+  ThreadsDao,
+  TYPES,
+  LoggingService,
 } from '@codestrap/developer-foundations-types';
 import type { User } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 
 export interface LarryResponse {
-    status: number;
-    message: string;
-    executionId: string;
-    taskList?: string;
-    error?: string;
-    state?: string;
+  status: number;
+  message: string;
+  executionId: string;
+  taskList?: string;
+  error?: string;
+  state?: string;
 }
 
 // use classes to take advantage of trace decorator
 export class Larry extends Text2Action {
-    @Trace({
-        resource: {
-            service_name: 'larry',
-            service_instance_id: 'production',
-            telemetry_sdk_name: 'xreason-functions',
-            telemetry_sdk_version: '7.0.2',
-            host_hostname: 'codestrap.usw-3.palantirfoundry.com',
-            host_architecture: 'prod',
-        },
-        operationName: 'askLarry',
-        kind: 'Server',
-        samplingDecision: 'RECORD_AND_SAMPLE',
-        samplingRate: 1.0,
-        attributes: {
-            endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/askLarry/execute`,
-        },
-    })
-    public async askLarry(
-        query: string,
-        userId: string,
-        threadId?: string
-    ): Promise<LarryResponse> {
-        const { log } = container.get<LoggingService>(TYPES.LoggingService);
-        let generatedTaskList: undefined | string = undefined;
-        let newThread = !threadId || threadId.length === 0;
+  @Trace({
+    resource: {
+      service_name: 'larry',
+      service_instance_id: 'production',
+      telemetry_sdk_name: 'xreason-functions',
+      telemetry_sdk_version: '7.0.2',
+      host_hostname: 'codestrap.usw-3.palantirfoundry.com',
+      host_architecture: 'prod',
+    },
+    operationName: 'askLarry',
+    kind: 'Server',
+    samplingDecision: 'RECORD_AND_SAMPLE',
+    samplingRate: 1.0,
+    attributes: {
+      endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/askLarry/execute`,
+    },
+  })
+  public async askLarry(
+    query: string,
+    userId: string,
+    threadId?: string
+  ): Promise<LarryResponse> {
+    const { log } = container.get<LoggingService>(TYPES.LoggingService);
+    let generatedTaskList: undefined | string = undefined;
+    let newThread = !threadId || threadId.length === 0;
 
-        // we need the ability for clients to pass a known threadId that they originate and still create a new task list
-        try {
-            const threadDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
-            await threadDao.read(threadId || '');
-        } catch (e) {
-            console.log(e);
-            // the client has sent a threadId they originated
-            newThread = true;
-        }
+    // we need the ability for clients to pass a known threadId that they originate and still create a new task list
+    try {
+      const threadDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
+      await threadDao.read(threadId || '');
+    } catch (e) {
+      console.log(e);
+      // the client has sent a threadId they originated
+      newThread = true;
+    }
 
-        // we only want to trigger task list generation if this is a new thread
-        if (newThread) {
-            // create a new solution with our solver
-            const { status, taskList, executionId } = await this.createLarryTasksList(
-                query,
-                userId,
-                threadId
-            );
+    // we only want to trigger task list generation if this is a new thread
+    if (newThread) {
+      // create a new solution with our solver
+      const { status, taskList, executionId } = await this.createLarryTasksList(
+        query,
+        userId,
+        threadId
+      );
 
-            // if we get a bad response skip calling execute task list
-            if (status !== 200 || !taskList) {
-                log(
-                    executionId,
-                    `askLarry failed to create new coms task list. 
+      // if we get a bad response skip calling execute task list
+      if (status !== 200 || !taskList) {
+        log(
+          executionId,
+          `askLarry failed to create new coms task list. 
                             You are missing required information: 
                             ${taskList}. 
                             Please fix your shit and resend.`
-                );
-                return {
-                    status,
-                    executionId,
-                    message: `You are missing required information: ${taskList}. Please fix your shit and resend.`,
-                };
-            }
-
-            log(executionId, `askLarry created new coms task list.\n${taskList}.`);
-
-            // threadId and executionId are identical.
-            // If threadId is defined there must be an associated state machine execution where executionId === threadId
-            // if its not defined we need to create a new task list and generate a new machine execution which will happen automatically
-            // when this.getNextState is called.
-            // The orchestrator will program a new solution if there's no machine matching the executionId
-            threadId = executionId;
-            generatedTaskList = taskList;
-        }
-
-        // if task list is defined and there's no machine where machineExecutionId === threadId, a new solution will be generated
-        // else the exiting machine will be rehydrated and the next state sent back
-        const results = await this.getNextState(
-            generatedTaskList,
-            true,
-            threadId,
-            undefined,
-            SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST
         );
+        return {
+          status,
+          executionId,
+          message: `You are missing required information: ${taskList}. Please fix your shit and resend.`,
+        };
+      }
 
-        // get thread messages
-        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
-        const { messages } = await threadsDao.read(threadId || '');
-        const parsedMessages = JSON.parse(messages || '[]') as { user?: string, system: string }[];
+      log(executionId, `askLarry created new coms task list.\n${taskList}.`);
 
+      // threadId and executionId are identical.
+      // If threadId is defined there must be an associated state machine execution where executionId === threadId
+      // if its not defined we need to create a new task list and generate a new machine execution which will happen automatically
+      // when this.getNextState is called.
+      // The orchestrator will program a new solution if there's no machine matching the executionId
+      threadId = executionId;
+      generatedTaskList = taskList;
+    }
 
-        // construct the response
-        const system = `You are a helpful AI coding assistant named Larry.
+    // if task list is defined and there's no machine where machineExecutionId === threadId, a new solution will be generated
+    // else the exiting machine will be rehydrated and the next state sent back
+    const results = await this.getNextState(
+      generatedTaskList,
+      true,
+      threadId,
+      undefined,
+      SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST
+    );
+
+    // get thread messages
+    const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
+    const { messages } = await threadsDao.read(threadId || '');
+    const parsedMessages = JSON.parse(messages || '[]') as {
+      user?: string;
+      system: string;
+    }[];
+
+    // construct the response
+    const system = `You are a helpful AI coding assistant named Larry.
         You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Larry, Code's AI Coding Assistant" or similar.
         You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString(
-            'en-US',
-            { weekday: 'long' }
+          'en-US',
+          { weekday: 'long' }
         )}. 
         You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
         You always obey the users instructions and understand the people you work for are busy executives and sometimes need help in their personal lives
         These tasks are not beneath you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
         It means we all pull together to get things done.
         The current local date/time is ${new Date().toLocaleString('en-US', {
-            timeZone: 'America/Los_Angeles',
+          timeZone: 'America/Los_Angeles',
         })}.
         The current day/time in your timezone is: ${new Date().toString()}`;
-        const user = `
+    const user = `
                 Based on the following user query
                 ${query}
         
@@ -139,122 +141,121 @@ export class Larry extends Text2Action {
                 if search results were returned make sure non of the critical information is lost in your response
                 `;
 
-        const geminiService = container.get<GeminiService>(TYPES.GeminiService);
+    const geminiService = container.get<GeminiService>(TYPES.GeminiService);
 
-        const response = await geminiService(user, system);
+    const response = await geminiService(user, system);
 
-        let result = response;
-        if (newThread) {
-            // putting Execution Id in the thread is useful for debugging as users may need to supply it
-            result = `# Execution Id: ${threadId}
+    let result = response;
+    if (newThread) {
+      // putting Execution Id in the thread is useful for debugging as users may need to supply it
+      result = `# Execution Id: ${threadId}
         ### Response from Larry
         ${result}
         `;
-        } else {
-            result = `### Response from Larry
+    } else {
+      result = `### Response from Larry
         ${result}`;
-        }
-
-        // persist the constructed response to the the threads object
-        parsedMessages.push({
-            user: query,
-            system: result,
-        });
-
-        // create or update with a summary of the results
-        // if there is an existing thread messages are appended to the existing history
-        await threadsDao.upsert(JSON.stringify(parsedMessages), 'bennie', threadId);
-
-        // return the structured response
-        return {
-            status: 200,
-            executionId: threadId!,
-            // Send back the incremental response to avoid sending huge threads back
-            // Can also support streaming outputs in the future
-            message: response,
-            // AIP Logic can not handle nullable fields, so we have to include these as empty string to support use cases where logic is used such as our daily reports with automate
-            // https://community.palantir.com/t/aip-logic-cant-recognize-optional-output-struct-fileds/4440/3
-            error: '',
-            taskList: generatedTaskList,
-            state: results.value as string,
-        };
     }
 
-    @Trace({
-        resource: {
-            service_name: 'vickie',
-            service_instance_id: 'production',
-            telemetry_sdk_name: 'xreason-functions',
-            telemetry_sdk_version: '7.0.2',
-            host_hostname: 'codestrap.usw-3.palantirfoundry.com',
-            host_architecture: 'prod',
-        },
-        operationName: 'createComsTasksList',
-        kind: 'Server',
-        samplingDecision: 'RECORD_AND_SAMPLE',
-        samplingRate: 1.0,
-        attributes: {
-            endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/createComsTasksList/execute`,
-        },
-    })
-    public async createLarryTasksList(
-        query: string,
-        userId: string,
-        threadId?: string
-    ): Promise<LarryResponse> {
-        console.log('createComsTasksList called');
-        // if no threadId create one
-        // call the solver to get back the task list.
-        const communication = await this.createTaskList(
-            query,
-            userId,
-            SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST,
-            undefined,
-            undefined,
-            threadId
-        );
+    // persist the constructed response to the the threads object
+    parsedMessages.push({
+      user: query,
+      system: result,
+    });
 
-        // If incomplete information is provided the solver will return Missing Information
-        // If the request is unsupported the solver will return Unsupported Questions
-        // If it's a complete supported query the solver will return a well formatted task list that we can use to execute
-        return {
-            status: 200,
-            message: 'Task list created',
-            // we match the threadID and threadId and executionId so we can associate conversations between agents and machine executions
-            executionId: communication.id,
-            taskList: communication.taskList,
-        };
-    }
+    // create or update with a summary of the results
+    // if there is an existing thread messages are appended to the existing history
+    await threadsDao.upsert(JSON.stringify(parsedMessages), 'bennie', threadId);
 
-    @Trace({
-        resource: {
-            service_name: 'text2action',
-            service_instance_id: 'production',
-            telemetry_sdk_name: 'xreason-functions',
-            telemetry_sdk_version: '7.0.2',
-            host_hostname: 'codestrap.usw-3.palantirfoundry.com',
-            host_architecture: 'prod',
-        },
-        operationName: 'recall',
-        kind: 'Server',
-        samplingDecision: 'RECORD_AND_SAMPLE',
-        samplingRate: 1.0,
-        attributes: {
-            endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/recall/execute`,
-        },
-    })
-    public override async recall(query: string, userProfile: User) {
+    // return the structured response
+    return {
+      status: 200,
+      executionId: threadId!,
+      // Send back the incremental response to avoid sending huge threads back
+      // Can also support streaming outputs in the future
+      message: response,
+      // AIP Logic can not handle nullable fields, so we have to include these as empty string to support use cases where logic is used such as our daily reports with automate
+      // https://community.palantir.com/t/aip-logic-cant-recognize-optional-output-struct-fileds/4440/3
+      error: '',
+      taskList: generatedTaskList,
+      state: results.value as string,
+    };
+  }
 
-        return {
-            contacts: [],
-            currentUser: {
-                name: userProfile.givenName || '',
-                email: userProfile.email || '',
-                id: userProfile.id,
-                timezone: 'America/Los Angeles',
-            },
-            messages: [],
-            reasoning: 'none',
-        };;
-    }
+  @Trace({
+    resource: {
+      service_name: 'vickie',
+      service_instance_id: 'production',
+      telemetry_sdk_name: 'xreason-functions',
+      telemetry_sdk_version: '7.0.2',
+      host_hostname: 'codestrap.usw-3.palantirfoundry.com',
+      host_architecture: 'prod',
+    },
+    operationName: 'createComsTasksList',
+    kind: 'Server',
+    samplingDecision: 'RECORD_AND_SAMPLE',
+    samplingRate: 1.0,
+    attributes: {
+      endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/createComsTasksList/execute`,
+    },
+  })
+  public async createLarryTasksList(
+    query: string,
+    userId: string,
+    threadId?: string
+  ): Promise<LarryResponse> {
+    console.log('createComsTasksList called');
+    // if no threadId create one
+    // call the solver to get back the task list.
+    const communication = await this.createTaskList(
+      query,
+      userId,
+      SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST,
+      undefined,
+      undefined,
+      threadId
+    );
+
+    // If incomplete information is provided the solver will return Missing Information
+    // If the request is unsupported the solver will return Unsupported Questions
+    // If it's a complete supported query the solver will return a well formatted task list that we can use to execute
+    return {
+      status: 200,
+      message: 'Task list created',
+      // we match the threadID and threadId and executionId so we can associate conversations between agents and machine executions
+      executionId: communication.id,
+      taskList: communication.taskList,
+    };
+  }
+
+  @Trace({
+    resource: {
+      service_name: 'text2action',
+      service_instance_id: 'production',
+      telemetry_sdk_name: 'xreason-functions',
+      telemetry_sdk_version: '7.0.2',
+      host_hostname: 'codestrap.usw-3.palantirfoundry.com',
+      host_architecture: 'prod',
+    },
+    operationName: 'recall',
+    kind: 'Server',
+    samplingDecision: 'RECORD_AND_SAMPLE',
+    samplingRate: 1.0,
+    attributes: {
+      endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/recall/execute`,
+    },
+  })
+  public override async recall(query: string, userProfile: User) {
+    return {
+      contacts: [],
+      currentUser: {
+        name: userProfile.givenName || '',
+        email: userProfile.email || '',
+        id: userProfile.id,
+        timezone: 'America/Los Angeles',
+      },
+      messages: [],
+      reasoning: 'none',
+    };
+  }
 }

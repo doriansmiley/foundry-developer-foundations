@@ -17,6 +17,7 @@ export const TYPES = {
   CommsDao: Symbol.for('CommsDao'),
   TelemetryDao: Symbol.for('TelemetryDao'),
   ThreadsDao: Symbol.for('ThreadsDao'),
+  SQLLiteThreadsDao: Symbol.for('SQLLiteThreadsDao'),
   RfpRequestsDao: Symbol.for('RfpRequestsDao'),
   RangrRfpRequestsDao: Symbol.for('RangrRfpRequestsDao'),
   ResearchAssistant: Symbol.for('ResearchAssistant'),
@@ -41,8 +42,7 @@ export type ResearchAssistant = (
   siteSearch?: string,
   siteSearchFilter?: string,
   searchEngineId?: string
-
-) => Promise<string>
+) => Promise<string>;
 
 export type CodingResearchAssistant = (
   userInput: string,
@@ -51,8 +51,7 @@ export type CodingResearchAssistant = (
   siteSearch?: string,
   siteSearchFilter?: string,
   searchEngineId?: string
-
-) => Promise<string>
+) => Promise<string>;
 
 export type CodingArchitect = (
   userInput: string,
@@ -61,8 +60,7 @@ export type CodingArchitect = (
   siteSearch?: string,
   siteSearchFilter?: string,
   searchEngineId?: string
-
-) => Promise<string>
+) => Promise<string>;
 
 // Schema Definitions for compute module
 // IMPORTANT:  @sinclair/typebox is required!!!
@@ -290,10 +288,10 @@ export type MeetingRequest = {
   participants: Array<string>;
   subject: string;
   timeframe_context:
-  | 'user defined exact date/time'
-  | 'as soon as possible'
-  | 'this week'
-  | 'next week';
+    | 'user defined exact date/time'
+    | 'as soon as possible'
+    | 'this week'
+    | 'next week';
   localDateString?: string;
   duration_minutes: number;
   working_hours: {
@@ -332,13 +330,13 @@ type GptSpecificToolChoice = {
 
 type GptTool = {
   function?:
-  | {
-    name: string;
-    description?: string | undefined;
-    strict?: boolean | undefined;
-    parameters: Map<string, string>;
-  }
-  | undefined;
+    | {
+        name: string;
+        description?: string | undefined;
+        strict?: boolean | undefined;
+        parameters: Map<string, string>;
+      }
+    | undefined;
 };
 
 type GptToolChoice = {
@@ -806,34 +804,34 @@ export const DRIVE_MIME_TYPES = {
   DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   DOC: 'application/msword',
   TXT: 'text/plain',
-  
+
   // Spreadsheets
   XLSX: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   XLS: 'application/vnd.ms-excel',
   CSV: 'text/csv',
-  
+
   // Presentations
   PPTX: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   PPT: 'application/vnd.ms-powerpoint',
-  
+
   // Images
   JPG: 'image/jpeg',
   JPEG: 'image/jpeg',
   PNG: 'image/png',
   GIF: 'image/gif',
   SVG: 'image/svg+xml',
-  
+
   // Google Workspace Files
   GOOGLE_DOC: 'application/vnd.google-apps.document',
   GOOGLE_SHEET: 'application/vnd.google-apps.spreadsheet',
   GOOGLE_SLIDE: 'application/vnd.google-apps.presentation',
   GOOGLE_FORM: 'application/vnd.google-apps.form',
   GOOGLE_DRAWING: 'application/vnd.google-apps.drawing',
-  
+
   // Archives
   ZIP: 'application/zip',
   RAR: 'application/x-rar-compressed',
-  
+
   // Audio/Video
   MP4: 'video/mp4',
   MP3: 'audio/mpeg',
@@ -859,28 +857,30 @@ export type DriveOrderField =
 export type SortDir = 'asc' | 'desc';
 export type DriveOrderBy = DriveOrderField | `${DriveOrderField} ${SortDir}`;
 
-// DriveFile interface 
+// DriveFile interface
 export interface DriveFile {
-  id: string;                    // Unique file ID
-  name: string;                  // File name
-  mimeType: string;              // File MIME type
-  size?: string;                 // File size in bytes
-  createdTime?: string;          // Creation timestamp
-  modifiedTime?: string;         // Last modification timestamp
-  webViewLink?: string;          // Link to view file in Drive
-  webContentLink?: string;       // Direct download link
-  owners?: Array<{               // File owners
+  id: string; // Unique file ID
+  name: string; // File name
+  mimeType: string; // File MIME type
+  size?: string; // File size in bytes
+  createdTime?: string; // Creation timestamp
+  modifiedTime?: string; // Last modification timestamp
+  webViewLink?: string; // Link to view file in Drive
+  webContentLink?: string; // Direct download link
+  owners?: Array<{
+    // File owners
     displayName?: string;
     emailAddress?: string;
   }>;
-  lastModifyingUser?: {          // Last user who modified
+  lastModifyingUser?: {
+    // Last user who modified
     displayName?: string;
     emailAddress?: string;
   };
-  parents?: string[];            // Parent folder IDs
-  description?: string;          // File description
-  starred?: boolean;             // Whether file is starred
-  trashed?: boolean;             // Whether file is trashed
+  parents?: string[]; // Parent folder IDs
+  description?: string; // File description
+  starred?: boolean; // Whether file is starred
+  trashed?: boolean; // Whether file is trashed
 }
 
 export interface DriveSearchParams {

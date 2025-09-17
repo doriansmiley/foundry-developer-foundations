@@ -44,6 +44,7 @@ import { makeTicketsDao } from '@codestrap/developer-foundations-services-palant
 import { makeSlackClient } from '@codestrap/developer-foundations-services-slack';
 import { createLoggingService } from '@codestrap/developer-foundations-utils';
 import { eiaService } from '@codestrap/developer-foundations-services-eia';
+import { makeSqlLiteThreadsDao } from '@codestrap/sql-lite';
 
 const container = new Container();
 
@@ -79,6 +80,9 @@ container.bind(TYPES.CommsDao).toConstantValue(makeCommsDao());
 container.bind(TYPES.TelemetryDao).toConstantValue(makeTelemetryDao());
 
 container.bind(TYPES.ThreadsDao).toConstantValue(makeThreadsDao());
+container
+  .bind(TYPES.SQLLiteThreadsDao)
+  .toConstantValue(makeSqlLiteThreadsDao());
 
 container.bind(TYPES.RfpRequestsDao).toConstantValue(makeRfpRequestsDao());
 
