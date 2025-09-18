@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "commonjs",
+    "rootDir": "src",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "types": ["vscode", "node"]
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["webview", "media", "scripts", "node_modules", "dist"]
+} 

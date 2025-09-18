@@ -1,0 +1,57 @@
+/* Larry webview overrides to match VS Code scale */
+:root {
+	--fdry-gap: 8px;
+}
+
+html, body, #root, .app { height: 100%; }
+html, body, #root { font-family: var(--vscode-font-family); color: var(--vscode-foreground); margin: 0; }
+
+/* Layout helpers */
+.p-3 { padding: 8px !important; }
+.p-1 { padding: 4px !important; }
+.mb-2 { margin-bottom: 8px !important; }
+.gap-2 > * + * { margin-top: 8px; }
+
+.app { display: flex; flex-direction: column; }
+.messages { flex: 1 1 auto; overflow: auto; }
+.composer { flex: 0 0 auto; }
+
+/* Buttons */
+.btn {
+	padding: 4px 8px !important;
+	min-height: 0 !important;
+	line-height: 1.4 !important;
+	border-radius: 6px !important;
+	background: var(--vscode-button-secondaryBackground) !important;
+	color: var(--vscode-foreground) !important;
+	border-color: var(--vscode-button-border, transparent) !important;
+	white-space: normal !important;
+	word-break: break-word !important;
+	overflow-wrap: anywhere !important;
+}
+.btn-primary {
+	background: var(--vscode-button-background) !important;
+	color: var(--vscode-button-foreground) !important;
+}
+/* Icon-only button */
+.btn-icon { display: inline-flex !important; align-items: center; justify-content: center; padding: 4px !important; }
+.btn-icon svg { display: block; }
+
+/* Inputs */
+.form-control {
+	font-size: 12px !important;
+	padding: 4px 6px !important;
+	height: auto !important;
+	background: var(--vscode-input-background) !important;
+	color: var(--vscode-input-foreground) !important;
+	border-color: var(--vscode-input-border, transparent) !important;
+}
+
+/* Markdown rendering */
+.markdown-body { font-size: 12px; line-height: 1.5; }
+.markdown-body p { margin: 6px 0; }
+.markdown-body ul, .markdown-body ol { margin: 6px 0 6px 0; padding-left: 1.2rem; }
+.markdown-body li { margin: 2px 0; }
+.markdown-body code { background: var(--vscode-editorInlayHint-background, var(--vscode-editor-background)); padding: 1px 4px; border-radius: 4px; }
+.markdown-body pre { background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); padding: 8px; border-radius: 6px; overflow: auto; }
+.markdown-body pre code { background: transparent; padding: 0; } 

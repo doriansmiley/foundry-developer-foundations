@@ -1,0 +1,60 @@
+{
+  "name": "larry-vscode-ext",
+  "displayName": "Larry Coding Assistant",
+  "description": "Chat with Larry inside VS Code",
+  "version": "0.0.1",
+  "publisher": "Codestrap",
+  "private": true,
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onView:larryHome",
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "larry-ai",
+          "title": "Larry AI Coding",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "larry-ai": [
+        {
+          "type": "webview",
+          "id": "larryHome",
+          "name": "Larry AI Coding Assistant"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc -p ./ && node scripts/bundle-webview.mjs",
+    "watch": "tsc -w -p ./ & node scripts/bundle-webview.mjs --watch",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.93.0",
+    "esbuild": "^0.21.0",
+    "preact": "^10.22.0",
+    "typescript": "^5.4.0",
+    "vsce": "^2.15.0"
+  },
+  "dependencies": {
+    "@primer/css": "^22.0.2",
+    "@vscode/webview-ui-toolkit": "^1.4.0",
+    "dompurify": "^3.2.7",
+    "highlight.js": "^11.11.1",
+    "marked": "^16.2.1",
+    "marked-highlight": "^2.2.2"
+  }
+}

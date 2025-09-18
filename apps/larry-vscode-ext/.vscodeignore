@@ -1,0 +1,6 @@
+node_modules
+src
+webview
+scripts
+.vscode
+**/*.map 
