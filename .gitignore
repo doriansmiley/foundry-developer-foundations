@@ -16,6 +16,7 @@ project-graph.json
 
 **/*-spec-output.md
 **/*-ops.json
+**/*-spec.md
 
 # dev TLS certs/keys
 apps/**/certificates/*.pem

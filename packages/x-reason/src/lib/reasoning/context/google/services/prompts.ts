@@ -5,6 +5,7 @@ import {
 } from '../../../../factory';
 import {
   ActionType,
+  Context,
   TrainingDataDao,
   TYPES,
 } from '@codestrap/developer-foundations-types';
@@ -318,6 +319,9 @@ export async function aiTransition(
   currentState: string,
   context: string
 ) {
+  const parsedContext = JSON.parse(context) as Context;
+  const state = parsedContext[JSON.parse(currentState)?.id];
+
   const system = `
   You are an AI based reasoning engine called Transit. Transit determines if state machine transitions should take place.
   Transit only returns a valid transition target and is never chatty.
@@ -326,6 +330,13 @@ export async function aiTransition(
   1. The task list - this is the list of tasks to perform
   2. The current state - this is the current state of the application performing the task list
   3. The context - the context contains all the work performed so far. The stack array attribute denotes which states have been executed and in what order.
+ 
+  When returning the target state you always make sure to include the complete state ID which includes the state name, pipe character, and UUID!
+  For example: 
+  Correct example of a complete stateID: architectImplementation|bf83af61-3ecb-48dd-ba3e-ec3466fac872
+  An incorrect stateID: architectImplementation. It's mission the pipe and UUID!
+
+  The success state can be target simply with success, no UID is required.
   `;
 
   const user = `
@@ -390,6 +401,7 @@ export async function aiTransition(
   13. Generate marketing claims using the output of step 11
   14. Generate a product image.
 
+  Q:
   The current state of the application is:
   {
     "id": "RecallSolutions",
@@ -410,8 +422,7 @@ export async function aiTransition(
   Return the target for the next state.
   A: IngredientDatabase
 
-  If The current state of the application is confirm user intent and:
-
+  Q:
   1. The current state confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654 corresponds to the first task: "Clarify Design with User".
   2.  The current state has includesLogic set to true and transitions defined as:
     *   { "on": "confirmUserIntent", "target": "confirmUserIntent" }
@@ -424,6 +435,14 @@ export async function aiTransition(
   Return the target for the next state.
   A: confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654
 
+  Q:
+  1. The current state is \`architectImplementation|bf83af61-3ecb-48dd-ba3e-ec3466fac872\`, which corresponds to the "Architect Implementation" task.
+  2. The user has provided feedback and instructions related to the architected implementation through the \`userResponse\`. Because the task description states "If the user approves the spec continue, otherwise try again taking into account the feedback from the user.", and the user has responded, this state should be entered again.
+  3. Since the task description states "If the user approves the spec continue, otherwise try again taking into account the feedback from the user.", the transition target should be \`architectImplementation|bf83af61-3ecb-48dd-ba3e-ec3466fac872\`.
+
+  Return the target for the next state.
+  A: architectImplementation|bf83af61-3ecb-48dd-ba3e-ec3466fac872
+
   ### End training data ###
 
   If the user orders you to move on or to proceed without answering all questions you do it.
@@ -435,13 +454,16 @@ export async function aiTransition(
  The current state of the application is:
   ${currentState}
   
-  The current context is:
-  ${context}
+  The output of the current state (make sure the output fulfills the task list!):
+  ${JSON.stringify(state)}
 
   Return the target for the next state. Let's take this step by step:
   1. Determine which step in the task list the user in on based on the current state and context.
   2. Determine which transition logic from the task to apply based on the results of each state contained in the context.
-  3. Determine the target to return. Show your work as an enumerated markdown list.
+  3. Ensure the task has been fulfilled based on the context. 
+  For example if the task is architect implementation and no implementation has been generated, the user has only clarified question
+  You need to reenter the architect implementation task.
+  4. Determine the target to return. Show your work as an enumerated markdown list.
   `;
 
   return { system, user };

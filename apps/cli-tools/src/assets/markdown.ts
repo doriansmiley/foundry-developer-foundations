@@ -23,33 +23,31 @@ function codeFenceFor(p: string): string {
         return '';
 }
 
-type EnvKey = { name: string; description?: string };
-
-// Parse .env-style content → keys (no values); take trailing `# comment` as description if present
-function parseEnvKeys(content: string): EnvKey[] {
-        const out: EnvKey[] = [];
-        const lines = content.split(/\r?\n/);
-        for (const raw of lines) {
-                const line = raw.trim();
-                if (!line || line.startsWith('#')) continue;
-                const m = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*[:=]/.exec(line);
-                if (m) {
-                        const name = m[1];
-                        const cm = /#\s*(.+)$/.exec(line);
-                        out.push({ name, description: cm ? cm[1].trim() : undefined });
-                }
-        }
-        return out;
-}
-
 export function renderReadme(ctx: Ctx): string {
         // Prefer synthesized fields from readmeInput if present; otherwise use raw ctx
         const ri = ctx.readmeInput;
 
-        const expositionMd =
+        let expositionMd =
                 (ri?.expositionMd?.trim())
                 || (ctx.exposition?.purpose ? String(ctx.exposition.purpose).trim() : '')
                 || '_Overview pending._';
+
+        const projectRoot = ctx.projectRoot;
+        const fileTree = ctx.files.reduce((acc, f) => {
+                if (f.file.includes('index.ts')) return acc;
+                acc += `${f.file}\n`;
+                for (const exp of f.exported) {
+                        acc += `  └─ ${exp.name}\n`;
+                }
+                return acc;
+        }, '');
+
+        expositionMd = `${expositionMd}
+### Root Directory and Layout
+Project root: ${projectRoot}
+File tree and exported symbols:
+${fileTree}
+        `
 
         // API surface is on ctx
         const apiSurface = Array.isArray(ctx.apiSurface) ? ctx.apiSurface : [];

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { input } from '@inquirer/prompts';
+import { input, select } from '@inquirer/prompts';
 import { marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import * as fs from 'fs';
@@ -21,23 +21,15 @@ import { SupportedEngines } from '@codestrap/developer-foundations-x-reason';
 import 'dotenv/config';
 import { uuidv4 } from '@codestrap/developer-foundations-utils';
 
-async function main(executionId?: string, contextUpdateInput?: string) {
+export async function googleCodingAgent(executionId?: string, contextUpdateInput?: string, task?: string) {
   const larry = new Larry();
   let result: LarryResponse | undefined;
   let answer;
-  let systemResponse;
   let readme;
   const readmePath = path.resolve(
     process.cwd(),
     '../../packages/services/google/src/lib/README.LLM.v2.md'
   );
-
-  const args = process.argv.slice(2);
-  const executionIdArg = args[0];
-
-  if (executionIdArg && !executionId) {
-    executionId = executionIdArg;
-  }
 
   // Configure marked to render for the terminal
   // install terminal renderer (like the test does)
@@ -87,12 +79,10 @@ async function main(executionId?: string, contextUpdateInput?: string) {
     breaks: true,
   });
 
-  const machineDao = container.get<MachineDao>(TYPES.MachineDao);
-  const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
-
   if (!executionId) {
+    // start a new execution and thread using the input task
     readme = await fs.readFileSync(readmePath, 'utf8');
-    answer = await input({ message: 'What would you like to do today:' });
+    answer = task;
     executionId = uuidv4();
     const initialMessage = `# User Question
       ${answer}
@@ -121,26 +111,19 @@ ${readme}
     );
   }
 
+  const machineDao = container.get<MachineDao>(TYPES.MachineDao);
+  const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
   const { state } = await machineDao.read(executionId);
   const { messages } = await threadsDao.read(executionId);
-  // get the target stateId to apply the contextual update to, in this case where we left off
   const { context } = JSON.parse(state!) as { context: Context };
-  const lastState = context.stack?.pop();
-
-  let parsedMessages: { user: string; system: string }[] = [];
-
-  try {
-    parsedMessages = JSON.parse(messages) as { user: string; system: string }[];
-    // the last system response is the question to the user
-    systemResponse = parsedMessages.pop().system;
-  } catch {
-    /* empty */
-  }
+  const parsedMessages = JSON.parse(messages || '[]') as { user?: string; system?: string }[];
+  const systemResponse = parsedMessages?.pop()?.system;
 
   if (context.stateId.includes('generateEditMachine')) {
     // TODO call the code editor once the user approves the changes
-    const p = path.join(process.cwd(), `${uuidv4()}-ops.json`);
-    const parsed = JSON.parse(systemResponse);
+    const p = path.join(process.cwd(), `${executionId}-ops.json`);
+    // remember this is double encoded!
+    const parsed = JSON.parse(JSON.parse(systemResponse));
     const formatted = JSON.stringify(parsed, null, 2);
     await fs.promises.writeFile(p, formatted, 'utf8');
 
@@ -152,11 +135,24 @@ ${formatted}
       `,
     });
 
+    parsedMessages.push({
+      user: userResponse,
+    });
+
+    // we must capture the thread response so that if the AI transition moves to the next state it's captured
+    // this might lead to redundant responses that those don't hurt anything, they are effectively idempotent
+    await threadsDao.upsert(
+      JSON.stringify(parsedMessages),
+      'cli-tool',
+      executionId,
+    );
+
+    // get the target stateId to apply the contextual update to, in this case where we left off
     const contextUpdate = {
       [context.stateId]: { userResponse: userResponse }, // I chose to name the key userResponse, but you can choose any key you like, but it needs to make sense to the LLM
     };
 
-    await main(executionId, JSON.stringify(contextUpdate));
+    await googleCodingAgent(executionId, JSON.stringify(contextUpdate));
   }
 
   // context.stateId is the id of the state where we left off, not the final state in the machine which in pause, success, or fail
@@ -171,13 +167,25 @@ ${formatted}
       message: `${markdown}`,
     });
 
+    parsedMessages.push({
+      user: userResponse,
+    });
+
+    // we must capture the thread response so that if the AI transition moves to the next state it's captured
+    // this might lead to redundant responses that those don't hurt anything, they are effectively idempotent
+    await threadsDao.upsert(
+      JSON.stringify(parsedMessages),
+      'cli-tool',
+      executionId,
+    );
+
     const contextUpdate = {
       [context.stateId]: { userResponse: userResponse }, // I chose to name the key userResponse, but you can choose any key you like, but it needs to make sense to the LLM
     };
 
     if (context.stateId.includes('architectImplementation')) {
       // write the spec file
-      const p = path.join(process.cwd(), `${uuidv4()}-spec-output.md`);
+      const p = path.join(process.cwd(), `${executionId}-spec.md`);
       await fs.promises.writeFile(
         p,
         context[context.stateId]?.confirmationPrompt || '# No results found',
@@ -185,7 +193,27 @@ ${formatted}
       );
     }
 
-    await main(executionId, JSON.stringify(contextUpdate));
+    await googleCodingAgent(executionId, JSON.stringify(contextUpdate));
+  }
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const executionIdArg = args[0];
+
+  if (executionIdArg) {
+    // TODO figure out how to resolve the coding agent from the executionIdArg
+    // likely need to add an attribute to the machine execution object to track the agent 
+    // or maintain a separate lookup table
+    await googleCodingAgent(executionIdArg);
+  }
+
+  const whichAgent = await select({ message: 'select the agent', choices: ['googleCodingAgent'] })
+  const task = await input({ message: 'What would you like to do today:' });
+
+  switch (whichAgent) {
+    case 'googleCodingAgent':
+      await googleCodingAgent(undefined, undefined, task);
   }
 }
 
