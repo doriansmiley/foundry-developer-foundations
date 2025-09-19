@@ -41,19 +41,53 @@ export async function executeEditMachine(
         manipulationSettings: { quoteKind: QuoteKind.Single, useTrailingCommas: true },
     });
 
-    // Group ops by absolute path and load SourceFiles
+    const createOps = ops.filter(o => o.kind === 'createOrReplaceFile');
+
+    const editOps = ops.filter(o => o.kind !== 'createOrReplaceFile');
+
+    // Track original text for each file so we can diff properly even for created/replaced files
+    const originalText = new Map<string, string>();
     const byFile = new Map<string, EditOp[]>();
-    for (const op of ops) {
+    // Ensure all files are in the project and cache them
+    const fileCache = new Map<string, SourceFile>();
+
+    // --- NEW: pre-pass for file creation / replacement ---
+    for (const op of createOps) {
+        const abs = path.resolve(baseDir, op.file);
+
+        // always enqueue the op for this file (phases will ignore it; pre-pass applies it)
+        if (!byFile.has(abs)) byFile.set(abs, []);
+        byFile.get(abs)!.push(op);
+
+        let sf = project.getSourceFile(abs);
+
+        if (!sf) {
+            // brand new file -> create in project, snapshot original as empty
+            project.createDirectory(path.dirname(abs));
+            originalText.set(abs, '');
+            sf = project.createSourceFile(abs, op.text, { overwrite: false });
+        } else {
+            // file already in project -> snapshot its current text once
+            const prev = sf.getFullText();
+            if (!originalText.has(abs)) originalText.set(abs, prev);
+
+            // apply replace only when overwrite===true and content differs
+            if (op.overwrite && prev !== op.text) {
+                sf.replaceWithText(op.text);
+            }
+        }
+
+        fileCache.set(abs, sf);
+    }
+
+    // Group ops by absolute path and load SourceFiles
+    for (const op of editOps) {
         const abs = path.resolve(baseDir, op.file);
         if (!fs.existsSync(abs)) throw new Error(`File does not exist: ${abs}`);
         if (!byFile.has(abs)) byFile.set(abs, []);
         byFile.get(abs)!.push(op);
-    }
 
-    // Ensure all files are in the project and cache them
-    const fileCache = new Map<string, SourceFile>();
-    for (const abs of byFile.keys()) {
-        const sf = project.getSourceFile(abs) ?? project.addSourceFileAtPath(abs);
+        const sf = project.getSourceFile(abs);
         if (!sf) throw new Error(`Unable to load SourceFile: ${abs}`);
         fileCache.set(abs, sf);
     }
@@ -71,8 +105,11 @@ export async function executeEditMachine(
     ];
 
     for (const [abs, fileOps] of byFile) {
-        const sf = fileCache.get(abs)!;
-        const original = sf.getFullText();
+        const sf = fileCache.get(abs);
+        if (!sf) {
+            throw new Error('unable to get file from cache')
+        }
+        const prior = originalText.get(abs) ?? sf.getFullText();
 
         for (const phase of phases) phase(sf, fileOps);
 
@@ -81,9 +118,9 @@ export async function executeEditMachine(
             if (formatted !== sf.getFullText()) sf.replaceWithText(formatted);
         }
 
-        if (sf.getFullText() !== original) {
+        if (sf.getFullText() !== prior) {
             changedFiles.push(abs);
-            diffByFile[abs] = unifiedDiff(original, sf.getFullText(), abs);
+            diffByFile[abs] = unifiedDiff(prior, sf.getFullText(), abs);
         }
     }
 

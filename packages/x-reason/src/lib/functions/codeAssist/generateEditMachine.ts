@@ -190,6 +190,17 @@ export const schema = {
                         },
                         required: ['kind', 'file', 'oldName', 'newName', 'scope'],
                     },
+                    {
+                        type: 'object',
+                        additionalProperties: false,
+                        properties: {
+                            kind: { type: 'string', enum: ['createOrReplaceFile'] },
+                            file: { type: 'string' },
+                            text: { type: 'string' },
+                            overwrite: { type: 'boolean' },
+                        },
+                        required: ['kind', 'file', 'text', 'overwrite'],
+                    },
                 ],
             },
         },
@@ -229,9 +240,9 @@ Rules:
 - Output MUST be valid JSON matching the provided JSON Schema (strict).
 - Only use the allowed op kinds. No free-form code, no extra fields.
 - Be surgical: smallest possible diff that satisfies the spec. If an edit is already present, omit it.
-- Don't invent files or symbols. Only reference files/symbols visible in the repo snapshot.
+- Don't invent files or symbols. Only reference files/symbols referenced in the provided design specification.
 - Respect semantics and API constraints from the spec (e.g., types, signatures, limits).
-- If the spec requires work that v0 ops cannot express (e.g., creating a new file), list a short note under \`non_applicable\` (do NOT include such work in \`ops\`).
+- If the spec requires work that v0 ops cannot express, list a short note under \`non_applicable\` (do NOT include such work in \`ops\`).
 
 Output fields:
 - \`version\`: "v0"
@@ -247,10 +258,6 @@ ${plan}
 
 ## TASK
 Produce the v0 edit plan to implement the spec in this repo.
-- Only reference paths that exist in the design specification contained in the message thread.
-- Use the smallest set of operations.
-- If something is already correct, omit that operation.
-- If the spec asks for behavior outside v0 op coverage (e.g., create new file), write a brief note in \`non_applicable\`.
 
 Return ONLY JSON.
 `;

@@ -28,7 +28,7 @@ export async function googleCodingAgent(executionId?: string, contextUpdateInput
   let readme;
   const readmePath = path.resolve(
     process.cwd(),
-    '../../packages/services/google/src/lib/README.LLM.v2.md'
+    '../../packages/services/google/src/lib/README.LLM.md'
   );
 
   // Configure marked to render for the terminal

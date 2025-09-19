@@ -317,6 +317,14 @@ export type EditOp =
         oldName: string;
         newName: string;
         scope?: 'exported' | 'local'; // default exported
+    }
+
+    // new file creation or overwrite
+    | {
+        kind: 'createOrReplaceFile';
+        file: string;
+        text: string;
+        overwrite: boolean;
     };
 
 export type ApplyOptions = {
