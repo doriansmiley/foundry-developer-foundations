@@ -1,0 +1,34 @@
+{
+  "name": "larry-vscode-ext",
+  "root": "apps/larry-vscode-ext",
+  "sourceRoot": "apps/larry-vscode-ext/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "tsc -p apps/larry-vscode-ext",
+          "node apps/larry-vscode-ext/scripts/bundle-webview.mjs"
+        ]
+      }
+    },
+    "watch": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "tsc -w -p apps/larry-vscode-ext",
+          "node apps/larry-vscode-ext/scripts/bundle-webview.mjs --watch"
+        ],
+        "parallel": true
+      }
+    },
+    "package": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vsce package",
+        "cwd": "apps/larry-vscode-ext"
+      }
+    }
+  }
+} 
