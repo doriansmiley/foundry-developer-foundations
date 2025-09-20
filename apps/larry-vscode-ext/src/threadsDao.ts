@@ -2,7 +2,9 @@ import initSqlJs from 'sql.js';
 import * as path from 'path';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { randomUUID } from 'crypto';
-import { Threads, ThreadsDao } from '@codestrap/developer-foundations-types';
+
+type ThreadsDao = any;
+type Threads = any;
 
 let SQL: any = null;
 let db: any = null;
@@ -38,6 +40,8 @@ async function initDatabase(
 ): Promise<void> {
   if (db) return;
 
+  console.log('Initializing database at:', dbPath);
+
   // Initialize sql.js
   if (!SQL) {
     SQL = await initSqlJs();
@@ -50,8 +54,9 @@ async function initDatabase(
   try {
     const buffer = await readFile(dbPath);
     data = new Uint8Array(buffer);
+    console.log('Loaded existing database file, size:', data.length, 'bytes');
   } catch (e) {
-    // File doesn't exist, will create new database
+    console.log('Database file does not exist, creating new database');
   }
 
   // Create or open database
@@ -63,11 +68,26 @@ async function initDatabase(
       id TEXT PRIMARY KEY,
       appId TEXT,
       messages TEXT,
+      worktreeId TEXT,
+      type TEXT,
       userId TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Add missing columns if they don't exist (migration)
+  try {
+    db.run('ALTER TABLE threads ADD COLUMN worktreeId TEXT;');
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  try {
+    db.run('ALTER TABLE threads ADD COLUMN type TEXT;');
+  } catch (e) {
+    // Column already exists, ignore
+  }
 
   db.run('CREATE INDEX IF NOT EXISTS idx_threads_appId ON threads(appId);');
 
@@ -76,10 +96,20 @@ async function initDatabase(
 }
 
 async function saveDatabase(dbPath: string): Promise<void> {
-  if (!db) return;
+  if (!db) {
+    console.log('saveDatabase: No database instance to save');
+    return;
+  }
 
   const data = db.export();
   await writeFile(dbPath, Buffer.from(data));
+  console.log(
+    'saveDatabase: Saved database to',
+    dbPath,
+    'size:',
+    data.length,
+    'bytes'
+  );
 }
 
 function ensureDb() {
@@ -99,22 +129,28 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
     upsert: async (
       messages: string,
       appId: string,
-      id?: string
+      id?: string,
+      worktreeId?: string
     ): Promise<Threads> => {
       await ensureInitialized();
       ensureDb();
 
       const threadId = id || randomUUID();
 
+      console.log('upsert: Saving thread', threadId, 'with appId:', appId);
+      console.log('upsert: Messages length:', messages?.length || 0);
+
       // Use REPLACE for upsert functionality
       db.run(
-        `REPLACE INTO threads (id, appId, messages, userId, updated_at) 
-         VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)`,
-        [threadId, appId, messages]
+        `REPLACE INTO threads (id, appId, messages, worktreeId, type, userId, updated_at) 
+         VALUES (?, ?, ?, ?, NULL, NULL, CURRENT_TIMESTAMP)`,
+        [threadId, appId, messages, worktreeId || null]
       );
 
+      console.log('upsert: SQL executed successfully');
+
       const stmt = db.prepare(
-        'SELECT id, appId, messages, userId FROM threads WHERE id = ?'
+        'SELECT id, appId, messages, worktreeId, type, userId FROM threads WHERE id = ?'
       );
       const rows = stmt.getAsObject([threadId]);
       stmt.free();
@@ -128,10 +164,14 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
         appId: (rows.appId as string) || undefined,
         messages: (rows.messages as string) || undefined,
         userId: (rows.userId as string) || undefined,
+        worktreeId: (rows.worktreeId as string) || undefined,
+        type: (rows.type as string) || undefined,
       };
 
       // Save to file
-      await saveDatabase(process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH);
+      const dbPath = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH;
+      await saveDatabase(dbPath);
+      console.log('Thread upserted and saved to:', dbPath);
 
       return thread;
     },
@@ -151,7 +191,7 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
       ensureDb();
 
       const stmt = db.prepare(
-        'SELECT id, appId, messages, userId FROM threads WHERE id = ?'
+        'SELECT id, appId, messages, worktreeId, type, userId FROM threads WHERE id = ?'
       );
       const rows = stmt.getAsObject([id]);
       stmt.free();
@@ -165,9 +205,42 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
         appId: (rows.appId as string) || undefined,
         messages: (rows.messages as string) || undefined,
         userId: (rows.userId as string) || undefined,
+        worktreeId: (rows.worktreeId as string) || undefined,
+        type: (rows.type as string) || undefined,
       };
 
       return thread;
+    },
+
+    listAll: async (): Promise<Threads[]> => {
+      await ensureInitialized();
+      ensureDb();
+
+      const dbPath = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH;
+      console.log('listAll: Querying database at:', dbPath);
+      const stmt = db.prepare(
+        'SELECT id, appId, messages, worktreeId, type, userId FROM threads ORDER BY updated_at DESC'
+      );
+      const results: Threads[] = [];
+
+      let rowCount = 0;
+      while (stmt.step()) {
+        const row = stmt.getAsObject();
+        rowCount++;
+        console.log(`Row ${rowCount}:`, row);
+        results.push({
+          id: row.id as string,
+          appId: (row.appId as string) || undefined,
+          messages: (row.messages as string) || undefined,
+          userId: (row.userId as string) || undefined,
+          worktreeId: (row.worktreeId as string) || undefined,
+          type: (row.type as string) || undefined,
+        });
+      }
+
+      stmt.free();
+      console.log(`listAll: Found ${results.length} threads total`);
+      return results;
     },
   };
 }

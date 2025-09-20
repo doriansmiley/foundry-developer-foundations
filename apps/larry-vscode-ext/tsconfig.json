@@ -9,8 +9,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "types": ["vscode", "node"]
+    "types": ["vscode", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@codestrap/*": ["../packages/*"]
+    }
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "../packages/sql-lite/src/**/*.ts", "../packages/types/src/**/*.ts"],
   "exclude": ["webview", "media", "scripts", "node_modules", "dist"]
 } 

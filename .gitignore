@@ -40,3 +40,6 @@ out
 /apps/cli-tools/db
 /apps/**/dist
 /apps/**/*.vsix
+
+# Larry worktrees files
+.larry/worktrees/**/*
