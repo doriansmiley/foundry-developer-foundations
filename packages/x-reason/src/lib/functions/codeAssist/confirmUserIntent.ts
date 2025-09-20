@@ -53,7 +53,13 @@ Your ultimate job is to create a draft of the design spec for the user task.
 - A description of the feature and proposed changes
 - The programming language(s), 
 - The libraries used
-- The effected parts of the codebase
+- The effected parts of the codebase. You must denote clearly what changes are modifications to existing files and what are new files
+For example:
+Files added/modified
+Modified: packages/services/google/src/lib/delegates/sendEmail.ts
+Added: packages/services/google/src/lib/delegates/driveHelpers.ts
+Modified: packages/services/google/src/lib/types.ts (EmailContext, SendEmailOutput)
+Added: packages/services/google/src/lib/delegates/sendEmail.test.ts
 - Security specification including required access controls and permissions as well as privacy controls such as log sanitization etc
 - Links to relevant documentation along with a summary of the methods used and data types
 - A loose description or proposed inputs and outputs, including changes to existing types

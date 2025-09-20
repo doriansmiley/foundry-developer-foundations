@@ -160,6 +160,17 @@ ${formatted}
     context.stateId.includes('confirmUserIntent') ||
     context.stateId.includes('architectImplementation')
   ) {
+
+    if (context.stateId.includes('architectImplementation')) {
+      // write the spec file
+      const p = path.join(process.cwd(), `${executionId}-spec.md`);
+      await fs.promises.writeFile(
+        p,
+        context[context.stateId]?.confirmationPrompt || '# No results found',
+        'utf8'
+      );
+    }
+    // await user feedback
     const markdown = marked(
       systemResponse ? systemResponse : messages
     ) as string;
@@ -182,16 +193,6 @@ ${formatted}
     const contextUpdate = {
       [context.stateId]: { userResponse: userResponse }, // I chose to name the key userResponse, but you can choose any key you like, but it needs to make sense to the LLM
     };
-
-    if (context.stateId.includes('architectImplementation')) {
-      // write the spec file
-      const p = path.join(process.cwd(), `${executionId}-spec.md`);
-      await fs.promises.writeFile(
-        p,
-        context[context.stateId]?.confirmationPrompt || '# No results found',
-        'utf8'
-      );
-    }
 
     await googleCodingAgent(executionId, JSON.stringify(contextUpdate));
   }

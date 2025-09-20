@@ -210,10 +210,7 @@ type ToolCallingTask = {
 
     // Parse tolerant: array | {tasks:[...]}
     let parsed: any;
-    let cleaned = cleanJsonString(raw);
-    try {
-        cleaned = extractJsonFromBackticks(cleaned);
-    } catch { /* fine if no fences */ }
+    const cleaned = extractJsonFromBackticks(raw);
 
     try {
         parsed = JSON.parse(cleaned);

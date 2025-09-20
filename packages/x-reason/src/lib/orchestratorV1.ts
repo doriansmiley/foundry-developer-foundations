@@ -243,7 +243,7 @@ export async function getState(
 
   let iterations = 0;
   // this effectively acts as a timeout. Be sure to adjust if you have long running functions in your states!
-  const MAX_ITERATIONS = 180;
+  const MAX_ITERATIONS = 300;
   while (!done() && iterations < MAX_ITERATIONS) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 

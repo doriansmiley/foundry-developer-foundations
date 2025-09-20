@@ -20,43 +20,21 @@ The specification includes citations to ground you in the sources of documentati
   - Explicit constraints (e.g., “25 MB total attachment size”)
 - A user task/question.
 
-You always carefully evaluate user input before crafting your search queries, web page retrieval functions and obey all search rules provided by the user.
+You always carefully evaluate user input before generating your response.
   `;
 
     const user = `
 Generate a complete specification that fulfils the provided design specification.
 Include the proposed code changes. You must code the solution!
 
-### Hard Rules for Web Search
-1) Only perform searches in cases where the provided sources do not fullfil the requirements
-2) **Extract-and-use entities** from the thread. Build queries that contain:
-   - Languages (TypeScript/JavaScript), frameworks (Node.js/Next.js), tools (Nx, Jest),
-   - SDKs/APIs/libraries with exact names and relevant endpoints (e.g., "gmail users.messages.send", "Drive files.get alt=media", "Base64Url"),
-   - Function names from the API surface (e.g., sendEmail), and design constraints (e.g., 25 MB limit, allowed MIME types).
-3) **No vague queries.** Avoid generic terms like “javascript create mime message”. Queries must be tight, technical, and context-anchored.
-4) **Multiple facets**, split into separate queries:
-   - (A) Official API how-to and endpoints
-   - (B) MIME construction specifics for attachments
-   - (C) Limits/quotas/payload size and encoding
-   - (D) Language/framework integration (TypeScript/Node)
-   - (E) Edge cases: allowed MIME types (docx/pdf/png/jpg/gif), multi-part boundaries, Base64URL vs Base64, size aggregation
-5) **De-duplicate & normalize.** Prefer exact phrases in quotes for endpoint names, use operators (\`site: \`, quotes, AND).
-6) **Respect the stack.** If the thread shows \`googleapis\` v149 and Gmail/Drive, target those. Do **not** introduce unrelated libs unless present.
-7) **Keep each query ≤ 12 words** when possible. No punctuation unless required for exact phrases or operators.
-
-### Heuristics
-- Prefer the already cited sources
-- When an endpoint is clearly implicated, include its exact path in quotes.
-- Include concrete constraint terms (e.g., "25 MB", "Base64url", "multipart/related").
-
 # Hard Rules for Answer Synthesis
 You must denote clearly what changes are modifications to existing files and what are new files
 For example
 Files added/modified
-- Modified: src/lib/delegates/sendEmail.ts
-- Added: src/lib/delegates/driveHelpers.ts
-- Modified: src/lib/types.ts (EmailContext, SendEmailOutput)
-- Added: src/lib/delegates/sendEmail.test.ts
+- Modified: packages/services/google/src/lib/delegates/sendEmail.ts
+- Added: packages/services/google/src/lib/delegates/driveHelpers.ts
+- Modified: packages/services/google/src/lib/types.ts (EmailContext, SendEmailOutput)
+- Added: packages/services/google/src/lib/delegates/sendEmail.test.ts
 This ensures our code editor can distinguish how to handle the changes with ts-morph
 Be sure you have captured changes that are required for the existing public API such as new parameters, methods, etc
 Be sure you prevent developer foot gunning by designing the solution to handle errors, retries, and backoff policies

@@ -1,6 +1,41 @@
 # Overview
+The Google services package wraps Google APIs (`import { google } from 'googleapis';`) in our Office Service (OfficeServiceV2, OfficeServiceV1) interfaces. These interfaces are injected into other parts of our application stack with inversify. This injection is always async to handle scoping the client:
+```typescript
+// injection example
+const officeService = await container.getAsync<OfficeService>(
+      TYPES.OfficeService
+    );
+```
+Excerpt for google client setup:
+```typescript
+async function makeClient(user: string) {
+  console.log(`Creating client for user: ${user}`);
+  // load the service account one time
+  const credentials = await loadServiceAccountFromEnv();
 
-_Overview pending._
+  const mailScopes: GSUITE_SCOPES[] = [
+    GSUITE_SCOPES.GMAIL_SEND,
+    GSUITE_SCOPES.CALENDAR_READ,
+    GSUITE_SCOPES.GMAIL_READ,
+  ];
+
+  const calendarScopes: GSUITE_SCOPES[] = [
+    GSUITE_SCOPES.CALENDAR_ALL,
+    GSUITE_SCOPES.CALENDAR_FREEBUSY,
+    GSUITE_SCOPES.CALENDAR_READ,
+    GSUITE_SCOPES.CALENDAR_WRITE,
+  ];
+
+  const emailAuth = makeGoogleAuth(credentials, mailScopes, user);
+  const calAuth = makeGoogleAuth(credentials, calendarScopes, user);
+
+  const mailClient = await emailAuth.getClient();
+  const calClient = await calAuth.getClient();
+```
+The delegates directory (`packages/services/google/src/lib/delegates`) is where we store delegates. Delegates are just a way to keep code more readable in our office clients. This is where the actual operations with the APIs are typically performed like sending emails, searching drive, etc. 
+
+When modifying an OfficeService function or adding a new one to the interface you will have to modify or create the backing delegate. Delegates are listed below along with their exported functions.
+
 ### Root Directory and Layout
 Project root: packages/services/google
 File tree and exported symbols:
@@ -251,7 +286,12 @@ packages/utils/src/lib/utc.ts
 | `detectIanaTimeZone` | function | `function detectIanaTimeZone() => string` |  |
 
 ## Key Concepts & Data Flow <!-- anchor: concepts_flow -->
-_See Overview; expand this section as needed._
+We use the framework established by Titus Winters & Hyrum Wright when defining what good tests are:
+Correctness - verify the requirements of the system are met. IE executes real scenarios with real inputs.
+Readability - Avoid too much bolier plate. Tests should be obvious to the und user. Use the `packages/utils/src/lib/__fixtures__` directory for fixtures. 
+Completeness - don't just test happy path. Test common inputs and edge cases. Do not test APIs that are not directly owned by the code being tested.
+Demonstrability - tests should serve as a demonstration of how the API works.
+Resilience - Tests should be deterministic and not depend on things like the time of day or external conditions. Don't write flakey tests.
 
 ## Quickstart (Worked Examples from Jest Tests) <!-- anchor: worked_examples -->
 - **user defined exact date/time: uses the exact minute and step=1 (inside hours)** — _packages/services/google/src/lib/delegates/deriveWindowFromTimeframe.test.ts_
