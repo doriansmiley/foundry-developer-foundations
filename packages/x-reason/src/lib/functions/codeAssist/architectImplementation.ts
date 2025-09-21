@@ -2,7 +2,6 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 
 import {
-  CodingArchitect,
   Context,
   GeminiService,
   MachineEvent,
@@ -12,6 +11,7 @@ import {
 import { container } from '@codestrap/developer-foundations-di';
 import { TYPES } from '@codestrap/developer-foundations-types';
 import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
+import { softwareArchitect } from './softwareArchitect';
 
 async function getEffectedFileList(plan: string) {
   const gemini = container.get<GeminiService>(TYPES.GeminiService);
@@ -67,7 +67,6 @@ export async function architectImplementation(
   event?: MachineEvent,
   task?: string
 ): Promise<UserIntent> {
-  const architect = container.get<CodingArchitect>(TYPES.CodingArchitect);
 
   const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
   // we use the thread because it should not aonly contain the design specification but user comments as well
@@ -140,15 +139,14 @@ ${cur.contents}
   }
 
   const prompt = `
-    The complete message thread including the README that explains our current codebase and the proposed plan
-    As well as the user's request and follow up answers
-    ${messages}
+    The software specification
+    ${plan}
 
     And the complete file contents of files to be modified. Be sure to review carefully to construct your response.
     ${fileBlocks}
     `;
 
-  const response = await architect(prompt);
+  const response = await softwareArchitect(prompt);
 
   parsedMessages.push({
     system: response,

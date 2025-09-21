@@ -31,10 +31,6 @@ import {
 import {
   makeGSuiteClientV2,
   researchAssistant,
-  googleCodingSpecSearcher,
-  googleCodingArchitect,
-  softwareDesignSpec,
-  softwareArchitect,
 } from '@codestrap/developer-foundations-services-google';
 import {
   makeRfpRequestsDao,
@@ -113,12 +109,6 @@ container
   .toConstantValue(createLoggingService(1 * 1024 * 1024, 64 * 1024 * 1024));
 
 container.bind(TYPES.ResearchAssistant).toConstantValue(researchAssistant);
-
-container
-  .bind(TYPES.CodingResearchAssistant)
-  .toConstantValue(softwareDesignSpec);
-
-container.bind(TYPES.CodingArchitect).toConstantValue(softwareArchitect);
 
 // IMPORTANT use container.getAsync when retrieving!
 container

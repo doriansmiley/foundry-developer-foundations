@@ -1,12 +1,11 @@
 import {
-  CodingResearchAssistant,
   Context,
   MachineEvent,
-  ResearchAssistant,
   ThreadsDao,
 } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import { TYPES } from '@codestrap/developer-foundations-types';
+import { softwareDesignSpec } from './softwareDesignSpec';
 
 export type SearchDocumentationResults = {
   searchResults: string;
@@ -17,9 +16,6 @@ export async function searchDocumentation(
   event?: MachineEvent,
   task?: string
 ): Promise<SearchDocumentationResults> {
-  const researchAssistant = container.get<CodingResearchAssistant>(
-    TYPES.CodingResearchAssistant
-  );
   const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
 
   const { messages } = await threadsDao.read(context.machineExecutionId || '');
@@ -38,7 +34,7 @@ export async function searchDocumentation(
 
   // TODO: explore how we can Promise.allSettled(researchAssistant1, researchAssistant1, ...) without killing ourselves with token cost and rate limits
   // then use a higher end none reasoning model (or gpt with instant answer) to use the input plans and synthesize the best possible response
-  const response = await researchAssistant(
+  const response = await softwareDesignSpec(
     prompt,
     2,
     undefined,
