@@ -1,4 +1,5 @@
 ## Overview
+
 The Google services package wraps Google APIs (`import { google } from 'googleapis';`) in our Office Service (OfficeServiceV2, OfficeServiceV1) interfaces. These interfaces are injected into other parts of our application stack with inversify. This injection is always async to handle scoping the client:
 ```typescript
 // injection example
@@ -35,7 +36,6 @@ async function makeClient(user: string) {
 The delegates directory (`packages/services/google/src/lib/delegates`) is where we store delegates. Delegates are just a way to keep code more readable in our office clients. This is where the actual operations with the APIs are typically performed like sending emails, searching drive, etc. 
 
 When modifying an OfficeService function or adding a new one to the interface you will have to modify or create the backing delegate. Delegates are listed below along with their exported functions.
-
 ## Root Directory and Layout
 Project root: packages/services/google
 File tree and exported symbols:
@@ -1904,7 +1904,6 @@ export default [
 _Text-only representation intentionally omitted in this version; agents can walk files from API surface._
 
 ## Practice Tasks (for Agents/RL) <!-- anchor: practice_tasks -->
-
 **Q:** create sending email function to send an custom templated email
 **A:**
 
@@ -2251,18 +2250,14 @@ const result = await client.getAvailableMeetingTimes({
 ```
 
 ## Synthetic Variations <!-- anchor: synthetic_variations -->
-
 _No generators proposed._
 
 ## Guardrails & Quality <!-- anchor: guardrails_quality -->
-
 _Include test coverage & invariants if available (future enhancement)._
 
 ## Open Questions / Needs from Engineer <!-- anchor: questions_for_engineer -->
-
 _None_
 
 ## Appendix <!-- anchor: appendix -->
-
 - Stable section anchors provided for agent navigation.
 - IDs: Prefer path-based IDs for files and export names for API items.
