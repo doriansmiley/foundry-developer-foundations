@@ -4,36 +4,23 @@ import { mkdir, readFile, writeFile } from 'fs/promises';
 import { randomUUID } from 'crypto';
 
 type ThreadsDao = any;
-type Threads = any;
+type Threads = {
+  id: string;
+  appId?: string;
+  messages?: string;
+  userId?: string;
+  worktreeId?: string;
+  name?: string;
+  type?: string;
+  updatedAt?: string;
+};
 
 let SQL: any = null;
 let db: any = null;
 
-// Find project root by looking for package.json with "name": "foundry-developer-foundations"
-function findProjectRoot(): string {
-  let currentDir = process.cwd();
-
-  while (currentDir !== path.dirname(currentDir)) {
-    try {
-      const packageJsonPath = path.join(currentDir, 'package.json');
-      const packageJson = require(packageJsonPath);
-      if (packageJson.name === 'foundry-developer-foundations') {
-        return currentDir;
-      }
-    } catch (e) {
-      // package.json not found, continue
-    }
-    currentDir = path.dirname(currentDir);
-  }
-
-  // Fallback to current directory if not found
-  return process.cwd();
-}
-
-const DEFAULT_DB_PATH = path.resolve(
-  findProjectRoot(),
-  '.larry/db/developer-foundations-threads.sqlite'
-);
+// Note: In VSCode extension context, the DB path should be set via environment variable
+// by the extension.ts file using proper VSCode workspace APIs
+const DEFAULT_DB_PATH = '.larry/db/developer-foundations-threads.sqlite';
 
 async function initDatabase(
   dbPath: string = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH
@@ -71,6 +58,7 @@ async function initDatabase(
       worktreeId TEXT,
       type TEXT,
       userId TEXT,
+      name TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -85,6 +73,12 @@ async function initDatabase(
 
   try {
     db.run('ALTER TABLE threads ADD COLUMN type TEXT;');
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  try {
+    db.run('ALTER TABLE threads ADD COLUMN name TEXT;');
   } catch (e) {
     // Column already exists, ignore
   }
@@ -130,7 +124,8 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
       messages: string,
       appId: string,
       id?: string,
-      worktreeId?: string
+      worktreeId?: string,
+      name?: string
     ): Promise<Threads> => {
       await ensureInitialized();
       ensureDb();
@@ -142,15 +137,15 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
 
       // Use REPLACE for upsert functionality
       db.run(
-        `REPLACE INTO threads (id, appId, messages, worktreeId, type, userId, updated_at) 
-         VALUES (?, ?, ?, ?, NULL, NULL, CURRENT_TIMESTAMP)`,
-        [threadId, appId, messages, worktreeId || null]
+        `REPLACE INTO threads (id, appId, messages, worktreeId, name, type, userId, updated_at) 
+         VALUES (?, ?, ?, ?, ?, NULL, NULL, CURRENT_TIMESTAMP)`,
+        [threadId, appId, messages, worktreeId || null, name || null]
       );
 
       console.log('upsert: SQL executed successfully');
 
       const stmt = db.prepare(
-        'SELECT id, appId, messages, worktreeId, type, userId FROM threads WHERE id = ?'
+        'SELECT id, appId, messages, worktreeId, name, type, userId, updated_at FROM threads WHERE id = ?'
       );
       const rows = stmt.getAsObject([threadId]);
       stmt.free();
@@ -165,7 +160,9 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
         messages: (rows.messages as string) || undefined,
         userId: (rows.userId as string) || undefined,
         worktreeId: (rows.worktreeId as string) || undefined,
+        name: (rows.name as string) || undefined,
         type: (rows.type as string) || undefined,
+        updatedAt: (rows.updated_at as string) || undefined,
       };
 
       // Save to file
@@ -191,7 +188,7 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
       ensureDb();
 
       const stmt = db.prepare(
-        'SELECT id, appId, messages, worktreeId, type, userId FROM threads WHERE id = ?'
+        'SELECT id, appId, messages, worktreeId, name, type, userId, updated_at FROM threads WHERE id = ?'
       );
       const rows = stmt.getAsObject([id]);
       stmt.free();
@@ -206,7 +203,9 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
         messages: (rows.messages as string) || undefined,
         userId: (rows.userId as string) || undefined,
         worktreeId: (rows.worktreeId as string) || undefined,
+        name: (rows.name as string) || undefined,
         type: (rows.type as string) || undefined,
+        updatedAt: (rows.updated_at as string) || undefined,
       };
 
       return thread;
@@ -219,7 +218,7 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
       const dbPath = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH;
       console.log('listAll: Querying database at:', dbPath);
       const stmt = db.prepare(
-        'SELECT id, appId, messages, worktreeId, type, userId FROM threads ORDER BY updated_at DESC'
+        'SELECT id, appId, messages, worktreeId, name, type, userId, updated_at FROM threads ORDER BY updated_at DESC'
       );
       const results: Threads[] = [];
 
@@ -234,7 +233,9 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
           messages: (row.messages as string) || undefined,
           userId: (row.userId as string) || undefined,
           worktreeId: (row.worktreeId as string) || undefined,
+          name: (row.name as string) || undefined,
           type: (row.type as string) || undefined,
+          updatedAt: (row.updated_at as string) || undefined,
         });
       }
 

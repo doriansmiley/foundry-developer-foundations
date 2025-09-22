@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { makeSqlLiteThreadsDao } from './threadsDao';
+import { Conversation, Message } from './types';
+import { findProjectRoot } from './findProjectRoot';
 
 const execAsync = promisify(exec);
 
@@ -55,74 +57,18 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     this.threadsDao = makeSqlLiteThreadsDao();
   }
 
-  private findFoundryProjectRoot(): string | null {
-    try {
-      const fs = require('fs');
-      const packageJsonPath = require('path').join(
-        process.cwd(),
-        'package.json'
-      );
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      if (packageJson.name === 'foundry-developer-foundations') {
-        return process.cwd();
-      }
-    } catch (e) {
-      console.error('Error reading package.json from workspace root:', e);
-    }
-
-    return null;
-  }
-
   // Database operations
   private async loadSessions(): Promise<void> {
     try {
-      // Query all threads from database to create sessions
       const threads = await this.threadsDao.listAll();
 
-      console.log('All threads from DB:', threads.length, threads);
-      console.log(
-        'Thread appIds:',
-        threads.map((t: any) => t.appId)
-      );
-
-      // Convert threads to sessions format
-      // Each thread with appId 'larry-conversation' represents a session
       const filteredThreads = threads.filter(
         (thread: any) => thread.appId === 'larry-conversation'
       );
-      console.log(
-        'Filtered threads (larry-conversation):',
-        filteredThreads.length,
-        filteredThreads
-      );
-
-      const sessions = filteredThreads.map((thread: any) => {
-        // Parse messages to get session name from first user message or use thread ID
-        let sessionName = `Session ${thread.id.substring(0, 8)}`;
-        try {
-          const messages = JSON.parse(thread.messages || '[]');
-          if (messages.length > 0 && messages[0].user) {
-            // Use first 50 chars of first user message as session name
-            sessionName = messages[0].user.substring(0, 50);
-            if (messages[0].user.length > 50) sessionName += '...';
-          }
-        } catch (e) {
-          // Keep default name if parsing fails
-        }
-
-        return {
-          conversationId: thread.id,
-          updatedAt: new Date().toISOString(), // We don't have updated_at in current schema
-          name: sessionName,
-          gitworktreeId: thread.worktreeId,
-          worktreePath: `.larry/worktrees/${thread.worktreeId}`,
-          messages: thread.messages,
-        };
-      });
 
       this.view?.webview.postMessage({
         type: 'sessionsLoaded',
-        sessions,
+        sessions: filteredThreads,
       });
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -137,42 +83,12 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
   private async loadMessages(conversationId: string): Promise<void> {
     try {
       const { messages } = await this.threadsDao.read(conversationId);
-      const parsedMessages = JSON.parse(messages || '[]') as {
-        user?: string;
-        system?: string;
-      }[];
-
-      const formattedMessages: any[] = [];
-
-      for (let i = 0; i < parsedMessages.length; i++) {
-        const msg = parsedMessages[i];
-
-        if (msg.user) {
-          formattedMessages.push({
-            conversationId,
-            id: `user-${i}`,
-            updatedAt: new Date().toISOString(),
-            type: 'text',
-            content: msg.user,
-            metadata: { isUserTurn: false },
-          });
-        }
-
-        if (msg.system) {
-          formattedMessages.push({
-            conversationId,
-            id: `system-${i}`,
-            updatedAt: new Date().toISOString(),
-            type: 'text',
-            content: msg.system,
-            metadata: { isUserTurn: true },
-          });
-        }
-      }
+      console.log('Messages:', messages);
+      const parsedMessages = JSON.parse(messages || '[]') as Message[];
 
       this.view?.webview.postMessage({
         type: 'messagesLoaded',
-        messages: formattedMessages,
+        messages: parsedMessages,
       });
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -199,7 +115,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
   private async saveMessage(
     conversationId: string,
-    content: string
+    message: Message
   ): Promise<void> {
     try {
       // Try to read existing messages, or start with empty array if thread doesn't exist
@@ -212,13 +128,10 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         console.log('Thread not found, creating new thread with first message');
       }
 
-      const parsedMessages = JSON.parse(existingMessages) as {
-        user?: string;
-        system?: string;
-      }[];
+      const parsedMessages = JSON.parse(existingMessages) as Message[];
 
       // Add new user message
-      parsedMessages.push({ user: content });
+      parsedMessages.push(message);
 
       // Save to database (preserve existing worktreeId if available)
       let existingWorktreeId = null;
@@ -235,11 +148,6 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         conversationId,
         existingWorktreeId
       );
-
-      console.log(
-        'Message saved successfully for conversation:',
-        conversationId
-      );
     } catch (error) {
       console.error('Error saving message:', error);
     }
@@ -249,11 +157,9 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
   private async buildDockerImage(): Promise<void> {
     try {
       // Find the foundry-developer-foundations project root
-      const foundryProjectRoot = this.findFoundryProjectRoot();
+      const foundryProjectRoot = await findProjectRoot();
       if (!foundryProjectRoot) {
-        throw new Error(
-          'Foundry developer foundations project root not found. Please ensure you are in a workspace that contains the foundry-developer-foundations project.'
-        );
+        throw new Error('Project root not found.');
       }
 
       const dockerfilePath = vscode.Uri.joinPath(
@@ -273,12 +179,9 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         );
       }
 
-      const { stdout } = await execAsync(
-        `docker build -f Codebase.Dockerfile -t larry-server .`,
-        { cwd: foundryProjectRoot }
-      );
-
-      console.log('Docker image built successfully:', stdout);
+      await execAsync(`docker build -f Codebase.Dockerfile -t larry-server .`, {
+        cwd: foundryProjectRoot,
+      });
     } catch (error) {
       console.error('Error building Docker image:', error);
       throw error;
@@ -301,9 +204,9 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
       const containerName = `larry-server-${conversationId}`;
 
-      // Run container with mounted .larry directory
+      // Run container with mounted to worktree path
       const { stdout } = await execAsync(
-        `docker run -d --name ${containerName} -e CONVERSATION_ID=${conversationId} -v "${workspaceFolder.uri.fsPath}/.larry:/app/.larry" larry-server`,
+        `docker run -d --name ${containerName} -e CONVERSATION_ID=${conversationId} -v "${workspaceFolder.uri.fsPath}:/app" larry-server`,
         { cwd: workspaceFolder.uri.fsPath }
       );
 
@@ -382,17 +285,12 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
           const worktreeMatch = gitDir.match(/worktrees\/([^\/]+)/);
           if (worktreeMatch) {
-            console.log('Found worktree name:', worktreeMatch[1]);
             return worktreeMatch[1]; // Return the actual worktree name
           } else {
-            // Fallback: extract from the end of the path
             const worktreeName = gitDir.split('/').pop() || 'unknown';
-            console.log('Fallback worktree name:', worktreeName);
             return worktreeName;
           }
         } else {
-          // This is the main repository, get the actual current branch
-          console.log('In main repository, getting current branch');
           return await this.getCurrentBranchName(workspaceFolder.uri.fsPath);
         }
       } catch (gitError) {
@@ -447,11 +345,6 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
       // Get the main repository path - try multiple approaches
       let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-
-      console.log(
-        'Workspace folders:',
-        vscode.workspace.workspaceFolders?.length || 0
-      );
 
       if (!workspaceFolder) {
         // Fallback: try to get the active text editor's workspace
@@ -567,13 +460,8 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
                   JSON.stringify([]), // Start with empty messages
                   'larry-conversation',
                   conversationId,
-                  finalWorktreeName
-                );
-                console.log(
-                  'Created initial database record for session:',
-                  conversationId,
-                  'with worktreeId:',
-                  finalWorktreeName
+                  finalWorktreeName,
+                  sessionName
                 );
               } catch (error) {
                 console.error(
@@ -581,6 +469,13 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
                   error
                 );
               }
+            }
+
+            if (!conversationId) {
+              console.error(
+                'Conversation ID is missing, critical at this point!'
+              );
+              return;
             }
 
             // Notify webview about successful worktree creation
@@ -613,7 +508,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  async openWorktree(worktreePath: string) {
+  async openWorktree(worktreeId: string) {
     try {
       // Get the main repository path
       let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -630,6 +525,13 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         vscode.window.showErrorMessage('No workspace folder found');
         return;
       }
+
+      const worktreePath = vscode.Uri.joinPath(
+        workspaceFolder.uri,
+        '.larry',
+        'worktrees',
+        worktreeId
+      ).fsPath;
 
       // Convert relative path to absolute path
       const absoluteWorktreePath = worktreePath.startsWith('.')
@@ -669,11 +571,8 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  async checkWorktreeExists(worktreePath: string): Promise<boolean> {
+  async checkWorktreeExists(worktreeId: string): Promise<boolean> {
     try {
-      console.log('checkWorktreeExists: Checking path:', worktreePath);
-
-      // Get the main repository path
       let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
       if (!workspaceFolder) {
@@ -688,6 +587,13 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         console.log('checkWorktreeExists: No workspace folder found');
         return false;
       }
+
+      const worktreePath = vscode.Uri.joinPath(
+        workspaceFolder.uri,
+        '.larry',
+        'worktrees',
+        worktreeId
+      ).fsPath;
 
       // Convert relative path to absolute path
       const absoluteWorktreePath = worktreePath.startsWith('.')
@@ -712,7 +618,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  async createMissingWorktree(worktreePath: string) {
+  async createMissingWorktree(worktreeId: string) {
     try {
       // Get the main repository path
       let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -729,6 +635,13 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         vscode.window.showErrorMessage('No workspace folder found');
         return;
       }
+
+      const worktreePath = vscode.Uri.joinPath(
+        workspaceFolder.uri,
+        '.larry',
+        'worktrees',
+        worktreeId
+      ).fsPath;
 
       // Convert relative path to absolute path
       const absoluteWorktreePath = worktreePath.startsWith('.')
@@ -878,7 +791,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         await this.notifyWorktreeChange();
         return;
       }
-      if (msg?.type === 'createSessionWithName') {
+      if (msg?.type === 'createSession') {
         await this.createSessionWithWorktree(
           msg.sessionName,
           msg.agentId,
@@ -887,20 +800,20 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       if (msg?.type === 'checkWorktreeExists') {
-        const exists = await this.checkWorktreeExists(msg.worktreePath);
+        const exists = await this.checkWorktreeExists(msg.worktreeId);
         view.webview.postMessage({
           type: 'worktreeExists',
-          worktreePath: msg.worktreePath,
+          worktreeId: msg.worktreeId,
           exists,
         });
         return;
       }
       if (msg?.type === 'createMissingWorktree') {
-        await this.createMissingWorktree(msg.worktreePath);
+        await this.createMissingWorktree(msg.worktreeId);
         return;
       }
       if (msg?.type === 'openWorktree') {
-        await this.openWorktree(msg.worktreePath);
+        await this.openWorktree(msg.worktreeId);
         return;
       }
       if (msg?.type === 'leaveWorktree') {
@@ -961,7 +874,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       if (msg?.type === 'sendMessage') {
-        await this.saveMessage(msg.conversationId, msg.content);
+        await this.saveMessage(msg.conversationId, msg.message);
         return;
       }
     });
