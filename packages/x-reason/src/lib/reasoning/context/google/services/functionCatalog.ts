@@ -6,6 +6,7 @@ import {
 } from '@codestrap/developer-foundations-types';
 
 import { confirmUserIntent, searchDocumentation, architectImplementation, generateEditMachine } from '../../../../functions';
+import { applyEdits } from 'packages/x-reason/src/lib/functions/codeAssist/applyEdits';
 
 
 function getPayload(context: Context, result: Record<string, any>) {
@@ -36,7 +37,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const result = await confirmUserIntent(context, event, task);
                     const payload = getPayload(context, result);
                     console.log(`confirmUserIntent returned: ${JSON.stringify(result)}`);
-                    console.log('dispatching CONTINUE from confirmUserIntent');
+                    console.log('dispatching pause from confirmUserIntent');
                     // example of how to pause
                     dispatch({
                         type: 'pause',
@@ -74,7 +75,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const result = await architectImplementation(context, event, task);
                     const payload = getPayload(context, result);
                     console.log(`architectImplementation returned: ${JSON.stringify(result)}`);
-                    console.log('dispatching CONTINUE from architectImplementation');
+                    console.log('dispatching pause from architectImplementation');
 
                     dispatch({
                         type: 'pause',
@@ -93,10 +94,29 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const result = await generateEditMachine(context, event, task);
                     const payload = getPayload(context, result);
                     console.log(`generateEditMachine returned: ${JSON.stringify(result)}`);
-                    console.log('dispatching CONTINUE from generateEditMachine');
+                    console.log('dispatching pause from generateEditMachine');
 
                     dispatch({
                         type: 'pause',
+                        payload,
+                    });
+                },
+            },
+        ],
+        [
+            "applyEdits",
+            {
+                description:
+                    "Use this tool to execute the approved architecture plan.",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    console.log('applyEdits implementation in function catalog called');
+                    const result = await applyEdits(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`applyEdits returned: ${JSON.stringify(result)}`);
+                    console.log('dispatching CONTINUE from applyEdits');
+
+                    dispatch({
+                        type: 'CONTINUE',
                         payload,
                     });
                 },

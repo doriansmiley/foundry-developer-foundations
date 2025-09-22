@@ -161,15 +161,16 @@ ${formatted}
     context.stateId.includes('architectImplementation')
   ) {
 
-    if (context.stateId.includes('architectImplementation')) {
-      // write the spec file
-      const p = path.join(process.cwd(), `${executionId}-spec.md`);
-      await fs.promises.writeFile(
-        p,
-        context[context.stateId]?.confirmationPrompt || '# No results found',
-        'utf8'
-      );
-    }
+    const prefix = context.stateId.includes('architectImplementation') ? 'designDoc' : 'spec';
+
+    // write the spec file
+    const p = path.join(process.cwd(), `${prefix}-${executionId}.md`);
+    await fs.promises.writeFile(
+      p,
+      context[context.stateId]?.confirmationPrompt || '# No results found',
+      'utf8'
+    );
+
     // await user feedback
     const markdown = marked(
       systemResponse ? systemResponse : messages

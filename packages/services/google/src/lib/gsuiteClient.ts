@@ -15,6 +15,7 @@ import { scheduleMeeting } from './delegates/scheduleMeeting';
 import { sendEmail } from './delegates/sendEmail';
 import { readEmailHistory } from './delegates/readEmailHistory';
 import { watchEmails } from './delegates/watchEmails';
+import { loadServiceAccountFromEnv, makeGoogleAuth } from './helpers/googleAuth';
 
 export enum GSUITE_SCOPES {
   CALENDAR_READ = 'https://www.googleapis.com/auth/calendar.readonly',
@@ -26,8 +27,6 @@ export enum GSUITE_SCOPES {
   GMAIL_META = 'https://www.googleapis.com/auth/gmail.metadata',
   GMAIL_MODIFY = 'https://www.googleapis.com/auth/gmail.modify',
 }
-
-import { loadServiceAccountFromEnv, makeGoogleAuth } from '../helpers/googleAuth';
 
 async function makeClient(user: string) {
   console.log(`Creating client for user: ${user}`);
@@ -59,7 +58,7 @@ async function makeClient(user: string) {
 
   const calendarClient = google.calendar({ version: 'v3', auth: calAuth });
   const emailClient = google.gmail({ version: 'v1', auth: emailAuth });
-  
+
   return { emailClient, calendarClient };
 }
 

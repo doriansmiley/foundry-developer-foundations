@@ -54,7 +54,7 @@ packages/services/google/src/lib/delegates/summerizeCalanders.ts
   └─ summarizeCalendars
 packages/services/google/src/lib/delegates/searchDriveFiles.ts
   └─ searchDriveFiles
-packages/services/google/src/helpers/googleAuth.ts
+packages/services/google/src/lib/helpers/googleAuth.ts
   └─ loadServiceAccountFromEnv
   └─ makeGoogleAuth
 packages/types/src/lib/types.ts
