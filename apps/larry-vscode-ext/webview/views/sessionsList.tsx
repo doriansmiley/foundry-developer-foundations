@@ -4,7 +4,7 @@ import { h } from 'preact';
 import { formatDate } from '../utils/date';
 import { Conversation } from '../../src/types';
 
-export function SessionsList({vscode, onCreateNewSession, onOpenSession}: {vscode: any, onCreateNewSession: () => void, onOpenSession: (session: Conversation) => void}) {
+export function SessionsList({vscode, onCreateNewSession, onOpenSession, currentWorktreeId}: {vscode: any, onCreateNewSession: () => void, onOpenSession: (session: Conversation) => void, currentWorktreeId?: string}) {
   const [sessions, setSessions] = useState<Conversation[]>([]);
 	// Load sessions from database via VS Code extension
 	const loadSessions = async () => {
@@ -27,6 +27,21 @@ export function SessionsList({vscode, onCreateNewSession, onOpenSession}: {vscod
     window.addEventListener('message', onMsg);
     return () => window.removeEventListener('message', onMsg);
   }, []);
+
+  // Auto-open session if we're in a worktree that matches a session
+  useEffect(() => {
+    if (currentWorktreeId && sessions.length > 0) {
+      console.log('Checking for matching session with worktreeId:', currentWorktreeId);
+      console.log('Available sessions:', sessions.map(s => ({ id: s.conversationId, worktreeId: s.worktreeId })));
+      
+      const matchingSession = sessions.find(session => session.worktreeId === currentWorktreeId);
+      
+      if (matchingSession) {
+        console.log('Auto-opening session:', matchingSession.conversationId);
+        onOpenSession(matchingSession);
+      }
+    }
+  }, [currentWorktreeId, sessions]);
 
 	return (
 		<div className="p-1 d-flex flex-column gap-2">

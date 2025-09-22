@@ -14515,7 +14515,7 @@
   }
 
   // apps/larry-vscode-ext/webview/views/sessionsList.tsx
-  function SessionsList({ vscode: vscode2, onCreateNewSession, onOpenSession }) {
+  function SessionsList({ vscode: vscode2, onCreateNewSession, onOpenSession, currentWorktreeId }) {
     const [sessions, setSessions] = d2([]);
     const loadSessions = async () => {
       try {
@@ -14535,6 +14535,17 @@
       window.addEventListener("message", onMsg);
       return () => window.removeEventListener("message", onMsg);
     }, []);
+    y2(() => {
+      if (currentWorktreeId && sessions.length > 0) {
+        console.log("Checking for matching session with worktreeId:", currentWorktreeId);
+        console.log("Available sessions:", sessions.map((s3) => ({ id: s3.conversationId, worktreeId: s3.worktreeId })));
+        const matchingSession = sessions.find((session) => session.worktreeId === currentWorktreeId);
+        if (matchingSession) {
+          console.log("Auto-opening session:", matchingSession.conversationId);
+          onOpenSession(matchingSession);
+        }
+      }
+    }, [currentWorktreeId, sessions]);
     return /* @__PURE__ */ _("div", { className: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { className: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { className: "f4 text-bold mb-0" }, "Sessions"), /* @__PURE__ */ _("button", { className: "btn btn-primary", onClick: onCreateNewSession }, "Create new session")), /* @__PURE__ */ _("div", { className: "sessions-list" }, sessions.map((session) => /* @__PURE__ */ _("div", { key: session.conversationId, className: "Box Box--condensed p-2 mb-2 session-item", onClick: () => onOpenSession(session) }, /* @__PURE__ */ _("div", { className: "d-flex flex-justify-between flex-items-start" }, /* @__PURE__ */ _("div", { className: "flex-1" }, /* @__PURE__ */ _("div", { className: "f5 text-bold mb-1" }, session.name)), /* @__PURE__ */ _("div", { className: "f6 color-fg-muted ml-2" }, formatDate(session.updatedAt)))))));
   }
 
@@ -16833,17 +16844,6 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
     const generateConversationId = () => {
       return `conv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     };
-    const checkAndLoadWorktreeSession = (worktreeId, currentSession2) => {
-      if (!worktreeId || !currentSession2) return;
-      console.log("Checking worktree session for:", worktreeId);
-      const matchingSession = currentSession2.worktreeId === worktreeId ? currentSession2 : null;
-      console.log("Matching session found:", matchingSession?.conversationId);
-      if (matchingSession) {
-        setCurrentSessionId(matchingSession.conversationId);
-        setCurrentWorktreeId(worktreeId);
-        setView("chat");
-      }
-    };
     const startLarryServer = async (conversationId) => {
       try {
         vscode.postMessage({
@@ -16854,11 +16854,6 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
         console.error("Error starting Larry server:", error);
       }
     };
-    y2(() => {
-      if (currentWorktreeIdFromExtension && currentSession && currentSession.worktreeId !== currentWorktreeIdFromExtension) {
-        checkAndLoadWorktreeSession(currentWorktreeIdFromExtension, currentSession);
-      }
-    }, [currentWorktreeIdFromExtension, currentSession]);
     y2(() => {
       async function onMsg(e3) {
         const m4 = e3.data;
@@ -16874,13 +16869,16 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
           });
           setView("worktree-created");
           setWorktreeStatus("mounting");
-          await startLarryServer(m4.conversationId);
-          setWorktreeStatus("ready");
+          setTimeout(() => {
+            setWorktreeStatus("ready");
+          }, 3e3);
         }
         if (m4?.type === "worktreeExists") {
           if (m4.exists) {
             setWorktreeStatus("mounting");
-            await startLarryServer(m4.conversationId);
+            setTimeout(() => {
+              setWorktreeStatus("ready");
+            }, 3e3);
           } else {
             setWorktreeStatus("missing");
           }
@@ -16943,7 +16941,7 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
     }
     const AppShell = ({ children }) => /* @__PURE__ */ _("div", { class: "app" }, children);
     if (view === "sessions") {
-      return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _(SessionsList, { vscode, onCreateNewSession: onCreateNewSessionClick, onOpenSession: openSession }));
+      return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _(SessionsList, { vscode, onCreateNewSession: onCreateNewSessionClick, onOpenSession: openSession, currentWorktreeId: currentWorktreeIdFromExtension }));
     }
     if (view === "worktree-created") {
       const isNewSession = currentSessionId === "new-session";
@@ -16988,8 +16986,12 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
             return "\u2753";
         }
       };
-      const isButtonDisabled = worktreeStatus !== "ready" && worktreeStatus !== "missing";
-      return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _("div", { class: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { class: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { class: "f4 text-bold mb-0" }, isNewSession ? "Worktree Created" : "Open Session Worktree"), /* @__PURE__ */ _("button", { class: "btn", onClick: () => setView("sessions") }, "Back to Sessions")), /* @__PURE__ */ _("div", { class: "Box p-3" }, /* @__PURE__ */ _("div", { class: "f5 text-bold mb-2" }, "Session: ", worktreeData?.sessionName), /* @__PURE__ */ _("div", { class: "f6 color-fg-muted mb-2" }, "Worktree: ", worktreeData?.worktreeName), /* @__PURE__ */ _("div", { class: "Box p-2 mb-3", style: { background: "var(--vscode-editor-background)" } }, /* @__PURE__ */ _("div", { class: "d-flex flex-items-center gap-2" }, /* @__PURE__ */ _("span", { class: "f4" }, getStatusIcon()), /* @__PURE__ */ _("span", { class: "f6" }, getStatusMessage()))), /* @__PURE__ */ _("div", { class: "d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { class: "d-flex gap-2" }, worktreeStatus === "missing" ? /* @__PURE__ */ _(
+      const isButtonDisabled = worktreeStatus !== "ready" && worktreeStatus !== "missing" || currentSession?.worktreeId === "hello-world";
+      return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _("div", { class: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { class: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { class: "f4 text-bold mb-0" }, isNewSession ? "Worktree Created" : "Open Session Worktree"), /* @__PURE__ */ _("button", { class: "btn", onClick: () => {
+        setCurrentSession(null);
+        setWorktreeStatus("checking");
+        setView("sessions");
+      } }, "Back to Sessions")), /* @__PURE__ */ _("div", { class: "Box p-3" }, /* @__PURE__ */ _("div", { class: "f5 text-bold mb-2" }, "Session: ", worktreeData?.sessionName), /* @__PURE__ */ _("div", { class: "f6 color-fg-muted mb-2" }, "Worktree: ", worktreeData?.worktreeName), /* @__PURE__ */ _("div", { class: "Box p-2 mb-3", style: { background: "var(--vscode-editor-background)" } }, /* @__PURE__ */ _("div", { class: "d-flex flex-items-center gap-2" }, /* @__PURE__ */ _("span", { class: "f4" }, getStatusIcon()), /* @__PURE__ */ _("span", { class: "f6" }, getStatusMessage()))), /* @__PURE__ */ _("div", { class: "d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { class: "d-flex gap-2" }, worktreeStatus === "missing" ? /* @__PURE__ */ _(
         "button",
         {
           class: "btn btn-primary",

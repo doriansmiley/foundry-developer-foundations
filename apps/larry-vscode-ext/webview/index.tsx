@@ -27,23 +27,6 @@ function App() {
 		return `conv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 	};
 
-	const checkAndLoadWorktreeSession = (worktreeId: string, currentSession: Conversation) => {
-		if (!worktreeId || !currentSession) return;
-
-		console.log('Checking worktree session for:', worktreeId);
-		
-		// Try multiple matching strategies:
-		const matchingSession = currentSession.worktreeId === worktreeId ? currentSession : null;
-		
-		console.log('Matching session found:', matchingSession?.conversationId);
-		
-		if (matchingSession) {
-			setCurrentSessionId(matchingSession.conversationId);
-			setCurrentWorktreeId(worktreeId);
-			
-			setView('chat');
-		}
-	};
 
 	// Start Docker container for Larry server
 	const startLarryServer = async (conversationId: string) => {
@@ -57,13 +40,6 @@ function App() {
 		}
 	};
 
-	// Auto-load session when both sessions and worktree info are available
-	useEffect(() => {
-		if (currentWorktreeIdFromExtension && currentSession && 
-			currentSession.worktreeId !== currentWorktreeIdFromExtension) {
-			checkAndLoadWorktreeSession(currentWorktreeIdFromExtension, currentSession);
-		}
-	}, [currentWorktreeIdFromExtension, currentSession]);
 
 	useEffect(() => {
 		async function onMsg(e: MessageEvent) {
@@ -81,16 +57,19 @@ function App() {
 				});
 				setView('worktree-created');
 				setWorktreeStatus('mounting');
-				setTimeout(async () => {
+				setTimeout( () => {
 					setWorktreeStatus('ready');
-				}, 1000);
-				await startLarryServer(m.conversationId);
-				setWorktreeStatus('ready');
+				}, 3000);
+				// await startLarryServer(m.conversationId);
+				// setWorktreeStatus('ready');
 			}
 			if (m?.type === 'worktreeExists') {
 				if (m.exists) {
 					setWorktreeStatus('mounting');
-					await startLarryServer(m.conversationId);
+					// await startLarryServer(m.conversationId);
+					setTimeout( () => {
+						setWorktreeStatus('ready');
+					}, 3000);
 				} else {
 					setWorktreeStatus('missing');
 				}
@@ -174,7 +153,7 @@ function App() {
 	if (view === 'sessions') {
 		return (
 			<AppShell>
-				<SessionsList vscode={vscode} onCreateNewSession={onCreateNewSessionClick} onOpenSession={openSession} />
+				<SessionsList vscode={vscode} onCreateNewSession={onCreateNewSessionClick} onOpenSession={openSession} currentWorktreeId={currentWorktreeIdFromExtension} />
 			</AppShell>
 		);
 	}
@@ -221,7 +200,7 @@ function App() {
 						<h3 class="f4 text-bold mb-0">
 							{isNewSession ? 'Worktree Created' : 'Open Session Worktree'}
 						</h3>
-						<button class="btn" onClick={() => setView('sessions')}>Back to Sessions</button>
+						<button class="btn" onClick={() => {setCurrentSession(null); setWorktreeStatus('checking'); setView('sessions')}}>Back to Sessions</button>
 					</div>
 					
 					<div class="Box p-3">
