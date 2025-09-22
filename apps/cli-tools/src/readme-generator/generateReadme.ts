@@ -8,6 +8,7 @@ export async function generateReadmeFromEntry(entryFile: string, outFile?: strin
         const service = interpret(readmeMachine.withContext({
             entryFile,
             tsconfigPath,
+            outFile,
             importTree: [],
             files: [],
             apiSurface: [],

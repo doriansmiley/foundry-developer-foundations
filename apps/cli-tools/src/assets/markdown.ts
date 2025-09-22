@@ -23,7 +23,33 @@ function codeFenceFor(p: string): string {
         return '';
 }
 
+// Extract the *content* of a section that starts with an exact "## <heading>",
+// stopping right before the next line that starts with "##".
+function extractSection(md: string, heading: string): string | undefined {
+        // exact "## Heading" (allow trailing text like anchors/comments on that line)
+        const startRx = new RegExp(`^##\\s+${heading}\\b.*\\n?`, 'm');
+        const startMatch = md.match(startRx);
+        if (!startMatch) return undefined;
+
+        const startIdx = startMatch.index! + startMatch[0].length;
+
+        // find next "## " heading after startIdx
+        const tail = md.slice(startIdx);
+        const nextRx = /^##\s+/m;
+        const nextMatch = tail.match(nextRx);
+
+        const endIdx = nextMatch ? startIdx + (nextMatch.index as number) : md.length;
+
+        return md.slice(startIdx, endIdx).trim();
+}
+
 export function renderReadme(ctx: Ctx): string {
+        // Try to load existing README to preserve specific sections
+        const existingMd = readTextSafe((ctx as any).outFile);
+        const existingOverview = existingMd ? extractSection(existingMd, 'Overview') : undefined;
+        const existingPractice = existingMd ? extractSection(existingMd, 'Practice Tasks') : undefined;
+        const existingKeyConcepts = existingMd ? extractSection(existingMd, 'Key Concepts & Data Flow') : undefined;
+
         // Prefer synthesized fields from readmeInput if present; otherwise use raw ctx
         const ri = ctx.readmeInput;
 
@@ -31,6 +57,11 @@ export function renderReadme(ctx: Ctx): string {
                 (ri?.expositionMd?.trim())
                 || (ctx.exposition?.purpose ? String(ctx.exposition.purpose).trim() : '')
                 || '_Overview pending._';
+
+        // If existing README has an Overview section, override
+        if (existingOverview) {
+                expositionMd = existingOverview;
+        }
 
         const projectRoot = ctx.projectRoot;
         const fileTree = ctx.files.reduce((acc, f) => {
@@ -47,7 +78,7 @@ export function renderReadme(ctx: Ctx): string {
 Project root: ${projectRoot}
 File tree and exported symbols:
 ${fileTree}
-        `
+  `.trim();
 
         // API surface is on ctx
         const apiSurface = Array.isArray(ctx.apiSurface) ? ctx.apiSurface : [];
@@ -107,9 +138,9 @@ ${fileTree}
 `
                 : '_No Nx graph available._';
 
-        // task examples
+        // tool-calling tasks (generated); can be overridden by existing README section
         const toolTasks = ctx.toolTasks || [];
-        const practiceSection = toolTasks.length
+        let practiceSection = toolTasks.length
                 ? toolTasks.map(t =>
                         `**Q:** ${t.question}
 **A:**
@@ -120,6 +151,11 @@ ${t.notes ? `> _${t.notes}_` : ''}`).join('\n\n')
                 : (ctx.practice?.length
                         ? ctx.practice.map(p => `- **${escPipes(p.title)}** — ${escPipes(p.description || '')}`).join('\n')
                         : '_No practice tasks synthesized._');
+
+        // If existing README has a "## Practice Tasks" section, override
+        if (existingPractice) {
+                practiceSection = existingPractice;
+        }
 
         // Gaps/questions
         const gapsAQ = ri?.gapsAndQuestions ?? ctx.unknowns ?? [];
@@ -240,7 +276,7 @@ ${mockItems}
 ${apiRows}`,
 
                 `## Key Concepts & Data Flow <!-- anchor: concepts_flow -->
-_See Overview; expand this section as needed._`,
+                ${existingKeyConcepts || '_See Overview; expand this section as needed._'}`,
 
                 `## Quickstart (Worked Examples from Jest Tests) <!-- anchor: worked_examples -->
 ${worked || '_No worked examples detected._'}`,

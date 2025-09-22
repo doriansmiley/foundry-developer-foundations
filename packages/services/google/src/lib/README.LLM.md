@@ -1,4 +1,4 @@
-# Overview
+## Overview
 The Google services package wraps Google APIs (`import { google } from 'googleapis';`) in our Office Service (OfficeServiceV2, OfficeServiceV1) interfaces. These interfaces are injected into other parts of our application stack with inversify. This injection is always async to handle scoping the client:
 ```typescript
 // injection example
@@ -36,7 +36,7 @@ The delegates directory (`packages/services/google/src/lib/delegates`) is where 
 
 When modifying an OfficeService function or adding a new one to the interface you will have to modify or create the backing delegate. Delegates are listed below along with their exported functions.
 
-### Root Directory and Layout
+## Root Directory and Layout
 Project root: packages/services/google
 File tree and exported symbols:
 packages/services/google/src/lib/gsuiteClient.v2.ts
