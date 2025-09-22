@@ -43,7 +43,7 @@ export function renderReadme(ctx: Ctx): string {
         }, '');
 
         expositionMd = `${expositionMd}
-### Root Directory and Layout
+## Root Directory and Layout
 Project root: ${projectRoot}
 File tree and exported symbols:
 ${fileTree}
@@ -232,7 +232,7 @@ ${mockItems}
 `.trim();
 
         return [
-                `# Overview\n\n${expositionMd}`,
+                `## Overview\n\n${expositionMd}`,
 
                 `## Public API (Exports) <!-- anchor: public_api -->
 | export | kind | signature | description |
