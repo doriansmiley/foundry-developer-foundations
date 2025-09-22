@@ -33,8 +33,8 @@ export async function applyEdits(
     const root = process.cwd();
     const baseDir = root.split('foundry-developer-foundations')[0];
     const options = {
-        baseDir,
-        tsconfigPath: `${baseDir}/tsconfig.base.json`,
+        baseDir: `${baseDir}foundry-developer-foundations`,
+        tsconfigPath: `${baseDir}foundry-developer-foundations/tsconfig.base.json`,
         dryRun: false,
         write: true,
         format: true,
