@@ -35,10 +35,36 @@ export async function sendChatMessage(
 
     const spaceName = input.channelId || 'spaces/default';
     
+    console.log(`${LOG_PREFIX} 🔍 Auth client details:`);
+    console.log(`${LOG_PREFIX}   - Auth type: ${(chatClient as any).context?._options?.auth?.constructor?.name || 'Unknown'}`);
+    
+    // Test auth before making the API call
+    try {
+      console.log(`${LOG_PREFIX} 📝 Testing authentication...`);
+      const auth = (chatClient as any).context?._options?.auth;
+      if (auth && typeof auth.getClient === 'function') {
+        const authClient = await auth.getClient();
+        console.log(`${LOG_PREFIX} ✅ Authentication successful`);
+        console.log(`${LOG_PREFIX} 📋 Auth client info:`, {
+          type: authClient.constructor.name,
+          email: (authClient as any).email || 'N/A',
+          scopes: (authClient as any).scopes || 'N/A',
+          subject: (authClient as any).subject || 'N/A'
+        });
+      } else {
+        console.log(`${LOG_PREFIX} ⚠️ Cannot test auth - auth client not accessible`);
+      }
+    } catch (authError) {
+      console.error(`${LOG_PREFIX} ❌ Authentication test failed:`, authError);
+    }
+    
     const requestBody: chat_v1.Schema$Message = {
       text: input.message,
     };
 
+    console.log(`${LOG_PREFIX} 🚀 Making API request to space: ${spaceName}`);
+    console.log(`${LOG_PREFIX} 📦 Request body:`, JSON.stringify(requestBody, null, 2));
+    
     const response = await chatClient.spaces.messages.create({
       parent: spaceName,
       requestBody,

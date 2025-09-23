@@ -31,14 +31,17 @@ export async function makeGSuiteClientV2(
   ];
 
   const chatScopes = [
-    'https://www.googleapis.com/auth/chat.bot',
+    'https://www.googleapis.com/auth/chat.messages',
   ];
 
   const driveAuth = makeGoogleAuth(credentials, driveScopes, user);
   const chatAuth = makeGoogleAuth(credentials, chatScopes, user);
 
+  console.log('🛠️ Creating Google API clients...');
   const driveClient = google.drive({ version: 'v3', auth: driveAuth });
   const chatClient = google.chat({ version: 'v1', auth: chatAuth });
+  console.log('✅ Google API clients created successfully');
+  console.log('🤖 Chat client configured for scopes:', chatScopes);
 
   return {
     ...v1Client,
