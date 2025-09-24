@@ -27,7 +27,8 @@ export async function getState(
   solution: Solutions,
   forward = true,
   workflow?: Record<string, any>,
-  xreason: SupportedEngines = SupportedEngines.COMS
+  xreason: SupportedEngines = SupportedEngines.COMS,
+  persistMachineOnTransition = false,
 ) {
   const { programmer, aiTransition, evaluate, functionCatalog } = xReasonFactory(xreason)({});
   let currentState: State<Context, MachineEvent> | undefined;
@@ -44,8 +45,26 @@ export async function getState(
     }
   };
 
-  const sendProxy = (action: ActionType) => {
+  const sendProxy = async (action: ActionType) => {
+    // this will trigger the call to the dispatch function defined above which should update the state values
     send(action, action.payload?.stateId as string);
+    if (persistMachineOnTransition) {
+      // save the machine with the current state
+      const { getLog } = container.get<LoggingService>(TYPES.LoggingService);
+
+      const machineDao = container.get<MachineDao>(TYPES.MachineDao);
+      // This should capture the result of the last state
+      const jsonState = serialize(currentState);
+      await machineDao.upsert(
+        solution.id,
+        // the StateConfig[] returned by the programmer
+        JSON.stringify(result),
+        jsonState,
+        getLog(solution.id) ?? '',
+        '', // we have to send default values for lockOwner and lockUntil or the OSDK will shit a brick. It still can't handle optional params
+        1
+      );
+    }
   };
 
   const functions = functionCatalog(sendProxy);
@@ -165,7 +184,7 @@ export async function getState(
       // Structured outputs could be very useful here to restrict acceptable state output values to a enum based on the functions catalog id values
       // not sure if Foundry supports structured outputs yet or not
       const nextState = await engine.logic.transition(
-        solution.plan,
+        programmedState?.task || solution.plan,
         JSON.stringify(programmedState),
         JSON.stringify(stateDefinition.context),
         aiTransition,

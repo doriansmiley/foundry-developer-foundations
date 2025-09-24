@@ -76,6 +76,22 @@ export async function architectImplementation(
     system?: string;
   }[];
 
+  const architectImplementationId =
+    context.stack
+      ?.slice()
+      .reverse()
+      .find((item) => item.includes('architectImplementation')) || '';
+  const userResponseToArchitectQuestions = (context[architectImplementationId] as UserIntent)
+    ?.userResponse;
+
+  // if we are reentering the state after a clarifying questions were asked 
+  // but no response was received from the user return the previously generated response
+  if (!userResponseToArchitectQuestions && context[architectImplementationId]?.confirmationPrompt) {
+    return {
+      confirmationPrompt: context[architectImplementationId]?.confirmationPrompt,
+    };
+  }
+
   const confirmUserIntentId =
     context.stack
       ?.slice()
@@ -130,6 +146,8 @@ ${cur.contents}
     parsedMessages.push({
       user: userResponse,
     });
+    // reset the user response so they can respond again!
+    context[architectImplementationId].userResponse = undefined;
   } else {
     // this should only happen on the first iteration,
     // but there may be edge cases where this task was reentered without asking the user a question

@@ -22,13 +22,14 @@ import {
   googleServicesEvaluate,
   googleServicesFunctionCatalog,
 } from '../reasoning';
+import { ActionType, Task } from '@codestrap/developer-foundations-types';
 
 // Define the shape of the clients map
 export type XReasonEngine = (config: Record<string, any>) => {
   programmer: typeof comsProgrammer;
   aiTransition: typeof comsAiTrasition;
   evaluate: typeof comsEvaluate;
-  functionCatalog: typeof comsFunctionCatalog;
+  functionCatalog: (dispatch: ((action: ActionType) => void) | ((action: ActionType) => Promise<void>)) => Map<string, Task>,
   solver: typeof comsSolver;
 };
 

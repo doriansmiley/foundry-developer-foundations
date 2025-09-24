@@ -98,7 +98,8 @@ export class Larry extends Text2Action {
       true,
       threadId,
       undefined,
-      SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST
+      SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST,
+      true,
     );
 
     // get thread messages

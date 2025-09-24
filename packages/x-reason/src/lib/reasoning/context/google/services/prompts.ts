@@ -320,7 +320,44 @@ export async function aiTransition(
   context: string
 ) {
   const parsedContext = JSON.parse(context) as Context;
-  const state = parsedContext[JSON.parse(currentState)?.id];
+  const parsedState = JSON.parse(currentState);
+  const possibleTransitions = parsedState?.transitions as { on: string, target: string }
+
+  let instructions = `
+  Based on the following task list:
+  ${taskList}
+
+  The current state of the application is:
+  ${parsedState.id}
+
+  and the possible states your can trasition to:
+  ${JSON.stringify(possibleTransitions || [], null, 2)}
+  `;
+
+  if (
+    parsedContext.stateId.includes('confirmUserIntent') ||
+    parsedContext.stateId.includes('architectImplementation')) {
+    const systemResponse = parsedContext[parsedState.id].confirmationPrompt;
+    const userResponse = parsedContext[parsedState.id].userResponse;
+
+    instructions = `${instructions}
+
+      The System Response is:
+      ${systemResponse}
+
+      The User Response is:
+      ${userResponse ? userResponse : 'The user has not provided feedback yet'}
+      `;
+  } else {
+    instructions = `The output of the current state (make sure the output fulfills the task list!):
+  ${JSON.stringify(parsedContext[parsedState.id])}`
+  }
+
+  // TODO use parsedContext.stateId to determine if we are on a state that requires user feedback.
+  // if so add conditional prompts that collect the confirmationPrompt and userResponse string
+  //parsedContext[parsedState.id].confirmationPrompt
+  //parsedContext[parsedState.id].userResponse
+  // we could probably determine transitions like this deterministically but it's a pain right now.
 
   const system = `
   You are an AI based reasoning engine called Transit. Transit determines if state machine transitions should take place.
@@ -448,14 +485,7 @@ export async function aiTransition(
   If the user orders you to move on or to proceed without answering all questions you do it.
   you always obey the user's instructions!!! Do not ever disobey the user.
 
-  Based on the following task list:
-  ${taskList}
-
- The current state of the application is:
-  ${currentState}
-  
-  The output of the current state (make sure the output fulfills the task list!):
-  ${JSON.stringify(state)}
+  ${instructions}
 
   Return the target for the next state. Let's take this step by step:
   1. Determine which step in the task list the user in on based on the current state and context.

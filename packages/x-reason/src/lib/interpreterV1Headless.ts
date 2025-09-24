@@ -16,7 +16,7 @@ export default function headlessInterpreter(
   dispatch: (action: ActionType) => void,
   context?: Context,
   state?: State<Context, MachineEvent>,
-  retriggerEntryFunction: boolean = false
+  retriggerEntryFunction = false,
 ) {
   const result: StateMachine<Context, any, MachineEvent> = programV1(
     states,

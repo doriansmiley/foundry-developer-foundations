@@ -167,14 +167,16 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
     forward = true,
     executionId?: string,
     inputs = '{}',
-    xreason: string = SupportedEngines.COMS
+    xreason: string = SupportedEngines.COMS,
+    persistMachineOnTransition = false,
   ): Promise<GetNextStateResult> {
     const machine = await this.upsertState(
       plan,
       forward,
       executionId,
       inputs,
-      xreason
+      xreason,
+      persistMachineOnTransition
     );
 
     if (machine?.state) {
@@ -227,7 +229,8 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
     forward = true,
     executionId?: string,
     inputs = '{}',
-    xreason: string = SupportedEngines.COMS
+    xreason: string = SupportedEngines.COMS,
+    persistMachineOnTransition = false,
   ): Promise<MachineExecutions> {
     const solution = {
       input: '', //not relevant for this
@@ -239,7 +242,8 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
       solution,
       forward,
       JSON.parse(inputs),
-      xreason as SupportedEngines
+      xreason as SupportedEngines,
+      persistMachineOnTransition
     );
 
     const { getLog } = container.get<LoggingService>(TYPES.LoggingService);

@@ -107,7 +107,8 @@ ${readme}
       true,
       executionId,
       contextUpdateInput,
-      SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST // IMPORTANT: The X-Reason factory needs to be updated to support whatever key you define for this x-Reason
+      SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST,
+      true,
     );
   }
 
@@ -117,7 +118,8 @@ ${readme}
   const { messages } = await threadsDao.read(executionId);
   const { context } = JSON.parse(state!) as { context: Context };
   const parsedMessages = JSON.parse(messages || '[]') as { user?: string; system?: string }[];
-  const systemResponse = parsedMessages?.pop()?.system;
+  const systemResponse = parsedMessages?.[parsedMessages.length - 1]?.system;
+
 
   if (context.stateId.includes('generateEditMachine')) {
     // TODO call the code editor once the user approves the changes
@@ -173,6 +175,7 @@ ${formatted}
 
     // await user feedback
     const markdown = marked(
+      // TODO we need a way to get back the questions for the user. 
       systemResponse ? systemResponse : messages
     ) as string;
     const userResponse = await input({

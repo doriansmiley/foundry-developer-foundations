@@ -37,6 +37,14 @@ export async function confirmUserIntent(
     system: string;
   }[];
 
+  // if we are reentering the state after a clarifying questions were asked 
+  // but no response was received from the user return the previously generated response
+  if (!userResponse && context[confirmUserIntentId]?.confirmationPrompt) {
+    return {
+      confirmationPrompt: context[confirmUserIntentId]?.confirmationPrompt,
+    };
+  }
+
   const system = `
 You are a software design specialist engaged in a conversation with a human software engineer.
 
@@ -247,6 +255,11 @@ const meeting = await client.scheduleMeeting({
   ).content[0].text;
   if (!msg) {
     throw new Error('No message block found in output');
+  }
+
+  if (userResponse) {
+    // reset the user response so they can respond again!
+    context[confirmUserIntentId].userResponse = undefined;
   }
 
   parsedMessages.push({
