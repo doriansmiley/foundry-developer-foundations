@@ -349,7 +349,8 @@ export async function aiTransition(
       ${userResponse ? userResponse : 'The user has not provided feedback yet'}
       `;
   } else {
-    instructions = `The output of the current state (make sure the output fulfills the task list!):
+    instructions = `${instructions}
+    The output of the current state (make sure the output fulfills the task list!):
   ${JSON.stringify(parsedContext[parsedState.id])}`
   }
 
