@@ -87,8 +87,15 @@ export async function executeEditMachine(
         if (!byFile.has(abs)) byFile.set(abs, []);
         byFile.get(abs)!.push(op);
 
-        const sf = project.getSourceFile(abs);
-        if (!sf) throw new Error(`Unable to load SourceFile: ${abs}`);
+        let sf = project.getSourceFile(abs);
+        if (!sf) {
+            //required for unit testing
+            // In unit tests, we hydrate source files from a *virtual* filesystem (VFS) by
+            // mocking Project.prototype.addSourceFileAtPath to read from that VFS. However,
+            // those files are not preloaded into the Project (we aren't constructing the
+            // Project with a tsconfig that includes them).
+            sf = project.addSourceFileAtPath(abs);
+        }
         fileCache.set(abs, sf);
     }
 
