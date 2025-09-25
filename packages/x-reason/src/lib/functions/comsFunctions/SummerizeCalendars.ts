@@ -4,15 +4,53 @@ import {
   OfficeServiceV2,
   Summaries,
 } from '@codestrap/developer-foundations-types';
-import { 
-  extractJsonFromBackticks,
-  nowInTZ,
-  buildDateWindow,
-  startOfDay,
-  addDays,
-} from '@codestrap/developer-foundations-utils';
+import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 import { GeminiService, TYPES } from '@codestrap/developer-foundations-types';
+
+function nowInTZ(tz: string, ref: Date): Date {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const p = Object.fromEntries(
+    dtf.formatToParts(ref).map((x) => [x.type, x.value])
+  );
+  return new Date(
+    Number(p.year),
+    Number(p.month) - 1,
+    Number(p.day),
+    Number(p.hour),
+    Number(p.minute),
+    Number(p.second),
+    0
+  );
+}
+
+function startOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function addDays(d: Date, days: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+}
+
+function startOfWeekMonday(d: Date): Date {
+  const x = startOfDay(d);
+  const dow = x.getDay(); // Sun=0..Sat=6
+  const delta = dow === 0 ? -6 : 1 - dow;
+  return startOfDay(addDays(x, delta));
+}
 
 export async function summarizeCalendars(
   context: Context,
@@ -80,10 +118,35 @@ export async function summarizeCalendars(
     emails: string[];
   };
 
-  const { startDate, endDate } = buildDateWindow(timeframe, nowPT);
-  
-  const windowStartLocal = startDate ?? startOfDay(nowPT);
-  const windowEndLocal = endDate ?? startOfDay(addDays(nowPT, 1));
+  /* ---------- build PT window ---------- */
+
+  let windowStartLocal: Date;
+  let windowEndLocal: Date;
+
+  switch (timeframe) {
+    case 'tomorrow': {
+      windowStartLocal = startOfDay(addDays(nowPT, 1)); // tomorrow 00:00
+      windowEndLocal = startOfDay(addDays(nowPT, 2)); // day after tomorrow 00:00
+      break;
+    }
+    case 'this week': {
+      windowStartLocal = startOfDay(nowPT); // today 00:00
+      const nextMon = startOfWeekMonday(addDays(nowPT, 7)); // next week’s Monday 00:00
+      windowEndLocal = nextMon;
+      break;
+    }
+    case 'next week': {
+      const nextMon = startOfWeekMonday(addDays(nowPT, 7)); // next Monday 00:00
+      windowStartLocal = nextMon;                           // start of next week
+      windowEndLocal = startOfDay(addDays(nextMon, 7));     // following Monday 00:00
+      break;
+    }
+    case 'today':
+    default: {
+      windowStartLocal = startOfDay(nowPT); // today 00:00
+      windowEndLocal = startOfDay(addDays(nowPT, 1)); // tomorrow 00:00
+    }
+  }
 
   const officeService = await container.getAsync<OfficeServiceV2>(
     TYPES.OfficeService
