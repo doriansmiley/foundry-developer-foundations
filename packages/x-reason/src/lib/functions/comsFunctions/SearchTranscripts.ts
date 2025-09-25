@@ -8,9 +8,9 @@ import {
 } from '@codestrap/developer-foundations-types';
 import { 
   extractJsonFromBackticks,
-  nowInTZ,
-  buildDateWindow,
+  buildDateWindowUTC,
 } from '@codestrap/developer-foundations-utils';
+import { partsInTZ, wallClockToUTC } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 import { GeminiService, TYPES } from '@codestrap/developer-foundations-types';
 
@@ -20,7 +20,10 @@ export async function searchTranscripts(
   task?: string
 ): Promise<DriveSearchOutput> {
   const TZ = 'America/Los_Angeles';
-  const nowPT = nowInTZ(TZ, new Date()); // wall-clock PT "now"
+  const now = new Date();
+  const p = partsInTZ(now, TZ);
+  const nowString = `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}T${String(p.hour).padStart(2, '0')}:${String(p.minute).padStart(2, '0')}:${String(p.second).padStart(2, '0')}`;
+  const nowUTC = wallClockToUTC(nowString, TZ);
 
   const system = `You are a helpful virtual ai assistant tasked with extracting search parameters for transcript queries from Google Drive.`;
 
@@ -37,8 +40,7 @@ export async function searchTranscripts(
     The task from the end user:
     ${task}
 
-    The current day/time in the user's time zone (${TZ}) is:
-    ${nowPT}
+    Current time (UTC): ${nowUTC.toISOString()}
 
     You can only respond in JSON in the following format:
     {
@@ -124,7 +126,7 @@ export async function searchTranscripts(
   
   const keywords = [...topicKeywords, ...filenameKeywords];
 
-  const { startDate: searchStartDate, endDate: searchEndDate } = buildDateWindow(timeframe, nowPT);
+  const { startDate: searchStartDate, endDate: searchEndDate } = buildDateWindowUTC(timeframe, nowUTC);
 
   const searchParams: DriveSearchParams = {
     keywords,

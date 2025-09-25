@@ -10,8 +10,9 @@ import {
 } from '@codestrap/developer-foundations-types';
 import { 
   extractJsonFromBackticks,
-  nowInTZ,
-  buildDateWindow,
+  partsInTZ,
+  wallClockToUTC,
+  buildDateWindowUTC,
 } from '@codestrap/developer-foundations-utils';
 import { container } from '@codestrap/developer-foundations-di';
 import { searchTranscripts } from './SearchTranscripts';
@@ -27,8 +28,9 @@ jest.mock('@codestrap/developer-foundations-di', () => ({
 // Mock the utility functions
 jest.mock('@codestrap/developer-foundations-utils', () => ({
   extractJsonFromBackticks: jest.fn(),
-  nowInTZ: jest.fn(),
-  buildDateWindow: jest.fn(),
+  partsInTZ: jest.fn(),
+  wallClockToUTC: jest.fn(),
+  buildDateWindowUTC: jest.fn(),
 }));
 
 // Mock console methods to avoid noise in tests
@@ -75,8 +77,16 @@ describe('searchTranscripts', () => {
     mockContainer.getAsync.mockResolvedValue(mockOfficeService);
 
     // Setup mock utility functions
-    (nowInTZ as jest.Mock).mockReturnValue(new Date('2024-01-15T10:30:00.000Z'));
-    (buildDateWindow as jest.Mock).mockReturnValue({
+    (partsInTZ as jest.Mock).mockReturnValue({
+      year: 2024,
+      month: 1,
+      day: 15,
+      hour: 10,
+      minute: 30,
+      second: 0
+    });
+    (wallClockToUTC as jest.Mock).mockReturnValue(new Date('2024-01-15T10:30:00.000Z'));
+    (buildDateWindowUTC as jest.Mock).mockReturnValue({
       startDate: new Date('2024-01-15T00:00:00.000Z'),
       endDate: new Date('2024-01-16T00:00:00.000Z'),
     });
@@ -110,7 +120,7 @@ describe('searchTranscripts', () => {
         expect.stringContaining('Find today\'s standup meeting notes'),
         expect.stringContaining('You are a helpful virtual ai assistant')
       );
-      expect(buildDateWindow).toHaveBeenCalledWith('today', expect.any(Date));
+      expect(buildDateWindowUTC).toHaveBeenCalledWith('today', expect.any(Date));
       expect(result).toEqual(mockDriveResponse);
     });
 
@@ -132,7 +142,7 @@ describe('searchTranscripts', () => {
 
       const result = await searchTranscripts(mockContext, mockEvent, 'Find yesterday\'s budget discussion notes');
 
-      expect(buildDateWindow).toHaveBeenCalledWith('yesterday', expect.any(Date));
+      expect(buildDateWindowUTC).toHaveBeenCalledWith('yesterday', expect.any(Date));
       expect(result).toEqual(mockDriveResponse);
     });
 
@@ -154,7 +164,7 @@ describe('searchTranscripts', () => {
 
       const result = await searchTranscripts(mockContext, mockEvent, 'Search for product review meeting transcripts from this week');
 
-      expect(buildDateWindow).toHaveBeenCalledWith('this week', expect.any(Date));
+      expect(buildDateWindowUTC).toHaveBeenCalledWith('this week', expect.any(Date));
       expect(result).toEqual(mockDriveResponse);
     });
 
@@ -176,7 +186,7 @@ describe('searchTranscripts', () => {
 
       const result = await searchTranscripts(mockContext, mockEvent, 'Give me transcript for meeting with corner last week');
 
-      expect(buildDateWindow).toHaveBeenCalledWith('last week', expect.any(Date));
+      expect(buildDateWindowUTC).toHaveBeenCalledWith('last week', expect.any(Date));
       expect(result).toEqual(mockDriveResponse);
     });
 
@@ -198,7 +208,7 @@ describe('searchTranscripts', () => {
 
       const result = await searchTranscripts(mockContext, mockEvent, 'Search for interview transcripts from this month');
 
-      expect(buildDateWindow).toHaveBeenCalledWith('this month', expect.any(Date));
+      expect(buildDateWindowUTC).toHaveBeenCalledWith('this month', expect.any(Date));
       expect(result).toEqual(mockDriveResponse);
     });
 
@@ -220,7 +230,7 @@ describe('searchTranscripts', () => {
 
       const result = await searchTranscripts(mockContext, mockEvent, 'Find team sync notes from last month');
 
-      expect(buildDateWindow).toHaveBeenCalledWith('last month', expect.any(Date));
+      expect(buildDateWindowUTC).toHaveBeenCalledWith('last month', expect.any(Date));
       expect(result).toEqual(mockDriveResponse);
     });
 
@@ -242,7 +252,7 @@ describe('searchTranscripts', () => {
 
       const result = await searchTranscripts(mockContext, mockEvent, 'Show me all client call transcripts');
 
-      expect(buildDateWindow).toHaveBeenCalledWith('all time', expect.any(Date));
+      expect(buildDateWindowUTC).toHaveBeenCalledWith('all time', expect.any(Date));
       expect(result).toEqual(mockDriveResponse);
     });
 
@@ -264,7 +274,7 @@ describe('searchTranscripts', () => {
 
       const result = await searchTranscripts(mockContext, mockEvent, 'Find meeting notes');
 
-      expect(buildDateWindow).toHaveBeenCalledWith('today', expect.any(Date));
+      expect(buildDateWindowUTC).toHaveBeenCalledWith('today', expect.any(Date));
       expect(result).toEqual(mockDriveResponse);
     });
   });
@@ -565,8 +575,8 @@ describe('searchTranscripts', () => {
       const result = await searchTranscripts(mockContext, mockEvent, 'Find meeting notes');
       
       expect(result).toEqual(mockDriveResponse);
-      // Should still call buildDateWindow with undefined timeframe
-      expect(buildDateWindow).toHaveBeenCalledWith(undefined, expect.any(Date));
+      // Should still call buildDateWindowUTC with undefined timeframe
+      expect(buildDateWindowUTC).toHaveBeenCalledWith(undefined, expect.any(Date));
     });
 
     it('should handle missing topicKeywords in Gemini response', async () => {
@@ -694,8 +704,8 @@ describe('searchTranscripts', () => {
       (extractJsonFromBackticks as jest.Mock).mockReturnValue(mockGeminiResponse);
       mockGeminiService.mockResolvedValue('```json\n' + mockGeminiResponse + '\n```');
       
-      // Mock buildDateWindow to return undefined dates for 'all time'
-      (buildDateWindow as jest.Mock).mockReturnValue({
+      // Mock buildDateWindowUTC to return undefined dates for 'all time'
+      (buildDateWindowUTC as jest.Mock).mockReturnValue({
         startDate: undefined,
         endDate: undefined,
       });
@@ -764,7 +774,7 @@ describe('searchTranscripts', () => {
       expect(mockContainer.getAsync).toHaveBeenCalledWith(TYPES.OfficeService);
     });
 
-    it('should call nowInTZ with correct timezone', async () => {
+    it('should call partsInTZ and wallClockToUTC with correct timezone', async () => {
       const mockGeminiResponse = JSON.stringify({
         timeframe: 'today',
         topicKeywords: ['meeting'],
@@ -782,7 +792,8 @@ describe('searchTranscripts', () => {
 
       await searchTranscripts(mockContext, mockEvent, 'Find meeting notes');
 
-      expect(nowInTZ).toHaveBeenCalledWith('America/Los_Angeles', expect.any(Date));
+      expect(partsInTZ).toHaveBeenCalledWith(expect.any(Date), 'America/Los_Angeles');
+      expect(wallClockToUTC).toHaveBeenCalledWith(expect.any(String), 'America/Los_Angeles');
     });
 
     it('should call extractJsonFromBackticks with Gemini response', async () => {
