@@ -193,8 +193,7 @@ ${formatted}
   // context.stateId is the id of the state where we left off, not the final state in the machine which in pause, success, or fail
   if (
     context.stateId.includes('confirmUserIntent') ||
-    context.stateId.includes('architectImplementation') ||
-    context.stateId.includes('pause') // some states end on pause which also require human review
+    context.stateId.includes('architectImplementation')
   ) {
 
     const prefix = context.stateId.includes('architectImplementation') ? 'designDoc' : 'spec';
