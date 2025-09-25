@@ -2,6 +2,7 @@ import {
   Context,
   MachineEvent,
   OfficeServiceV2,
+  DriveFile,
   DriveSearchOutput,
   DriveSearchParams,
   DriveDateField,
@@ -121,7 +122,7 @@ describe('searchTranscripts', () => {
         expect.stringContaining('You are a helpful virtual ai assistant')
       );
       expect(buildDateWindowUTC).toHaveBeenCalledWith('today', expect.any(Date));
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
 
     it('should classify "yesterday" timeframe correctly', async () => {
@@ -143,7 +144,7 @@ describe('searchTranscripts', () => {
       const result = await searchTranscripts(mockContext, mockEvent, 'Find yesterday\'s budget discussion notes');
 
       expect(buildDateWindowUTC).toHaveBeenCalledWith('yesterday', expect.any(Date));
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
 
     it('should classify "this week" timeframe correctly', async () => {
@@ -165,7 +166,7 @@ describe('searchTranscripts', () => {
       const result = await searchTranscripts(mockContext, mockEvent, 'Search for product review meeting transcripts from this week');
 
       expect(buildDateWindowUTC).toHaveBeenCalledWith('this week', expect.any(Date));
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
 
     it('should classify "last week" timeframe correctly', async () => {
@@ -187,7 +188,7 @@ describe('searchTranscripts', () => {
       const result = await searchTranscripts(mockContext, mockEvent, 'Give me transcript for meeting with corner last week');
 
       expect(buildDateWindowUTC).toHaveBeenCalledWith('last week', expect.any(Date));
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
 
     it('should classify "this month" timeframe correctly', async () => {
@@ -209,7 +210,7 @@ describe('searchTranscripts', () => {
       const result = await searchTranscripts(mockContext, mockEvent, 'Search for interview transcripts from this month');
 
       expect(buildDateWindowUTC).toHaveBeenCalledWith('this month', expect.any(Date));
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
 
     it('should classify "last month" timeframe correctly', async () => {
@@ -231,7 +232,7 @@ describe('searchTranscripts', () => {
       const result = await searchTranscripts(mockContext, mockEvent, 'Find team sync notes from last month');
 
       expect(buildDateWindowUTC).toHaveBeenCalledWith('last month', expect.any(Date));
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
 
     it('should classify "all time" timeframe correctly', async () => {
@@ -253,7 +254,7 @@ describe('searchTranscripts', () => {
       const result = await searchTranscripts(mockContext, mockEvent, 'Show me all client call transcripts');
 
       expect(buildDateWindowUTC).toHaveBeenCalledWith('all time', expect.any(Date));
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
 
     it('should default to "today" when no timeframe is specified', async () => {
@@ -275,7 +276,7 @@ describe('searchTranscripts', () => {
       const result = await searchTranscripts(mockContext, mockEvent, 'Find meeting notes');
 
       expect(buildDateWindowUTC).toHaveBeenCalledWith('today', expect.any(Date));
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
   });
 
@@ -465,44 +466,103 @@ describe('searchTranscripts', () => {
   });
 
   describe('Response Handling', () => {
-    it('should return Drive search results successfully', async () => {
+    it('should return top 3 selected files successfully', async () => {
       const mockGeminiResponse = JSON.stringify({
         timeframe: 'today',
         topicKeywords: ['meeting'],
       });
       
-      (extractJsonFromBackticks as jest.Mock).mockReturnValue(mockGeminiResponse);
-      mockGeminiService.mockResolvedValue('```json\n' + mockGeminiResponse + '\n```');
+      const mockFileSelectionResponse = JSON.stringify({
+        selectedIds: ['file1', 'file2', 'file3']
+      });
       
+      (extractJsonFromBackticks as jest.Mock)
+        .mockReturnValueOnce(mockGeminiResponse)
+        .mockReturnValueOnce(mockFileSelectionResponse);
+      
+      mockGeminiService
+        .mockResolvedValueOnce('```json\n' + mockGeminiResponse + '\n```')
+        .mockResolvedValueOnce('```json\n' + mockFileSelectionResponse + '\n```');
+      
+      const mockFiles: DriveFile[] = [
+        {
+          id: 'file1',
+          name: 'Meeting Notes - Transcript',
+          mimeType: 'application/vnd.google-apps.document',
+          size: '1024',
+          createdTime: '2024-01-15T09:00:00.000Z',
+          modifiedTime: '2024-01-15T10:00:00.000Z',
+          webViewLink: 'https://drive.google.com/file/d/file1/view',
+          webContentLink: 'https://drive.google.com/uc?id=file1',
+          owners: [
+            {
+              displayName: 'John Doe',
+              emailAddress: 'john@example.com',
+            },
+          ],
+          lastModifyingUser: {
+            displayName: 'Jane Doe',
+            emailAddress: 'jane@example.com',
+          },
+          parents: ['parent1'],
+          description: 'Meeting transcript',
+          starred: false,
+          trashed: false,
+        },
+        {
+          id: 'file2',
+          name: 'Another Meeting - Notes',
+          mimeType: 'application/vnd.google-apps.document',
+          size: '2048',
+          createdTime: '2024-01-14T09:00:00.000Z',
+          modifiedTime: '2024-01-14T10:00:00.000Z',
+          webViewLink: 'https://drive.google.com/file/d/file2/view',
+          webContentLink: 'https://drive.google.com/uc?id=file2',
+          owners: [
+            {
+              displayName: 'John Doe',
+              emailAddress: 'john@example.com',
+            },
+          ],
+          lastModifyingUser: {
+            displayName: 'Jane Doe',
+            emailAddress: 'jane@example.com',
+          },
+          parents: ['parent1'],
+          description: 'Another meeting notes',
+          starred: false,
+          trashed: false,
+        },
+        {
+          id: 'file3',
+          name: 'Third Meeting - Transcript',
+          mimeType: 'application/vnd.google-apps.document',
+          size: '1536',
+          createdTime: '2024-01-13T09:00:00.000Z',
+          modifiedTime: '2024-01-13T10:00:00.000Z',
+          webViewLink: 'https://drive.google.com/file/d/file3/view',
+          webContentLink: 'https://drive.google.com/uc?id=file3',
+          owners: [
+            {
+              displayName: 'John Doe',
+              emailAddress: 'john@example.com',
+            },
+          ],
+          lastModifyingUser: {
+            displayName: 'Jane Doe',
+            emailAddress: 'jane@example.com',
+          },
+          parents: ['parent1'],
+          description: 'Third meeting transcript',
+          starred: false,
+          trashed: false,
+        },
+      ];
+
       const mockDriveResponse: DriveSearchOutput = {
         message: 'Search completed successfully',
-        files: [
-          {
-            id: 'file1',
-            name: 'Meeting Notes - Transcript',
-            mimeType: 'application/vnd.google-apps.document',
-            size: '1024',
-            createdTime: '2024-01-15T09:00:00.000Z',
-            modifiedTime: '2024-01-15T10:00:00.000Z',
-            webViewLink: 'https://drive.google.com/file/d/file1/view',
-            webContentLink: 'https://drive.google.com/uc?id=file1',
-            owners: [
-              {
-                displayName: 'John Doe',
-                emailAddress: 'john@example.com',
-              },
-            ],
-            lastModifyingUser: {
-              displayName: 'Jane Doe',
-              emailAddress: 'jane@example.com',
-            },
-            parents: ['parent1'],
-            description: 'Meeting transcript',
-            starred: false,
-            trashed: false,
-          },
-        ],
-        totalResults: 1,
+        files: mockFiles,
+        totalResults: 3,
         nextPageToken: undefined,
         incompleteSearch: false,
       };
@@ -510,7 +570,7 @@ describe('searchTranscripts', () => {
 
       const result = await searchTranscripts(mockContext, mockEvent, 'Find today\'s meeting notes');
 
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual(mockFiles);
     });
 
     it('should handle empty search results', async () => {
@@ -533,7 +593,7 @@ describe('searchTranscripts', () => {
 
       const result = await searchTranscripts(mockContext, mockEvent, 'Find nonexistent meeting notes');
 
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
   });
 
@@ -574,7 +634,7 @@ describe('searchTranscripts', () => {
       // The function should handle missing timeframe gracefully by using default
       const result = await searchTranscripts(mockContext, mockEvent, 'Find meeting notes');
       
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
       // Should still call buildDateWindowUTC with undefined timeframe
       expect(buildDateWindowUTC).toHaveBeenCalledWith(undefined, expect.any(Date));
     });
@@ -642,7 +702,7 @@ describe('searchTranscripts', () => {
         expect.stringContaining('undefined'),
         expect.any(String)
       );
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
 
     it('should handle empty task parameter', async () => {
@@ -667,7 +727,7 @@ describe('searchTranscripts', () => {
         expect.stringContaining(''),
         expect.any(String)
       );
-      expect(result).toEqual(mockDriveResponse);
+      expect(result).toEqual([]);
     });
 
     it('should handle empty topicKeywords array', async () => {
