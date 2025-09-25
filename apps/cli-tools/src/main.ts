@@ -102,6 +102,39 @@ ${readme}
     );
     executionId = result.executionId;
   } else {
+    const machineDao = container.get<MachineDao>(TYPES.MachineDao);
+    const { state } = await machineDao.read(executionId);
+    const { context } = JSON.parse(state!) as { context: Context };
+
+    if (
+      context.stateId.includes('confirmUserIntent') ||
+      context.stateId.includes('architectImplementation')
+    ) {
+      // capture any edits the MD files
+      const prefix = context.stateId.includes('architectImplementation') ? 'designDoc' : 'spec';
+      const p = path.join(process.cwd(), `${prefix}-${executionId}.md`);
+
+      try {
+        // check if the file exists
+        await fs.promises.access(p, fs.constants.F_OK);
+        const contents = await fs.promises.readFile(p, 'utf8');
+        const inputUpdates = JSON.parse(contextUpdateInput || '{}');
+        let currentStateValue = context[context.stateId] || {};
+        if (inputUpdates[context.stateId]) {
+          currentStateValue = { ...currentStateValue, ...inputUpdates[context.stateId] }
+        }
+        // destructure current values and override with new ones
+        const contextUpdate = {
+          ...inputUpdates,
+          [context.stateId]: { ...currentStateValue, confirmationPrompt: contents },
+        };
+
+        contextUpdateInput = JSON.stringify(contextUpdate);
+      } catch {
+        console.log(`now file found for: ${p}`);
+      }
+    }
+
     await larry.getNextState(
       undefined,
       true,

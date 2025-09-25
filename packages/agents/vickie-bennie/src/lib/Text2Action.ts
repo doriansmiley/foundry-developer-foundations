@@ -249,16 +249,32 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
     const { getLog } = container.get<LoggingService>(TYPES.LoggingService);
 
     const machineDao = container.get<MachineDao>(TYPES.MachineDao);
-    const machine = await machineDao.upsert(
-      solution.id,
-      JSON.stringify(result.stateMachine),
-      result.jsonState,
-      getLog(solution.id) ?? '',
-      '', // we have to send default values for lockOwner and lockUntil or the OSDK will shit a brick. It still can't handle optional params
-      1
-    );
 
-    return machine;
+    // this is to prevent race condition because edits resulting from the state transition when auto save is on
+    // may still be ongoing. This results in errors in platforms like Foundry where stale writes are detected and prevented
+    if (!persistMachineOnTransition) {
+      const machine = await machineDao.upsert(
+        solution.id,
+        JSON.stringify(result.stateMachine),
+        result.jsonState,
+        getLog(solution.id) ?? '',
+        '', // we have to send default values for lockOwner and lockUntil or the OSDK will shit a brick. It still can't handle optional params
+        1
+      );
+
+      return machine;
+    }
+
+    const state = JSON.parse(result.jsonState);
+
+    return {
+      id: solution.id,
+      currentState: state.value,
+      logs: getLog(solution.id) ?? '',
+      machine: JSON.stringify(result.stateMachine),
+      state: result.jsonState,
+    }
+
   }
 
   @Trace({
