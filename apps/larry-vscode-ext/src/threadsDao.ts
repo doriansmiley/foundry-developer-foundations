@@ -1,19 +1,30 @@
+// this is copy of packages/services/sql-lite/src/lib/threadsDao.ts
+// do not modify this file, it has to be a copy of the original file
+// it is copied because of the imports issue and builds issue I dont want to spend time fixing
 import initSqlJs from 'sql.js';
 import * as path from 'path';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { randomUUID } from 'crypto';
+// this is problematic import, for now just hardcoded types below
+// import { Threads, ThreadsDao } from '@codestrap/developer-foundations-types';
 
-type ThreadsDao = any;
-type Threads = {
-  id: string;
-  appId?: string;
-  messages?: string;
-  userId?: string;
-  worktreeId?: string;
-  name?: string;
-  type?: string;
-  updatedAt?: string;
+export type ThreadsDao = {
+  upsert: (messages: string, appId: string, id?: string) => Promise<Threads>;
+  delete: (id: string) => Promise<void>;
+  read: (id: string) => Promise<Threads>;
+  listAll?: () => Promise<Threads[]>;
 };
+
+export interface Threads {
+  /** appId */
+  appId: string | undefined;
+  /** id */
+  readonly id: string;
+  /** messages */
+  messages: string | undefined;
+  /** userId */
+  userId: string | undefined;
+}
 
 let SQL: any = null;
 let db: any = null;
@@ -55,33 +66,11 @@ async function initDatabase(
       id TEXT PRIMARY KEY,
       appId TEXT,
       messages TEXT,
-      worktreeId TEXT,
-      type TEXT,
       userId TEXT,
-      name TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
-
-  // Add missing columns if they don't exist (migration)
-  try {
-    db.run('ALTER TABLE threads ADD COLUMN worktreeId TEXT;');
-  } catch (e) {
-    // Column already exists, ignore
-  }
-
-  try {
-    db.run('ALTER TABLE threads ADD COLUMN type TEXT;');
-  } catch (e) {
-    // Column already exists, ignore
-  }
-
-  try {
-    db.run('ALTER TABLE threads ADD COLUMN name TEXT;');
-  } catch (e) {
-    // Column already exists, ignore
-  }
 
   db.run('CREATE INDEX IF NOT EXISTS idx_threads_appId ON threads(appId);');
 
@@ -114,6 +103,19 @@ function ensureDb() {
   }
 }
 
+function run(sql: string, params: unknown[] = []): void {
+  ensureDb();
+  db.run(sql, params);
+}
+
+function get<T = any>(sql: string, params: unknown[] = []): T | undefined {
+  ensureDb();
+  const stmt = db.prepare(sql);
+  const result = stmt.getAsObject(params);
+  stmt.free();
+  return result as T | undefined;
+}
+
 async function ensureInitialized() {
   await initDatabase();
 }
@@ -123,61 +125,47 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
     upsert: async (
       messages: string,
       appId: string,
-      id?: string,
-      worktreeId?: string,
-      name?: string
+      id?: string
     ): Promise<Threads> => {
       await ensureInitialized();
-      ensureDb();
 
       const threadId = id || randomUUID();
 
-      console.log('upsert: Saving thread', threadId, 'with appId:', appId);
-      console.log('upsert: Messages length:', messages?.length || 0);
+      const sql = `INSERT INTO threads (id, appId, messages, userId, updated_at) VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)
+        ON CONFLICT(id) DO UPDATE SET appId=excluded.appId, messages=excluded.messages, updated_at=CURRENT_TIMESTAMP`;
 
-      // Use REPLACE for upsert functionality
-      db.run(
-        `REPLACE INTO threads (id, appId, messages, worktreeId, name, type, userId, updated_at) 
-         VALUES (?, ?, ?, ?, ?, NULL, NULL, CURRENT_TIMESTAMP)`,
-        [threadId, appId, messages, worktreeId || null, name || null]
-      );
+      run(sql, [threadId, appId, messages]);
 
-      console.log('upsert: SQL executed successfully');
+      const row = get<{
+        id: string;
+        appId: string | null;
+        messages: string | null;
+        userId: string | null;
+      }>('SELECT id, appId, messages, userId FROM threads WHERE id = ?', [
+        threadId,
+      ]);
 
-      const stmt = db.prepare(
-        'SELECT id, appId, messages, worktreeId, name, type, userId, updated_at FROM threads WHERE id = ?'
-      );
-      const rows = stmt.getAsObject([threadId]);
-      stmt.free();
-
-      if (!rows || !rows.id) {
+      if (!row) {
         throw new Error('Failed to upsert and retrieve thread');
       }
 
       const thread: Threads = {
-        id: rows.id as string,
-        appId: (rows.appId as string) || undefined,
-        messages: (rows.messages as string) || undefined,
-        userId: (rows.userId as string) || undefined,
-        worktreeId: (rows.worktreeId as string) || undefined,
-        name: (rows.name as string) || undefined,
-        type: (rows.type as string) || undefined,
-        updatedAt: (rows.updated_at as string) || undefined,
+        id: row.id,
+        appId: row.appId ?? undefined,
+        messages: row.messages ?? undefined,
+        userId: row.userId ?? undefined,
       };
 
       // Save to file
       const dbPath = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH;
       await saveDatabase(dbPath);
-      console.log('Thread upserted and saved to:', dbPath);
 
       return thread;
     },
 
     delete: async (id: string): Promise<void> => {
       await ensureInitialized();
-      ensureDb();
-
-      db.run('DELETE FROM threads WHERE id = ?', [id]);
+      run('DELETE FROM threads WHERE id = ?', [id]);
 
       // Save to file
       await saveDatabase(process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH);
@@ -185,27 +173,23 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
 
     read: async (id: string): Promise<Threads> => {
       await ensureInitialized();
-      ensureDb();
 
-      const stmt = db.prepare(
-        'SELECT id, appId, messages, worktreeId, name, type, userId, updated_at FROM threads WHERE id = ?'
-      );
-      const rows = stmt.getAsObject([id]);
-      stmt.free();
+      const row = get<{
+        id: string;
+        appId: string | null;
+        messages: string | null;
+        userId: string | null;
+      }>('SELECT id, appId, messages, userId FROM threads WHERE id = ?', [id]);
 
-      if (!rows || !rows.id) {
+      if (!row) {
         throw new Error(`Thread not found for id ${id}`);
       }
 
       const thread: Threads = {
-        id: rows.id as string,
-        appId: (rows.appId as string) || undefined,
-        messages: (rows.messages as string) || undefined,
-        userId: (rows.userId as string) || undefined,
-        worktreeId: (rows.worktreeId as string) || undefined,
-        name: (rows.name as string) || undefined,
-        type: (rows.type as string) || undefined,
-        updatedAt: (rows.updated_at as string) || undefined,
+        id: row.id,
+        appId: row.appId ?? undefined,
+        messages: row.messages ?? undefined,
+        userId: row.userId ?? undefined,
       };
 
       return thread;
@@ -213,34 +197,23 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
 
     listAll: async (): Promise<Threads[]> => {
       await ensureInitialized();
-      ensureDb();
 
-      const dbPath = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH;
-      console.log('listAll: Querying database at:', dbPath);
       const stmt = db.prepare(
-        'SELECT id, appId, messages, worktreeId, name, type, userId, updated_at FROM threads ORDER BY updated_at DESC'
+        'SELECT id, appId, messages, userId FROM threads ORDER BY updated_at DESC'
       );
       const results: Threads[] = [];
 
-      let rowCount = 0;
       while (stmt.step()) {
         const row = stmt.getAsObject();
-        rowCount++;
-        console.log(`Row ${rowCount}:`, row);
         results.push({
           id: row.id as string,
-          appId: (row.appId as string) || undefined,
-          messages: (row.messages as string) || undefined,
-          userId: (row.userId as string) || undefined,
-          worktreeId: (row.worktreeId as string) || undefined,
-          name: (row.name as string) || undefined,
-          type: (row.type as string) || undefined,
-          updatedAt: (row.updated_at as string) || undefined,
+          appId: (row.appId as string) ?? undefined,
+          messages: (row.messages as string) ?? undefined,
+          userId: (row.userId as string) ?? undefined,
         });
       }
 
       stmt.free();
-      console.log(`listAll: Found ${results.length} threads total`);
       return results;
     },
   };
