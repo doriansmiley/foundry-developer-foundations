@@ -4,6 +4,8 @@ import { promisify } from 'util';
 import { makeSqlLiteThreadsDao } from './threadsDao';
 import { Conversation, Message } from './types';
 import { findProjectRoot } from './findProjectRoot';
+import path from 'path';
+import * as os from 'os';
 
 const execAsync = promisify(exec);
 
@@ -12,14 +14,11 @@ export function activate(context: vscode.ExtensionContext) {
   try {
     const config = vscode.workspace.getConfiguration('larry');
     const configuredDbPath = config.get<string>('dbPath');
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    const baseUri = workspaceFolder?.uri || vscode.Uri.file(process.cwd());
-    const defaultDbPath = vscode.Uri.joinPath(
-      baseUri,
-      '.larry',
-      'db',
+    const defaultDbPath = path.join(
+      require('os').homedir(),
+      'larry-db',
       'developer-foundations-threads.sqlite'
-    ).fsPath;
+    );
     const effectiveDbPath =
       configuredDbPath && configuredDbPath.trim().length > 0
         ? configuredDbPath
@@ -66,9 +65,31 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         (thread: any) => thread.appId === 'larry-conversation'
       );
 
+      // Map database threads to Conversation objects
+      const conversations: Conversation[] = filteredThreads.map(
+        (thread: any) => ({
+          conversationId: thread.id,
+          agentId: thread.agentId || 'unknown',
+          updatedAt: thread.updatedAt || new Date().toISOString(),
+          name: thread.name || 'Unnamed Session',
+          worktreeId: thread.worktreeId || '',
+          messages: thread.messages ? JSON.parse(thread.messages) : [],
+        })
+      );
+
+      console.log(
+        'Mapped conversations:',
+        conversations.map((c) => ({
+          id: c.conversationId,
+          worktreeId: c.worktreeId,
+          name: c.name,
+        }))
+      );
+
       this.view?.webview.postMessage({
         type: 'sessionsLoaded',
-        sessions: filteredThreads,
+        sessions: conversations,
+        currentWorktreeId: await this.getCurrentWorktreeId(),
       });
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -164,7 +185,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
       const dockerfilePath = vscode.Uri.joinPath(
         vscode.Uri.file(foundryProjectRoot),
-        'Codebase.Dockerfile'
+        'Larry.Dockerfile'
       );
       const dockerfileExists = await vscode.workspace.fs
         .stat(dockerfilePath)
@@ -175,11 +196,11 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
       if (!dockerfileExists) {
         throw new Error(
-          `Codebase.Dockerfile not found at ${dockerfilePath.fsPath}`
+          `Larry.Dockerfile not found at ${dockerfilePath.fsPath}`
         );
       }
 
-      await execAsync(`docker build -f Codebase.Dockerfile -t larry-server .`, {
+      await execAsync(`docker build -f Larry.Dockerfile -t larry-server .`, {
         cwd: foundryProjectRoot,
       });
     } catch (error) {
@@ -188,26 +209,41 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async startLarryContainer(conversationId: string): Promise<string> {
-    try {
-      // Build image if not exists
-      await this.buildDockerImage();
+  private async startLarryContainer(
+    conversationId: string,
+    worktreeId: string
+  ): Promise<string> {
+    // for now let's skip building the image
+    // await this.buildDockerImage();
 
+    try {
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (!workspaceFolder) {
         throw new Error('No workspace folder found');
       }
 
-      // Create .larry directory if it doesn't exist
-      const larryDir = vscode.Uri.joinPath(workspaceFolder.uri, '.larry');
-      await vscode.workspace.fs.createDirectory(larryDir);
-
       const containerName = `larry-server-${conversationId}`;
 
-      // Run container with mounted to worktree path
+      try {
+        await execAsync(`docker rm -f ${containerName}`);
+        console.log(`Cleaned up existing container: ${containerName}`);
+      } catch (cleanupError) {
+        // Container doesn't exist, which is fine
+      }
+
+      const worktreePath = path.join(
+        workspaceFolder.uri.fsPath,
+        '.larry',
+        'worktrees',
+        worktreeId
+      );
       const { stdout } = await execAsync(
-        `docker run -d --name ${containerName} -e CONVERSATION_ID=${conversationId} -v "${workspaceFolder.uri.fsPath}:/app" larry-server`,
-        { cwd: workspaceFolder.uri.fsPath }
+        `docker run -d --name ${containerName} \
+   -e CONVERSATION_ID=${conversationId} \
+   -v "${worktreePath}:/workspace:rw" \
+      -v "${require('os').homedir()}/larry-db:/larry-db:rw" \
+   --user 1001:1001 \
+   larry-server`
       );
 
       const containerId = stdout.trim();
@@ -366,7 +402,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         if (openFolder === 'Open Folder') {
           await vscode.commands.executeCommand('vscode.openFolder');
         }
-        return;
+        return finalWorktreeName;
       }
 
       console.log('Using workspace folder:', workspaceFolder.uri.fsPath);
@@ -484,6 +520,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
               sessionName,
               worktreeName: finalWorktreeName,
               branchName: branchName,
+              worktreeId: finalWorktreeName,
               worktreePath: worktreePath.fsPath,
               agentId,
               conversationId,
@@ -503,6 +540,8 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
           `Failed to create git worktree: ${gitError.message || gitError}`
         );
       }
+
+      return finalWorktreeName;
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to create worktree: ${error}`);
     }
@@ -792,11 +831,17 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       if (msg?.type === 'createSession') {
-        await this.createSessionWithWorktree(
+        const worktreeId = await this.createSessionWithWorktree(
           msg.sessionName,
           msg.agentId,
           msg.conversationId
         );
+        view.webview.postMessage({
+          type: 'sessionCreated',
+          worktreeId: worktreeId,
+          conversationId: msg.conversationId,
+          sessionName: msg.sessionName,
+        });
         return;
       }
       if (msg?.type === 'checkWorktreeExists') {
@@ -804,6 +849,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         view.webview.postMessage({
           type: 'worktreeExists',
           worktreeId: msg.worktreeId,
+          conversationId: msg.conversationId,
           exists,
         });
         return;
@@ -822,7 +868,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === 'startLarryServer') {
         try {
-          await this.startLarryContainer(msg.conversationId);
+          await this.startLarryContainer(msg.conversationId, msg.worktreeId);
           view.webview.postMessage({
             type: 'larryServerStarted',
             conversationId: msg.conversationId,
