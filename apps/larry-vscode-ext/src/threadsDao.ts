@@ -20,7 +20,7 @@ let db: any = null;
 
 // Note: In VSCode extension context, the DB path should be set via environment variable
 // by the extension.ts file using proper VSCode workspace APIs
-const DEFAULT_DB_PATH = '.larry/db/developer-foundations-threads.sqlite';
+const DEFAULT_DB_PATH = '/larry-db/developer-foundations-threads.sqlite';
 
 async function initDatabase(
   dbPath: string = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH

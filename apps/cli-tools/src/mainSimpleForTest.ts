@@ -1,31 +1,3 @@
-/**
- * Unified Message Structure for VS Code Extension and Larry App Communication
- *
- * Messages are stored in SQLite and have the following structure:
- *
- * {
- *   "conversationId": "conversation-uuid",
- *   "id": "unique-message-id",
- *   "updatedAt": "2024-01-01T00:00:00.000Z",
- *   "type": "string", // in future e.g "markdown", "widget", etc.
- *   "content": "message content",
- *   "metadata": {
- *     "isUserTurn": boolean,  // indicates if it's user's turn to respond - this is how extension will know if allow user to answer
- *     "widgetData"?: Record<string, any> // for future widget support
- *   }
- * }
- *
- * Conversation Structure:
- * {
- *   "conversationId": "conversation-uuid",
- *   "updatedAt": "2024-01-15T10:30:00Z",
- *   "name": "Session Name",
- *   "gitworktreeId": "worktree-id",
- *   "worktreePath": ".larry/worktrees/worktree-id",
- *   "messages": Message[]
- * }
- */
-
 import {
   Larry,
   LarryResponse,
@@ -74,7 +46,7 @@ export async function processUserInput(
   const userId = process.env.FOUNDRY_TEST_USER || 'default-user';
 
   // Get Larry's response
-  const result = await larry.askLarry(userInput, userId, conversationId);
+  await larry.askLarry(userInput, userId, conversationId);
 
   // Read the updated thread to get Larry's response
   const { messages } = await threadsDao.read(conversationId);

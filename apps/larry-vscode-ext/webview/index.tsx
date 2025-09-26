@@ -17,7 +17,7 @@ function App() {
 	const [currentSessionId, setCurrentSessionId] = useState<string>('');
 	const [view, setView] = useState<'sessions' | 'chat' | 'agent-select' | 'create-session' | 'worktree-created'>('sessions');
 	const [currentWorktreeId, setCurrentWorktreeId] = useState<string>('');
-	const [createdWorktree, setCreatedWorktree] = useState<{sessionName: string; worktreeName: string; branchName?: string; worktreePath: string} | null>(null);
+	const [createdWorktree, setCreatedWorktree] = useState<{sessionName: string; worktreeName: string; branchName?: string; worktreeId: string} | null>(null);
 	const [worktreeStatus, setWorktreeStatus] = useState<'checking' | 'exists' | 'missing' | 'creating' | 'mounting' | 'ready'>('checking');
 	const [currentSession, setCurrentSession] = useState<Conversation | null>(null);
 	const [currentWorktreeIdFromExtension, setCurrentWorktreeIdFromExtension] = useState<string>('');
@@ -29,11 +29,12 @@ function App() {
 
 
 	// Start Docker container for Larry server
-	const startLarryServer = async (conversationId: string) => {
+	const startLarryServer = async (conversationId: string, worktreeId: string) => {
 		try {
 			vscode.postMessage({
 				type: 'startLarryServer',
-				conversationId: conversationId
+				conversationId: conversationId,
+				worktreeId: worktreeId
 			});
 		} catch (error) {
 			console.error('Error starting Larry server:', error);
@@ -45,31 +46,28 @@ function App() {
 		async function onMsg(e: MessageEvent) {
 			const m = (e as any).data;
 			if (m?.type === 'worktreeChanged') {
+				console.log('Worktree changed to:', m.worktreeId);
 				setCurrentWorktreeIdFromExtension(m.worktreeId);
 				// The useEffect will handle the session matching
 			}
 			if (m?.type === 'worktreeCreated') {
+				setCurrentWorktreeIdFromExtension(m.worktreeId);
 				setCreatedWorktree({
 					sessionName: m.sessionName,
 					worktreeName: m.worktreeName,
 					branchName: m.branchName,
-					worktreePath: m.worktreePath
+					worktreeId: m.worktreeId
 				});
 				setView('worktree-created');
 				setWorktreeStatus('mounting');
-				setTimeout( () => {
-					setWorktreeStatus('ready');
-				}, 3000);
-				// await startLarryServer(m.conversationId);
-				// setWorktreeStatus('ready');
+				await startLarryServer(m.conversationId, m.worktreeId);
+				setWorktreeStatus('ready');	
 			}
 			if (m?.type === 'worktreeExists') {
 				if (m.exists) {
 					setWorktreeStatus('mounting');
-					// await startLarryServer(m.conversationId);
-					setTimeout( () => {
-						setWorktreeStatus('ready');
-					}, 3000);
+					await startLarryServer(m.conversationId, m.worktreeId);
+					setWorktreeStatus('ready');
 				} else {
 					setWorktreeStatus('missing');
 				}
@@ -104,16 +102,12 @@ function App() {
 		// Generate new conversation ID
 		const conversationId = generateConversationId();
 		
-		// Start Larry server in Docker
-		await startLarryServer(conversationId);
-		
 		// Create worktree
 		vscode.postMessage({ 
 			type: 'createSession', 
 			sessionName, 
 			conversationId,
 			agentId,
-			worktreePath: `.larry/worktrees/${conversationId}`
 		});
 	}
 
@@ -121,7 +115,7 @@ function App() {
 		setWorktreeStatus('creating');
 		vscode.postMessage({ type: 'createMissingWorktree', worktreeId });
 
-		await startLarryServer(currentSessionId);
+		await startLarryServer(currentSessionId, worktreeId);
 	}
 
 	function openWorktree(worktreeId: string) {
@@ -135,6 +129,13 @@ function App() {
 		setView('create-session');
 	}
 
+	async function openChat(session: Conversation) {
+		setCurrentSession(session);
+		setCurrentSessionId(session.conversationId);
+		setCurrentWorktreeId(session.worktreeId);
+		setView('chat');
+	}
+
 	async function openSession(session: Conversation) {
 		setCurrentSession(session);
 		setCurrentSessionId(session.conversationId);
@@ -144,16 +145,29 @@ function App() {
 		setView('worktree-created');
 		
 		// Check if worktree exists
-		vscode.postMessage({ type: 'checkWorktreeExists', worktreeId: session.worktreeId });
+		vscode.postMessage({ type: 'checkWorktreeExists', worktreeId: session.worktreeId, conversationId: session.conversationId });
 	}
 
 	const AppShell = ({ children }: any) => <div class="app">{children}</div>;
 
+	// return (
+	// 	<AppShell>
+	// 		<Chat 
+	// 			vscode={vscode}
+	// 			currentWorktreeId={currentWorktreeId}
+	// 			goBackToSessions={() => setView('sessions')}
+	// 			currentSessionId={currentSessionId}
+	// 			onLeaveWorktree={() => 
+	// 			{ setView('sessions'); setCurrentSessionId('') 
+	// 				setCurrentWorktreeId('')
+	// 			} } />
+	// 	</AppShell>
+	// );
 	// Sessions view
 	if (view === 'sessions') {
 		return (
 			<AppShell>
-				<SessionsList vscode={vscode} onCreateNewSession={onCreateNewSessionClick} onOpenSession={openSession} currentWorktreeId={currentWorktreeIdFromExtension} />
+				<SessionsList vscode={vscode} onCreateNewSession={onCreateNewSessionClick} onOpenSession={openSession} onOpenChat={openChat} />
 			</AppShell>
 		);
 	}

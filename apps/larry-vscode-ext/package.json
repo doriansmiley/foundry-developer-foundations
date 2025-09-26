@@ -63,7 +63,7 @@
     "esbuild": "^0.21.0",
     "preact": "^10.22.0",
     "typescript": "^5.4.0",
-    "vsce": "^2.15.0"
+    "vsce": "^2.15.0" 
   },
   "dependencies": {
     "@primer/css": "^22.0.2",

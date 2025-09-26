@@ -14515,7 +14515,7 @@
   }
 
   // apps/larry-vscode-ext/webview/views/sessionsList.tsx
-  function SessionsList({ vscode: vscode2, onCreateNewSession, onOpenSession, currentWorktreeId }) {
+  function SessionsList({ vscode: vscode2, onCreateNewSession, onOpenSession, onOpenChat }) {
     const [sessions, setSessions] = d2([]);
     const loadSessions = async () => {
       try {
@@ -14530,22 +14530,21 @@
         const m4 = e3.data;
         if (m4?.type === "sessionsLoaded") {
           setSessions(m4.sessions);
+          if (m4.currentWorktreeId && m4.sessions.length > 0) {
+            console.log("Checking for matching session with worktreeId:", m4.currentWorktreeId);
+            console.log("Available sessions:", m4.sessions.map((s3) => ({ id: s3.conversationId, worktreeId: s3.worktreeId })));
+            const matchingSession = m4.sessions.find((session) => session.worktreeId === m4.currentWorktreeId);
+            if (matchingSession) {
+              console.log("Auto-opening session:", matchingSession.conversationId);
+              onOpenSession(matchingSession);
+              onOpenChat(matchingSession);
+            }
+          }
         }
       };
       window.addEventListener("message", onMsg);
       return () => window.removeEventListener("message", onMsg);
     }, []);
-    y2(() => {
-      if (currentWorktreeId && sessions.length > 0) {
-        console.log("Checking for matching session with worktreeId:", currentWorktreeId);
-        console.log("Available sessions:", sessions.map((s3) => ({ id: s3.conversationId, worktreeId: s3.worktreeId })));
-        const matchingSession = sessions.find((session) => session.worktreeId === currentWorktreeId);
-        if (matchingSession) {
-          console.log("Auto-opening session:", matchingSession.conversationId);
-          onOpenSession(matchingSession);
-        }
-      }
-    }, [currentWorktreeId, sessions]);
     return /* @__PURE__ */ _("div", { className: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { className: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { className: "f4 text-bold mb-0" }, "Sessions"), /* @__PURE__ */ _("button", { className: "btn btn-primary", onClick: onCreateNewSession }, "Create new session")), /* @__PURE__ */ _("div", { className: "sessions-list" }, sessions.map((session) => /* @__PURE__ */ _("div", { key: session.conversationId, className: "Box Box--condensed p-2 mb-2 session-item", onClick: () => onOpenSession(session) }, /* @__PURE__ */ _("div", { className: "d-flex flex-justify-between flex-items-start" }, /* @__PURE__ */ _("div", { className: "flex-1" }, /* @__PURE__ */ _("div", { className: "f5 text-bold mb-1" }, session.name)), /* @__PURE__ */ _("div", { className: "f6 color-fg-muted ml-2" }, formatDate(session.updatedAt)))))));
   }
 
@@ -16844,11 +16843,12 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
     const generateConversationId = () => {
       return `conv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     };
-    const startLarryServer = async (conversationId) => {
+    const startLarryServer = async (conversationId, worktreeId) => {
       try {
         vscode.postMessage({
           type: "startLarryServer",
-          conversationId
+          conversationId,
+          worktreeId
         });
       } catch (error) {
         console.error("Error starting Larry server:", error);
@@ -16858,27 +16858,27 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
       async function onMsg(e3) {
         const m4 = e3.data;
         if (m4?.type === "worktreeChanged") {
+          console.log("Worktree changed to:", m4.worktreeId);
           setCurrentWorktreeIdFromExtension(m4.worktreeId);
         }
         if (m4?.type === "worktreeCreated") {
+          setCurrentWorktreeIdFromExtension(m4.worktreeId);
           setCreatedWorktree({
             sessionName: m4.sessionName,
             worktreeName: m4.worktreeName,
             branchName: m4.branchName,
-            worktreePath: m4.worktreePath
+            worktreeId: m4.worktreeId
           });
           setView("worktree-created");
           setWorktreeStatus("mounting");
-          setTimeout(() => {
-            setWorktreeStatus("ready");
-          }, 3e3);
+          await startLarryServer(m4.conversationId, m4.worktreeId);
+          setWorktreeStatus("ready");
         }
         if (m4?.type === "worktreeExists") {
           if (m4.exists) {
             setWorktreeStatus("mounting");
-            setTimeout(() => {
-              setWorktreeStatus("ready");
-            }, 3e3);
+            await startLarryServer(m4.conversationId, m4.worktreeId);
+            setWorktreeStatus("ready");
           } else {
             setWorktreeStatus("missing");
           }
@@ -16908,19 +16908,17 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
     }
     async function createSession(sessionName, agentId) {
       const conversationId = generateConversationId();
-      await startLarryServer(conversationId);
       vscode.postMessage({
         type: "createSession",
         sessionName,
         conversationId,
-        agentId,
-        worktreePath: `.larry/worktrees/${conversationId}`
+        agentId
       });
     }
     async function createWorktree(worktreeId) {
       setWorktreeStatus("creating");
       vscode.postMessage({ type: "createMissingWorktree", worktreeId });
-      await startLarryServer(currentSessionId);
+      await startLarryServer(currentSessionId, worktreeId);
     }
     function openWorktree(worktreeId) {
       vscode.postMessage({ type: "openWorktree", worktreeId });
@@ -16931,17 +16929,23 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
       setCurrentWorktreeId("");
       setView("create-session");
     }
+    async function openChat(session) {
+      setCurrentSession(session);
+      setCurrentSessionId(session.conversationId);
+      setCurrentWorktreeId(session.worktreeId);
+      setView("chat");
+    }
     async function openSession(session) {
       setCurrentSession(session);
       setCurrentSessionId(session.conversationId);
       setCurrentWorktreeId(session.worktreeId);
       setWorktreeStatus("checking");
       setView("worktree-created");
-      vscode.postMessage({ type: "checkWorktreeExists", worktreeId: session.worktreeId });
+      vscode.postMessage({ type: "checkWorktreeExists", worktreeId: session.worktreeId, conversationId: session.conversationId });
     }
     const AppShell = ({ children }) => /* @__PURE__ */ _("div", { class: "app" }, children);
     if (view === "sessions") {
-      return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _(SessionsList, { vscode, onCreateNewSession: onCreateNewSessionClick, onOpenSession: openSession, currentWorktreeId: currentWorktreeIdFromExtension }));
+      return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _(SessionsList, { vscode, onCreateNewSession: onCreateNewSessionClick, onOpenSession: openSession, onOpenChat: openChat }));
     }
     if (view === "worktree-created") {
       const isNewSession = currentSessionId === "new-session";
@@ -16986,7 +16990,7 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
             return "\u2753";
         }
       };
-      const isButtonDisabled = worktreeStatus !== "ready" && worktreeStatus !== "missing" || currentSession?.worktreeId === "hello-world";
+      const isButtonDisabled = worktreeStatus !== "ready" && worktreeStatus !== "missing";
       return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _("div", { class: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { class: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { class: "f4 text-bold mb-0" }, isNewSession ? "Worktree Created" : "Open Session Worktree"), /* @__PURE__ */ _("button", { class: "btn", onClick: () => {
         setCurrentSession(null);
         setWorktreeStatus("checking");
