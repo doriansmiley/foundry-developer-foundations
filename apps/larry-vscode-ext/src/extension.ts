@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { makeSqlLiteThreadsDao } from './threadsDao';
+import { makeSqlLiteThreadsDao, ThreadsDao } from './threadsDao';
+import { makeSqlLiteSessionsDao, SessionsDao } from './sessionsDao';
 import { Conversation, Message } from './types';
 import { findProjectRoot } from './findProjectRoot';
 import path from 'path';
@@ -49,46 +50,23 @@ export function activate(context: vscode.ExtensionContext) {
 class LarryViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private runningContainers: Map<string, string> = new Map(); // conversationId -> containerId
-  private threadsDao: any;
+  private threadsDao: ThreadsDao;
+  private sessionsDao: SessionsDao;
 
   constructor(private readonly context: vscode.ExtensionContext) {
     // Initialize ThreadsDao
     this.threadsDao = makeSqlLiteThreadsDao();
+    this.sessionsDao = makeSqlLiteSessionsDao();
   }
 
   // Database operations
   private async loadSessions(): Promise<void> {
     try {
-      const threads = await this.threadsDao.listAll();
-
-      const filteredThreads = threads.filter(
-        (thread: any) => thread.appId === 'larry-conversation'
-      );
-
-      // Map database threads to Conversation objects
-      const conversations: Conversation[] = filteredThreads.map(
-        (thread: any) => ({
-          conversationId: thread.id,
-          agentId: thread.agentId || 'unknown',
-          updatedAt: thread.updatedAt || new Date().toISOString(),
-          name: thread.name || 'Unnamed Session',
-          worktreeId: thread.worktreeId || '',
-          messages: thread.messages ? JSON.parse(thread.messages) : [],
-        })
-      );
-
-      console.log(
-        'Mapped conversations:',
-        conversations.map((c) => ({
-          id: c.conversationId,
-          worktreeId: c.worktreeId,
-          name: c.name,
-        }))
-      );
+      const sessions = (await this.sessionsDao.listAll?.()) || [];
 
       this.view?.webview.postMessage({
         type: 'sessionsLoaded',
-        sessions: conversations,
+        sessions: sessions,
         currentWorktreeId: await this.getCurrentWorktreeId(),
       });
     } catch (error) {
@@ -154,20 +132,10 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       // Add new user message
       parsedMessages.push(message);
 
-      // Save to database (preserve existing worktreeId if available)
-      let existingWorktreeId = null;
-      try {
-        const existingThread = await this.threadsDao.read(conversationId);
-        existingWorktreeId = existingThread.worktreeId;
-      } catch (e) {
-        // Thread doesn't exist yet, worktreeId will be null
-      }
-
       await this.threadsDao.upsert(
         JSON.stringify(parsedMessages),
-        'larry-conversation',
-        conversationId,
-        existingWorktreeId
+        'larry-coding-assistant',
+        conversationId
       );
     } catch (error) {
       console.error('Error saving message:', error);

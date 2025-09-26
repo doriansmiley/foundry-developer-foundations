@@ -2,7 +2,26 @@ import initSqlJs from 'sql.js';
 import * as path from 'path';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { randomUUID } from 'crypto';
-import { Threads, ThreadsDao } from '@codestrap/developer-foundations-types';
+
+export type SessionsDao = {
+  upsert: (
+    id?: string,
+    threadsId?: string,
+    name?: string,
+    worktreeId?: string
+  ) => Promise<Session>;
+  delete: (id: string) => Promise<void>;
+  read: (id: string) => Promise<Session>;
+  listAll?: () => Promise<Session[]>;
+};
+
+export interface Session {
+  id: string;
+  name: string;
+  updatedAt: string;
+  worktreeId: string;
+  threadsId?: string;
+}
 
 let SQL: any = null;
 let db: any = null;
@@ -40,17 +59,19 @@ async function initDatabase(
 
   // Create tables
   db.run(`
-    CREATE TABLE IF NOT EXISTS threads (
+    CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
-      appId TEXT,
-      messages TEXT,
-      userId TEXT,
+      threadsId TEXT,
+      name TEXT,
+      worktreeId TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
-  db.run('CREATE INDEX IF NOT EXISTS idx_threads_appId ON threads(appId);');
+  db.run(
+    'CREATE INDEX IF NOT EXISTS idx_sessions_worktreeId ON sessions(worktreeId);'
+  );
 
   // Save database to file
   await saveDatabase(dbPath);
@@ -76,7 +97,7 @@ async function saveDatabase(dbPath: string): Promise<void> {
 function ensureDb() {
   if (!db) {
     throw new Error(
-      'SQLite threads store not initialized. Call ensureInitialized() first.'
+      'SQLite sessions store not initialized. Call ensureInitialized() first.'
     );
   }
 }
@@ -98,96 +119,111 @@ async function ensureInitialized() {
   await initDatabase();
 }
 
-export function makeSqlLiteThreadsDao(): ThreadsDao {
+export function makeSqlLiteSessionsDao(): SessionsDao {
   return {
     upsert: async (
-      messages: string,
-      appId: string,
-      id?: string
-    ): Promise<Threads> => {
+      id?: string,
+      threadsId?: string,
+      name?: string,
+      worktreeId?: string
+    ): Promise<Session> => {
       await ensureInitialized();
 
-      const threadId = id || randomUUID();
+      const sessionId = id || randomUUID();
 
-      const sql = `INSERT INTO threads (id, appId, messages, userId, updated_at) VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)
-        ON CONFLICT(id) DO UPDATE SET appId=excluded.appId, messages=excluded.messages, updated_at=CURRENT_TIMESTAMP`;
+      const sql = `INSERT INTO sessions (id, threadsId, name, worktreeId, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(id) DO UPDATE SET threadsId=excluded.threadsId, name=excluded.name, worktreeId=excluded.worktreeId, updated_at=CURRENT_TIMESTAMP`;
 
-      run(sql, [threadId, appId, messages]);
+      run(sql, [
+        sessionId,
+        threadsId || null,
+        name || null,
+        worktreeId || null,
+      ]);
 
       const row = get<{
         id: string;
-        appId: string | null;
-        messages: string | null;
-        userId: string | null;
-      }>('SELECT id, appId, messages, userId FROM threads WHERE id = ?', [
-        threadId,
-      ]);
+        threadsId: string | null;
+        name: string | null;
+        worktreeId: string | null;
+        updated_at: string;
+      }>(
+        'SELECT id, threadsId, name, worktreeId, updated_at FROM sessions WHERE id = ?',
+        [sessionId]
+      );
 
       if (!row) {
-        throw new Error('Failed to upsert and retrieve thread');
+        throw new Error('Failed to upsert and retrieve session');
       }
 
-      const thread: Threads = {
+      const session: Session = {
         id: row.id,
-        appId: row.appId ?? undefined,
-        messages: row.messages ?? undefined,
-        userId: row.userId ?? undefined,
+        threadsId: row.threadsId ?? undefined,
+        name: row.name || '',
+        worktreeId: row.worktreeId || '',
+        updatedAt: row.updated_at,
       };
 
       // Save to file
       const dbPath = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH;
       await saveDatabase(dbPath);
 
-      return thread;
+      return session;
     },
 
     delete: async (id: string): Promise<void> => {
       await ensureInitialized();
-      run('DELETE FROM threads WHERE id = ?', [id]);
+      run('DELETE FROM sessions WHERE id = ?', [id]);
 
       // Save to file
       await saveDatabase(process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH);
     },
 
-    read: async (id: string): Promise<Threads> => {
+    read: async (id: string): Promise<Session> => {
       await ensureInitialized();
 
       const row = get<{
         id: string;
-        appId: string | null;
-        messages: string | null;
-        userId: string | null;
-      }>('SELECT id, appId, messages, userId FROM threads WHERE id = ?', [id]);
+        threadsId: string | null;
+        name: string | null;
+        worktreeId: string | null;
+        updated_at: string;
+      }>(
+        'SELECT id, threadsId, name, worktreeId, updated_at FROM sessions WHERE id = ?',
+        [id]
+      );
 
       if (!row) {
-        throw new Error(`Thread not found for id ${id}`);
+        throw new Error(`Session not found for id ${id}`);
       }
 
-      const thread: Threads = {
+      const session: Session = {
         id: row.id,
-        appId: row.appId ?? undefined,
-        messages: row.messages ?? undefined,
-        userId: row.userId ?? undefined,
+        threadsId: row.threadsId ?? undefined,
+        name: row.name || '',
+        worktreeId: row.worktreeId || '',
+        updatedAt: row.updated_at,
       };
 
-      return thread;
+      return session;
     },
 
-    listAll: async (): Promise<Threads[]> => {
+    listAll: async (): Promise<Session[]> => {
       await ensureInitialized();
 
       const stmt = db.prepare(
-        'SELECT id, appId, messages, userId FROM threads ORDER BY updated_at DESC'
+        'SELECT id, threadsId, name, worktreeId, updated_at FROM sessions ORDER BY updated_at DESC'
       );
-      const results: Threads[] = [];
+      const results: Session[] = [];
 
       while (stmt.step()) {
         const row = stmt.getAsObject();
         results.push({
           id: row.id as string,
-          appId: (row.appId as string) ?? undefined,
-          messages: (row.messages as string) ?? undefined,
-          userId: (row.userId as string) ?? undefined,
+          threadsId: (row.threadsId as string) ?? undefined,
+          name: (row.name as string) || '',
+          worktreeId: (row.worktreeId as string) || '',
+          updatedAt: row.updated_at as string,
         });
       }
 
