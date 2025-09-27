@@ -6,16 +6,40 @@ import { Threads, ThreadsDao } from '@codestrap/developer-foundations-types';
 
 let SQL: any = null;
 let db: any = null;
+let isInitializing = false;
+let initPromise: Promise<void> | null = null;
 
 // Note: In VSCode extension context, the DB path should be set via environment variable
 // by the extension.ts file using proper VSCode workspace APIs
-const DEFAULT_DB_PATH = '/larry-db/developer-foundations-threads.sqlite';
+const DEFAULT_DB_PATH = path.resolve(
+  require('os').homedir(),
+  'larry-db/developer-foundations-threads.sqlite'
+);
 
 async function initDatabase(
   dbPath: string = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH
 ): Promise<void> {
+  // If already initialized, return
   if (db) return;
 
+  // If currently initializing, wait for it to complete
+  if (isInitializing && initPromise) {
+    return initPromise;
+  }
+
+  // Start initialization
+  isInitializing = true;
+  initPromise = performInitialization(dbPath);
+
+  try {
+    await initPromise;
+  } finally {
+    isInitializing = false;
+    initPromise = null;
+  }
+}
+
+async function performInitialization(dbPath: string): Promise<void> {
   console.log('Initializing database at:', dbPath);
 
   // Initialize sql.js
@@ -89,7 +113,9 @@ function run(sql: string, params: unknown[] = []): void {
 function get<T = any>(sql: string, params: unknown[] = []): T | undefined {
   ensureDb();
   const stmt = db.prepare(sql);
-  const result = stmt.getAsObject(params);
+  stmt.bind(params);
+  const hasData = stmt.step();
+  const result = hasData ? stmt.getAsObject() : undefined;
   stmt.free();
   return result as T | undefined;
 }
@@ -108,7 +134,7 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
       await ensureInitialized();
 
       const threadId = id || randomUUID();
-
+      console.log('SAVING TO DB', threadId, appId);
       const sql = `INSERT INTO threads (id, appId, messages, userId, updated_at) VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO UPDATE SET appId=excluded.appId, messages=excluded.messages, updated_at=CURRENT_TIMESTAMP`;
 

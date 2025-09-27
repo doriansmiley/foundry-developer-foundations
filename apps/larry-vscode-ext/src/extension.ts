@@ -3,10 +3,9 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { makeSqlLiteThreadsDao, ThreadsDao } from './threadsDao';
 import { makeSqlLiteSessionsDao, SessionsDao } from './sessionsDao';
-import { Conversation, Message } from './types';
+import { Message } from './types';
 import { findProjectRoot } from './findProjectRoot';
 import path from 'path';
-import * as os from 'os';
 
 const execAsync = promisify(exec);
 
@@ -79,8 +78,14 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async loadMessages(conversationId: string): Promise<void> {
+  private async loadMessages(sessionId: string): Promise<void> {
     try {
+      const session = await this.sessionsDao.read(sessionId);
+      const conversationId = session.threadsId;
+      console.log('Conversation ID:', conversationId);
+      if (!conversationId) {
+        return;
+      }
       const { messages } = await this.threadsDao.read(conversationId);
       console.log('Messages:', messages);
       const parsedMessages = JSON.parse(messages || '[]') as Message[];
@@ -113,12 +118,17 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async saveMessage(
-    conversationId: string,
+    sessionId: string,
     message: Message
   ): Promise<void> {
     try {
       // Try to read existing messages, or start with empty array if thread doesn't exist
       let existingMessages = '[]';
+      const session = await this.sessionsDao.read(sessionId);
+      const conversationId = session.threadsId;
+      if (!conversationId) {
+        return;
+      }
       try {
         const thread = await this.threadsDao.read(conversationId);
         existingMessages = thread.messages || '[]';
@@ -178,7 +188,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async startLarryContainer(
-    conversationId: string,
+    sessionId: string,
     worktreeId: string
   ): Promise<string> {
     // for now let's skip building the image
@@ -190,7 +200,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         throw new Error('No workspace folder found');
       }
 
-      const containerName = `larry-server-${conversationId}`;
+      const containerName = `larry-server-${sessionId}`;
 
       try {
         await execAsync(`docker rm -f ${containerName}`);
@@ -207,7 +217,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       );
       const { stdout } = await execAsync(
         `docker run -d --name ${containerName} \
-   -e CONVERSATION_ID=${conversationId} \
+   -e SESSION_ID=${sessionId} \
    -v "${worktreePath}:/workspace:rw" \
       -v "${require('os').homedir()}/larry-db:/larry-db:rw" \
    --user 1001:1001 \
@@ -215,10 +225,10 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       );
 
       const containerId = stdout.trim();
-      this.runningContainers.set(conversationId, containerId);
+      this.runningContainers.set(sessionId, containerId);
 
       console.log(
-        `Larry container started for conversation ${conversationId}:`,
+        `Larry container started for session ${sessionId}:`,
         containerId
       );
       return containerId;
@@ -228,24 +238,22 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async stopLarryContainer(conversationId: string): Promise<void> {
+  private async stopLarryContainer(sessionId: string): Promise<void> {
     try {
-      const containerId = this.runningContainers.get(conversationId);
+      const containerId = this.runningContainers.get(sessionId);
       if (!containerId) {
-        console.log(
-          `No running container found for conversation ${conversationId}`
-        );
+        console.log(`No running container found for session ${sessionId}`);
         return;
       }
 
-      const containerName = `larry-server-${conversationId}`;
+      const containerName = `larry-server-${sessionId}`;
 
       // Stop and remove container
       await execAsync(`docker stop ${containerName}`);
       await execAsync(`docker rm ${containerName}`);
 
-      this.runningContainers.delete(conversationId);
-      console.log(`Larry container stopped for conversation ${conversationId}`);
+      this.runningContainers.delete(sessionId);
+      console.log(`Larry container stopped for session ${sessionId}`);
     } catch (error) {
       console.error('Error stopping Larry container:', error);
       // Don't throw error, just log it
@@ -337,14 +345,13 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  async createSessionWithWorktree(
-    sessionName: string,
-    agentId: string,
-    conversationId?: string
-  ) {
+  async createSessionWithWorktree(sessionName: string, originalTask: string) {
     try {
       // Transform session name to proper branch name format
-      const branchName = this.transformSessionNameToBranchName(sessionName);
+      const branchName =
+        this.transformSessionNameToBranchName(sessionName) +
+        '-' +
+        Math.random().toString(36).substring(2, 5);
       const finalWorktreeName = branchName;
 
       // Get the main repository path - try multiple approaches
@@ -456,42 +463,28 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
               () => false
             );
 
+          let createdSession;
           if (worktreeExists) {
-            // Create initial database record for the session
-            if (conversationId) {
-              try {
-                await this.threadsDao.upsert(
-                  JSON.stringify([]), // Start with empty messages
-                  'larry-conversation',
-                  conversationId,
-                  finalWorktreeName,
-                  sessionName
-                );
-              } catch (error) {
-                console.error(
-                  'Failed to create initial database record:',
-                  error
-                );
-              }
-            }
-
-            if (!conversationId) {
-              console.error(
-                'Conversation ID is missing, critical at this point!'
+            try {
+              createdSession = await this.sessionsDao.upsert(
+                undefined,
+                undefined,
+                sessionName,
+                originalTask,
+                finalWorktreeName
               );
-              return;
+            } catch (error) {
+              console.error('Failed to create initial database record:', error);
             }
 
             // Notify webview about successful worktree creation
             this.view?.webview.postMessage({
               type: 'worktreeCreated',
               sessionName,
-              worktreeName: finalWorktreeName,
-              branchName: branchName,
               worktreeId: finalWorktreeName,
-              worktreePath: worktreePath.fsPath,
-              agentId,
-              conversationId,
+              originalTask,
+              sessionId: createdSession?.id || '',
+              updatedAt: createdSession?.updatedAt || '',
             });
 
             vscode.window.showInformationMessage(
@@ -799,17 +792,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       if (msg?.type === 'createSession') {
-        const worktreeId = await this.createSessionWithWorktree(
-          msg.sessionName,
-          msg.agentId,
-          msg.conversationId
-        );
-        view.webview.postMessage({
-          type: 'sessionCreated',
-          worktreeId: worktreeId,
-          conversationId: msg.conversationId,
-          sessionName: msg.sessionName,
-        });
+        await this.createSessionWithWorktree(msg.sessionName, msg.originalTask);
         return;
       }
       if (msg?.type === 'checkWorktreeExists') {
@@ -817,7 +800,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         view.webview.postMessage({
           type: 'worktreeExists',
           worktreeId: msg.worktreeId,
-          conversationId: msg.conversationId,
+          sessionId: msg.sessionId,
           exists,
         });
         return;
@@ -836,10 +819,10 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === 'startLarryServer') {
         try {
-          await this.startLarryContainer(msg.conversationId, msg.worktreeId);
+          await this.startLarryContainer(msg.sessionId, msg.worktreeId);
           view.webview.postMessage({
             type: 'larryServerStarted',
-            conversationId: msg.conversationId,
+            sessionId: msg.sessionId,
             success: true,
           });
         } catch (error) {
@@ -854,7 +837,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
           view.webview.postMessage({
             type: 'larryServerStarted',
-            conversationId: msg.conversationId,
+            sessionId: msg.sessionId,
             success: false,
             error: errorMessage,
           });
@@ -863,16 +846,16 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === 'stopLarryServer') {
         try {
-          await this.stopLarryContainer(msg.conversationId);
+          await this.stopLarryContainer(msg.sessionId);
           view.webview.postMessage({
             type: 'larryServerStopped',
-            conversationId: msg.conversationId,
+            sessionId: msg.sessionId,
             success: true,
           });
         } catch (error) {
           view.webview.postMessage({
             type: 'larryServerStopped',
-            conversationId: msg.conversationId,
+            sessionId: msg.sessionId,
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
           });
@@ -884,7 +867,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       if (msg?.type === 'loadMessages') {
-        await this.loadMessages(msg.conversationId);
+        await this.loadMessages(msg.sessionId);
         return;
       }
       if (msg?.type === 'sendMessage') {

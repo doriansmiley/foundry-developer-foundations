@@ -8,6 +8,7 @@ export type SessionsDao = {
     id?: string,
     threadsId?: string,
     name?: string,
+    originalTask?: string,
     worktreeId?: string
   ) => Promise<Session>;
   delete: (id: string) => Promise<void>;
@@ -18,6 +19,7 @@ export type SessionsDao = {
 export interface Session {
   id: string;
   name: string;
+  originalTask: string;
   updatedAt: string;
   worktreeId: string;
   threadsId?: string;
@@ -63,6 +65,7 @@ async function initDatabase(
       id TEXT PRIMARY KEY,
       threadsId TEXT,
       name TEXT,
+      originalTask TEXT,
       worktreeId TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -125,50 +128,134 @@ export function makeSqlLiteSessionsDao(): SessionsDao {
       id?: string,
       threadsId?: string,
       name?: string,
+      originalTask?: string,
       worktreeId?: string
     ): Promise<Session> => {
       await ensureInitialized();
 
-      const sessionId = id || randomUUID();
+      if (id) {
+        // Case 1: ID provided - Update existing session
+        const existingSession = get<{
+          id: string;
+          threadsId: string | null;
+          name: string | null;
+          originalTask: string | null;
+          worktreeId: string | null;
+          updated_at: string;
+        }>(
+          'SELECT id, threadsId, name, originalTask, worktreeId, updated_at FROM sessions WHERE id = ?',
+          [id]
+        );
 
-      const sql = `INSERT INTO sessions (id, threadsId, name, worktreeId, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(id) DO UPDATE SET threadsId=excluded.threadsId, name=excluded.name, worktreeId=excluded.worktreeId, updated_at=CURRENT_TIMESTAMP`;
+        if (!existingSession) {
+          throw new Error(`Session not found for id ${id}`);
+        }
+        // Update mode: only update provided fields
+        const updateFields: string[] = [];
+        const updateValues: unknown[] = [];
 
-      run(sql, [
-        sessionId,
-        threadsId || null,
-        name || null,
-        worktreeId || null,
-      ]);
+        if (threadsId !== undefined) {
+          updateFields.push('threadsId = ?');
+          updateValues.push(threadsId);
+        }
+        if (name !== undefined) {
+          updateFields.push('name = ?');
+          updateValues.push(name);
+        }
+        if (originalTask !== undefined) {
+          updateFields.push('originalTask = ?');
+          updateValues.push(originalTask);
+        }
+        if (worktreeId !== undefined) {
+          updateFields.push('worktreeId = ?');
+          updateValues.push(worktreeId);
+        }
 
-      const row = get<{
-        id: string;
-        threadsId: string | null;
-        name: string | null;
-        worktreeId: string | null;
-        updated_at: string;
-      }>(
-        'SELECT id, threadsId, name, worktreeId, updated_at FROM sessions WHERE id = ?',
-        [sessionId]
-      );
+        if (updateFields.length > 0) {
+          updateFields.push('updated_at = CURRENT_TIMESTAMP');
+          const updateSql = `UPDATE sessions SET ${updateFields.join(
+            ', '
+          )} WHERE id = ?`;
+          updateValues.push(id);
+          run(updateSql, updateValues);
+        }
 
-      if (!row) {
-        throw new Error('Failed to upsert and retrieve session');
+        // Return updated session
+        const row = get<{
+          id: string;
+          threadsId: string | null;
+          name: string | null;
+          originalTask: string | null;
+          worktreeId: string | null;
+          updated_at: string;
+        }>(
+          'SELECT id, threadsId, name, originalTask, worktreeId, updated_at FROM sessions WHERE id = ?',
+          [id]
+        );
+
+        if (!row) {
+          throw new Error('Failed to retrieve updated session');
+        }
+
+        const session: Session = {
+          id: row.id,
+          threadsId: row.threadsId ?? undefined,
+          name: row.name || '',
+          worktreeId: row.worktreeId || '',
+          originalTask: row.originalTask || '',
+          updatedAt: row.updated_at,
+        };
+
+        // Save to file
+        const dbPath = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH;
+        await saveDatabase(dbPath);
+
+        return session;
+      } else {
+        // Case 2: No ID provided - Create new session
+        const sessionId = randomUUID();
+
+        const insertSql = `INSERT INTO sessions (id, threadsId, name, originalTask, worktreeId, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`;
+        run(insertSql, [
+          sessionId,
+          threadsId || null,
+          name || null,
+          originalTask || null,
+          worktreeId || null,
+        ]);
+
+        // Return newly created session
+        const row = get<{
+          id: string;
+          threadsId: string | null;
+          name: string | null;
+          originalTask: string | null;
+          worktreeId: string | null;
+          updated_at: string;
+        }>(
+          'SELECT id, threadsId, name, originalTask, worktreeId, updated_at FROM sessions WHERE id = ?',
+          [sessionId]
+        );
+
+        if (!row) {
+          throw new Error('Failed to create and retrieve new session');
+        }
+
+        const session: Session = {
+          id: row.id,
+          threadsId: row.threadsId ?? undefined,
+          name: row.name || '',
+          worktreeId: row.worktreeId || '',
+          originalTask: row.originalTask || '',
+          updatedAt: row.updated_at,
+        };
+
+        // Save to file
+        const dbPath = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH;
+        await saveDatabase(dbPath);
+
+        return session;
       }
-
-      const session: Session = {
-        id: row.id,
-        threadsId: row.threadsId ?? undefined,
-        name: row.name || '',
-        worktreeId: row.worktreeId || '',
-        updatedAt: row.updated_at,
-      };
-
-      // Save to file
-      const dbPath = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH;
-      await saveDatabase(dbPath);
-
-      return session;
     },
 
     delete: async (id: string): Promise<void> => {
@@ -187,9 +274,10 @@ export function makeSqlLiteSessionsDao(): SessionsDao {
         threadsId: string | null;
         name: string | null;
         worktreeId: string | null;
+        originalTask: string | null;
         updated_at: string;
       }>(
-        'SELECT id, threadsId, name, worktreeId, updated_at FROM sessions WHERE id = ?',
+        'SELECT id, threadsId, name, worktreeId, originalTask, updated_at FROM sessions WHERE id = ?',
         [id]
       );
 
@@ -202,6 +290,7 @@ export function makeSqlLiteSessionsDao(): SessionsDao {
         threadsId: row.threadsId ?? undefined,
         name: row.name || '',
         worktreeId: row.worktreeId || '',
+        originalTask: row.originalTask || '',
         updatedAt: row.updated_at,
       };
 
@@ -212,7 +301,7 @@ export function makeSqlLiteSessionsDao(): SessionsDao {
       await ensureInitialized();
 
       const stmt = db.prepare(
-        'SELECT id, threadsId, name, worktreeId, updated_at FROM sessions ORDER BY updated_at DESC'
+        'SELECT id, threadsId, name, worktreeId, originalTask, updated_at FROM sessions ORDER BY updated_at DESC'
       );
       const results: Session[] = [];
 
@@ -223,6 +312,7 @@ export function makeSqlLiteSessionsDao(): SessionsDao {
           threadsId: (row.threadsId as string) ?? undefined,
           name: (row.name as string) || '',
           worktreeId: (row.worktreeId as string) || '',
+          originalTask: (row.originalTask as string) || '',
           updatedAt: row.updated_at as string,
         });
       }
