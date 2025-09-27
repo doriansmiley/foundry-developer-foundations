@@ -2,10 +2,10 @@
 import { useEffect, useState } from 'preact/hooks';
 import { h } from 'preact';
 import { formatDate } from '../utils/date';
-import { Conversation } from '../../src/types';
+import { Session } from '../../src/types';
 
-export function SessionsList({vscode, onCreateNewSession, onOpenSession, onOpenChat}: {vscode: any, onCreateNewSession: () => void, onOpenSession: (session: Conversation) => void, onOpenChat: (session: Conversation) => void}) {
-  const [sessions, setSessions] = useState<Conversation[]>([]);
+export function SessionsList({vscode, onCreateNewSession, onOpenSession, onOpenChat}: {vscode: any, onCreateNewSession: () => void, onOpenSession: (session: Session) => void, onOpenChat: (session: Session) => void}) {
+  const [sessions, setSessions] = useState<Session[]>([]);
 
 	// Load sessions from database via VS Code extension
 	const loadSessions = async () => {
@@ -25,13 +25,10 @@ export function SessionsList({vscode, onCreateNewSession, onOpenSession, onOpenC
         setSessions(m.sessions);
         
 				if (m.currentWorktreeId && m.sessions.length > 0) {
-					console.log('Checking for matching session with worktreeId:', m.currentWorktreeId);
-					console.log('Available sessions:', m.sessions.map(s => ({ id: s.conversationId, worktreeId: s.worktreeId })));
-					
 					const matchingSession = m.sessions.find(session => session.worktreeId === m.currentWorktreeId);
 					
 					if (matchingSession) {
-						console.log('Auto-opening session:', matchingSession.conversationId);
+						console.log('Auto-opening session:', matchingSession.id);
 						onOpenSession(matchingSession);
 						onOpenChat(matchingSession);
 					}
@@ -52,7 +49,7 @@ export function SessionsList({vscode, onCreateNewSession, onOpenSession, onOpenC
 					</div>
 					<div className="sessions-list">
 						{sessions.map(session => (
-							<div key={session.conversationId} className="Box Box--condensed p-2 mb-2 session-item" onClick={() => onOpenSession(session)}>
+							<div key={session.id} className="Box Box--condensed p-2 mb-2 session-item" onClick={() => onOpenSession(session)}>
 								<div className="d-flex flex-justify-between flex-items-start">
 									<div className="flex-1">
 										<div className="f5 text-bold mb-1">{session.name}</div>

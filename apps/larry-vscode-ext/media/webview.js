@@ -14531,11 +14531,9 @@
         if (m4?.type === "sessionsLoaded") {
           setSessions(m4.sessions);
           if (m4.currentWorktreeId && m4.sessions.length > 0) {
-            console.log("Checking for matching session with worktreeId:", m4.currentWorktreeId);
-            console.log("Available sessions:", m4.sessions.map((s3) => ({ id: s3.conversationId, worktreeId: s3.worktreeId })));
             const matchingSession = m4.sessions.find((session) => session.worktreeId === m4.currentWorktreeId);
             if (matchingSession) {
-              console.log("Auto-opening session:", matchingSession.conversationId);
+              console.log("Auto-opening session:", matchingSession.id);
               onOpenSession(matchingSession);
               onOpenChat(matchingSession);
             }
@@ -14545,54 +14543,35 @@
       window.addEventListener("message", onMsg);
       return () => window.removeEventListener("message", onMsg);
     }, []);
-    return /* @__PURE__ */ _("div", { className: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { className: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { className: "f4 text-bold mb-0" }, "Sessions"), /* @__PURE__ */ _("button", { className: "btn btn-primary", onClick: onCreateNewSession }, "Create new session")), /* @__PURE__ */ _("div", { className: "sessions-list" }, sessions.map((session) => /* @__PURE__ */ _("div", { key: session.conversationId, className: "Box Box--condensed p-2 mb-2 session-item", onClick: () => onOpenSession(session) }, /* @__PURE__ */ _("div", { className: "d-flex flex-justify-between flex-items-start" }, /* @__PURE__ */ _("div", { className: "flex-1" }, /* @__PURE__ */ _("div", { className: "f5 text-bold mb-1" }, session.name)), /* @__PURE__ */ _("div", { className: "f6 color-fg-muted ml-2" }, formatDate(session.updatedAt)))))));
+    return /* @__PURE__ */ _("div", { className: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { className: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { className: "f4 text-bold mb-0" }, "Sessions"), /* @__PURE__ */ _("button", { className: "btn btn-primary", onClick: onCreateNewSession }, "Create new session")), /* @__PURE__ */ _("div", { className: "sessions-list" }, sessions.map((session) => /* @__PURE__ */ _("div", { key: session.id, className: "Box Box--condensed p-2 mb-2 session-item", onClick: () => onOpenSession(session) }, /* @__PURE__ */ _("div", { className: "d-flex flex-justify-between flex-items-start" }, /* @__PURE__ */ _("div", { className: "flex-1" }, /* @__PURE__ */ _("div", { className: "f5 text-bold mb-1" }, session.name)), /* @__PURE__ */ _("div", { className: "f6 color-fg-muted ml-2" }, formatDate(session.updatedAt)))))));
   }
 
   // apps/larry-vscode-ext/webview/views/createSessionView.tsx
   function CreateSessionView({ onBack, onCreateSession }) {
-    const [sessionName, setSessionName] = d2("");
-    const [selectedAgent, setSelectedAgent] = d2("");
+    const [originalTask, setOriginalTask] = d2("");
     const [isCreating, setIsCreating] = d2(false);
-    const agents = [
-      { id: "auto", label: "Auto (let's figure it out from your first request)", enabled: true },
-      { id: "google", label: "Google Coding Agent", enabled: true },
-      { id: "slack", label: "Slack Coding Agent (disabled)", enabled: false },
-      { id: "microsoft", label: "Microsoft Coding Agent (disabled)", enabled: false }
-    ];
     function handleCreate(e3) {
       e3.preventDefault();
-      if (!sessionName.trim() || !selectedAgent) return;
       setIsCreating(true);
-      onCreateSession(sessionName.trim(), selectedAgent);
+      onCreateSession(originalTask);
     }
-    return /* @__PURE__ */ _("div", { className: "app" }, /* @__PURE__ */ _("div", { className: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { className: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { className: "f4 text-bold mb-0" }, "Create New Session"), /* @__PURE__ */ _("button", { className: "btn", onClick: onBack }, "Back to Sessions")), /* @__PURE__ */ _("form", { onSubmit: handleCreate, className: "d-flex flex-column gap-3" }, /* @__PURE__ */ _("div", { className: "form-group" }, /* @__PURE__ */ _("label", { className: "form-label f5 text-bold mb-1" }, "Session Name"), /* @__PURE__ */ _(
-      "input",
+    return /* @__PURE__ */ _("div", { className: "app" }, /* @__PURE__ */ _("div", { className: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { className: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { className: "f4 text-bold mb-0" }, "Create New Session"), /* @__PURE__ */ _("button", { className: "btn", onClick: onBack }, "Back to Sessions")), /* @__PURE__ */ _("form", { onSubmit: handleCreate, className: "d-flex flex-column gap-3" }, /* @__PURE__ */ _("div", { className: "form-group" }, /* @__PURE__ */ _("label", { className: "form-label f5 text-bold mb-1" }, "What can I help you with?"), /* @__PURE__ */ _(
+      "textarea",
       {
         className: "form-control",
-        placeholder: "Enter session name (e.g., 'React Component Refactoring')",
-        value: sessionName,
-        onInput: (e3) => setSessionName(e3.target.value),
+        placeholder: "What do you want to do?",
+        value: originalTask,
+        onInput: (e3) => setOriginalTask(e3.target.value),
         disabled: isCreating
       }
-    )), /* @__PURE__ */ _("div", { className: "form-group" }, /* @__PURE__ */ _("label", { className: "form-label f5 text-bold mb-1" }, "Select Agent"), /* @__PURE__ */ _("div", { className: "d-flex flex-column gap-2" }, agents.map((agent) => /* @__PURE__ */ _("label", { key: agent.id, className: "d-flex flex-items-center" }, /* @__PURE__ */ _(
-      "input",
-      {
-        type: "radio",
-        name: "agent",
-        value: agent.id,
-        checked: selectedAgent === agent.id,
-        onChange: (e3) => setSelectedAgent(e3.target.value),
-        disabled: !agent.enabled || isCreating,
-        className: "mr-2"
-      }
-    ), /* @__PURE__ */ _("span", { className: !agent.enabled ? "color-fg-muted" : "" }, agent.label))))), /* @__PURE__ */ _("div", { className: "d-flex gap-2" }, /* @__PURE__ */ _(
+    )), /* @__PURE__ */ _("div", { className: "d-flex" }, /* @__PURE__ */ _(
       "button",
       {
         type: "submit",
-        className: "btn btn-primary",
-        disabled: !sessionName.trim() || !selectedAgent || isCreating
+        className: "btn btn-primary mr-2",
+        disabled: !originalTask.trim() || isCreating
       },
-      isCreating ? "Creating..." : "Create Session & Worktree"
+      isCreating ? "Creating..." : "Create"
     ), /* @__PURE__ */ _("button", { type: "button", className: "btn", onClick: onBack, disabled: isCreating }, "Cancel")))));
   }
 
@@ -16732,31 +16711,25 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
     }, [md]);
   }
   function MessageComponent({ message }) {
-    const html2 = useMarkdown(message.content);
+    const isLarryProduced = message?.system && message?.system !== "Thinking" && message?.user;
+    const messageContent = isLarryProduced ? message?.system : "";
+    const html2 = useMarkdown(messageContent || "");
     const ref = A2(null);
-    const isUser = message.actor === "user";
-    const isLoading = message.content === "Thinking...";
+    const isLoading = message?.system === "Thinking";
     y2(() => {
       if (!ref.current || isLoading) return;
       ref.current.querySelectorAll("pre code").forEach((el) => common_default.highlightElement(el));
     }, [html2, isLoading]);
-    if (isUser) return /* @__PURE__ */ _("div", { className: "Box p-2" }, /* @__PURE__ */ _("div", { className: "color-fg-muted mb-1" }, /* @__PURE__ */ _("b", null, "You:")), /* @__PURE__ */ _("div", null, message.content));
-    return /* @__PURE__ */ _("div", { className: "Box p-2", ref }, /* @__PURE__ */ _("div", { className: "color-fg-muted mb-1" }, /* @__PURE__ */ _("b", null, "Larry:")), /* @__PURE__ */ _("div", { className: "markdown-body", dangerouslySetInnerHTML: { __html: html2 } }));
+    if (!isLarryProduced) return /* @__PURE__ */ _("div", { className: "Box p-2" }, /* @__PURE__ */ _("div", { className: "color-fg-muted mb-1" }, /* @__PURE__ */ _("b", null, "You:")), /* @__PURE__ */ _("div", null, message?.user), isLoading && /* @__PURE__ */ _("div", null, /* @__PURE__ */ _("div", { className: "color-fg-muted mb-1" }, /* @__PURE__ */ _("b", null, "Larry:")), /* @__PURE__ */ _("div", { className: "color-fg-muted mb-1" }, /* @__PURE__ */ _("b", null, "Thinking", /* @__PURE__ */ _("div", { className: "AnimatedEllipsis" })))));
+    return /* @__PURE__ */ _("div", { className: "Box p-2", ref }, /* @__PURE__ */ _("div", { className: "color-fg-muted mb-1" }, /* @__PURE__ */ _("b", null, "Larry:")), !isLoading && /* @__PURE__ */ _("div", { className: "markdown-body", dangerouslySetInnerHTML: { __html: html2 } }));
   }
-  function Chat({ vscode: vscode2, currentWorktreeId, goBackToSessions, currentSessionId, onLeaveWorktree }) {
+  function Chat({ originalTask, vscode: vscode2, currentWorktreeId, goBackToSessions, sessionId, onLeaveWorktree }) {
     y2(() => {
       const onMsg = (e3) => {
         const m4 = e3.data;
+        console.log(m4);
         if (m4?.type === "messagesLoaded") {
-          setMessages(m4.messages);
-        }
-        if (m4?.type === "larryResponse") {
-          setMessages((prev) => {
-            const filtered = prev.filter((msg) => msg.content !== "Thinking...");
-            return [...filtered, m4.message];
-          });
-        }
-        if (m4?.type === "conversationUpdated") {
+          m4.messages[m4.messages.length - 1].system = m4.messages[m4.messages.length - 1]?.system || "Thinking";
           setMessages(m4.messages);
         }
       };
@@ -16765,11 +16738,11 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
     }, []);
     const inputRef = A2(null);
     const [messages, setMessages] = d2([]);
-    const loadMessages = async (conversationId) => {
+    const loadMessages = async (sessionId2) => {
       try {
         vscode2.postMessage({
           type: "loadMessages",
-          conversationId
+          sessionId: sessionId2
         });
       } catch (error) {
         console.error("Error loading messages:", error);
@@ -16778,21 +16751,21 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
     };
     y2(() => {
       const pollInterval = setInterval(async () => {
-        if (currentSessionId) {
+        if (sessionId) {
           try {
-            await loadMessages(currentSessionId);
+            await loadMessages(sessionId);
           } catch (error) {
             console.error("Polling error:", error);
           }
         }
       }, 2e3);
       return () => clearInterval(pollInterval);
-    }, [currentSessionId]);
+    }, [sessionId]);
     async function leaveWorktree() {
-      if (currentSessionId) {
+      if (sessionId) {
         vscode2.postMessage({
           type: "stopLarryServer",
-          conversationId: currentSessionId
+          sessionId
         });
       }
       vscode2.postMessage({ type: "leaveWorktree" });
@@ -16803,51 +16776,33 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
       e3.preventDefault();
       const val = inputRef.current?.value?.trim?.() || "";
       if (!val) return;
-      const loadingMessage = {
-        conversationId: currentSessionId,
-        id: `loading-${Date.now()}`,
-        actor: "larry",
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        type: "text",
-        content: "Thinking...",
-        metadata: { isUserTurn: false }
-      };
-      setMessages((prev) => [...prev, loadingMessage]);
+      setMessages((prev) => [...prev, { user: val, system: "Thinking" }]);
       if (inputRef.current) inputRef.current.value = "";
       vscode2.postMessage({
         type: "sendMessage",
-        conversationId: currentSessionId,
+        sessionId,
         message: {
-          content: val,
-          id: `${Date.now()}`,
-          actor: "user",
-          updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          type: "markdown",
-          metadata: { isUserTurn: false }
+          user: val,
+          system: void 0
         }
       });
     }
-    return /* @__PURE__ */ _("div", null, /* @__PURE__ */ _("div", { className: "p-1 d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("div", { className: "f4 text-bold" }, currentWorktreeId ? `Worktree: ${currentWorktreeId}` : "Chat Session"), /* @__PURE__ */ _("div", { className: "d-flex gap-2" }, !currentWorktreeId && /* @__PURE__ */ _("button", { className: "btn", onClick: goBackToSessions }, "Sessions"), currentWorktreeId ? /* @__PURE__ */ _("button", { className: "btn", onClick: leaveWorktree }, "Leave worktree") : /* @__PURE__ */ _("button", { className: "btn", onClick: goBackToSessions }, "Back to Sessions"))), /* @__PURE__ */ _("div", { id: "log", className: "p-1 d-flex flex-column gap-2 mb-2 messages" }, messages.map((m4, i3) => /* @__PURE__ */ _(MessageComponent, { key: m4.id, message: m4 }))), /* @__PURE__ */ _("form", { onSubmit: send, className: "composer p-1" }, /* @__PURE__ */ _("div", { className: "form-group d-flex" }, /* @__PURE__ */ _("input", { ref: inputRef, className: "form-control flex-1 mr-2", placeholder: "Type a message..." }), /* @__PURE__ */ _("button", { className: "btn btn-primary btn-icon", type: "submit", "aria-label": "Send" }, /* @__PURE__ */ _("svg", { width: "16", height: "16", viewBox: "0 0 512 512", fill: "currentColor", "aria-hidden": "true", style: { color: "var(--vscode-button-foreground, #fff)" } }, /* @__PURE__ */ _("path", { d: "M440 6.5L24 246.4c-34.4 19.9-31.1 70.8 5.7 85.9L144 379.6V464c0 46.4 59.2 65.5 86.6 28.6l43.8-59.1 111.9 46.2c5.9 2.4 12.1 3.6 18.3 3.6 8.2 0 16.3-2.1 23.6-6.2 12.8-7.2 21.6-20 23.9-34.5l59.4-387.2c6.1-40.1-36.9-68.8-71.5-48.9zM192 464v-64.6l36.6 15.1L192 464zm212.6-28.7l-153.8-63.5L391 169.5c10.7-15.5-9.5-33.5-23.7-21.2L155.8 332.6 48 288 464 48l-59.4 387.3z" }))))));
+    return /* @__PURE__ */ _("div", null, /* @__PURE__ */ _("div", { className: "p-1 d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("div", { className: "f4 text-bold" }, currentWorktreeId ? `Worktree: ${currentWorktreeId}` : "Chat Session"), /* @__PURE__ */ _("div", { className: "d-flex gap-2" }, !currentWorktreeId && /* @__PURE__ */ _("button", { className: "btn", onClick: goBackToSessions }, "Sessions"), currentWorktreeId ? /* @__PURE__ */ _("button", { className: "btn", onClick: leaveWorktree }, "Leave worktree") : /* @__PURE__ */ _("button", { className: "btn", onClick: goBackToSessions }, "Back to Sessions"))), /* @__PURE__ */ _("div", { id: "log", className: "p-1 d-flex flex-column gap-2 mb-2 messages" }, /* @__PURE__ */ _("h5", null, "Original Task: ", originalTask), messages.length === 0 && /* @__PURE__ */ _("div", { className: "color-fg-muted" }, /* @__PURE__ */ _("b", null, "Larry:"), /* @__PURE__ */ _("div", { className: "color-fg-muted" }, "Thinking", /* @__PURE__ */ _("div", { className: "AnimatedEllipsis" }))), messages.map((m4, i3) => /* @__PURE__ */ _(MessageComponent, { key: i3, message: m4 }))), /* @__PURE__ */ _("form", { onSubmit: send, className: "composer p-1" }, /* @__PURE__ */ _("div", { className: "form-group d-flex" }, /* @__PURE__ */ _("input", { ref: inputRef, className: "form-control flex-1 mr-2", placeholder: "Type a message..." }), /* @__PURE__ */ _("button", { className: "btn btn-primary btn-icon p-1", type: "submit", "aria-label": "Send" }, /* @__PURE__ */ _("svg", { width: "16", height: "16", viewBox: "0 0 512 512", fill: "currentColor", "aria-hidden": "true", style: { color: "var(--vscode-button-foreground, #fff)" } }, /* @__PURE__ */ _("path", { d: "M440 6.5L24 246.4c-34.4 19.9-31.1 70.8 5.7 85.9L144 379.6V464c0 46.4 59.2 65.5 86.6 28.6l43.8-59.1 111.9 46.2c5.9 2.4 12.1 3.6 18.3 3.6 8.2 0 16.3-2.1 23.6-6.2 12.8-7.2 21.6-20 23.9-34.5l59.4-387.2c6.1-40.1-36.9-68.8-71.5-48.9zM192 464v-64.6l36.6 15.1L192 464zm212.6-28.7l-153.8-63.5L391 169.5c10.7-15.5-9.5-33.5-23.7-21.2L155.8 332.6 48 288 464 48l-59.4 387.3z" }))))), /* @__PURE__ */ _("div", { className: "color-fg-muted" }, "Using ", /* @__PURE__ */ _("b", null, "Larry Google Coding Agent")));
   }
 
   // apps/larry-vscode-ext/webview/index.tsx
   var vscode = window.acquireVsCodeApi();
   function App() {
-    const [currentSessionId, setCurrentSessionId] = d2("");
+    const [currentConversationId, setCurrentConversationId] = d2("");
     const [view, setView] = d2("sessions");
     const [currentWorktreeId, setCurrentWorktreeId] = d2("");
-    const [createdWorktree, setCreatedWorktree] = d2(null);
     const [worktreeStatus, setWorktreeStatus] = d2("checking");
     const [currentSession, setCurrentSession] = d2(null);
-    const [currentWorktreeIdFromExtension, setCurrentWorktreeIdFromExtension] = d2("");
-    const generateConversationId = () => {
-      return `conv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    };
-    const startLarryServer = async (conversationId, worktreeId) => {
+    const startLarryServer = async (sessionId, worktreeId) => {
       try {
         vscode.postMessage({
           type: "startLarryServer",
-          conversationId,
+          sessionId,
           worktreeId
         });
       } catch (error) {
@@ -16857,27 +16812,23 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
     y2(() => {
       async function onMsg(e3) {
         const m4 = e3.data;
-        if (m4?.type === "worktreeChanged") {
-          console.log("Worktree changed to:", m4.worktreeId);
-          setCurrentWorktreeIdFromExtension(m4.worktreeId);
-        }
         if (m4?.type === "worktreeCreated") {
-          setCurrentWorktreeIdFromExtension(m4.worktreeId);
-          setCreatedWorktree({
-            sessionName: m4.sessionName,
-            worktreeName: m4.worktreeName,
-            branchName: m4.branchName,
-            worktreeId: m4.worktreeId
+          setCurrentSession({
+            name: m4.sessionName,
+            worktreeId: m4.worktreeId,
+            id: m4.sessionId,
+            originalTask: m4.originalTask,
+            updatedAt: m4.updatedAt
           });
           setView("worktree-created");
           setWorktreeStatus("mounting");
-          await startLarryServer(m4.conversationId, m4.worktreeId);
+          await startLarryServer(m4.sessionId, m4.worktreeId);
           setWorktreeStatus("ready");
         }
         if (m4?.type === "worktreeExists") {
           if (m4.exists) {
             setWorktreeStatus("mounting");
-            await startLarryServer(m4.conversationId, m4.worktreeId);
+            await startLarryServer(m4.sessionId, m4.worktreeId);
             setWorktreeStatus("ready");
           } else {
             setWorktreeStatus("missing");
@@ -16885,7 +16836,7 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
         }
         if (m4?.type === "larryServerStarted") {
           if (m4.success) {
-            console.log(`Larry server started for conversation ${m4.conversationId}`);
+            console.log(`Larry server started for session ${m4.sessionId}`);
             setWorktreeStatus("ready");
           } else {
             console.error(`Failed to start Larry server: ${m4.error}`);
@@ -16894,7 +16845,7 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
         }
         if (m4?.type === "larryServerStopped") {
           if (m4.success) {
-            console.log(`Larry server stopped for conversation ${m4.conversationId}`);
+            console.log(`Larry server stopped for session ${m4.sessionId}`);
           } else {
             console.error(`Failed to stop Larry server: ${m4.error}`);
           }
@@ -16906,53 +16857,66 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
     function onCreateNewSessionClick() {
       setView("create-session");
     }
-    async function createSession(sessionName, agentId) {
-      const conversationId = generateConversationId();
+    async function createSession(originalTask) {
       vscode.postMessage({
         type: "createSession",
-        sessionName,
-        conversationId,
-        agentId
+        sessionName: originalTask.length > 20 ? originalTask.substring(0, 20) + "..." : originalTask,
+        originalTask
       });
     }
     async function createWorktree(worktreeId) {
       setWorktreeStatus("creating");
       vscode.postMessage({ type: "createMissingWorktree", worktreeId });
-      await startLarryServer(currentSessionId, worktreeId);
+      await startLarryServer(currentSession?.id || "", worktreeId);
     }
     function openWorktree(worktreeId) {
       vscode.postMessage({ type: "openWorktree", worktreeId });
     }
     function createAnotherSession() {
-      setCreatedWorktree(null);
-      setCurrentSessionId("");
+      setCurrentSession(null);
+      setCurrentConversationId("");
       setCurrentWorktreeId("");
       setView("create-session");
     }
     async function openChat(session) {
       setCurrentSession(session);
-      setCurrentSessionId(session.conversationId);
+      setCurrentConversationId(session.threadsId || "");
       setCurrentWorktreeId(session.worktreeId);
       setView("chat");
     }
     async function openSession(session) {
       setCurrentSession(session);
-      setCurrentSessionId(session.conversationId);
+      setCurrentConversationId(session.threadsId || "");
       setCurrentWorktreeId(session.worktreeId);
       setWorktreeStatus("checking");
       setView("worktree-created");
-      vscode.postMessage({ type: "checkWorktreeExists", worktreeId: session.worktreeId, conversationId: session.conversationId });
+      vscode.postMessage({ type: "checkWorktreeExists", worktreeId: session.worktreeId, sessionId: session.id });
     }
+    console.log("currentSession", currentSession);
     const AppShell = ({ children }) => /* @__PURE__ */ _("div", { class: "app" }, children);
+    return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _(
+      Chat,
+      {
+        originalTask: currentSession?.originalTask || "",
+        vscode,
+        currentWorktreeId: "10001-test",
+        goBackToSessions: () => setView("sessions"),
+        sessionId: "43a37ccc-26cf-4e4e-8b88-006c990ccc22",
+        onLeaveWorktree: () => {
+          setView("sessions");
+          setCurrentSession(null);
+          setCurrentWorktreeId("");
+        }
+      }
+    ));
     if (view === "sessions") {
       return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _(SessionsList, { vscode, onCreateNewSession: onCreateNewSessionClick, onOpenSession: openSession, onOpenChat: openChat }));
     }
     if (view === "worktree-created") {
-      const isNewSession = currentSessionId === "new-session";
       const worktreeData = {
-        sessionName: currentSession?.name || createdWorktree?.sessionName,
-        worktreeName: currentSession?.worktreeId || createdWorktree?.worktreeName,
-        branchName: currentSession?.worktreeId || createdWorktree?.branchName
+        sessionName: currentSession?.name,
+        worktreeName: currentSession?.worktreeId,
+        branchName: currentSession?.worktreeId
       };
       const getStatusMessage = () => {
         switch (worktreeStatus) {
@@ -16991,33 +16955,33 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
         }
       };
       const isButtonDisabled = worktreeStatus !== "ready" && worktreeStatus !== "missing";
-      return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _("div", { class: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { class: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { class: "f4 text-bold mb-0" }, isNewSession ? "Worktree Created" : "Open Session Worktree"), /* @__PURE__ */ _("button", { class: "btn", onClick: () => {
+      return /* @__PURE__ */ _(AppShell, null, /* @__PURE__ */ _("div", { class: "p-1 d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { class: "d-flex flex-justify-between flex-items-center mb-2" }, /* @__PURE__ */ _("h3", { class: "f4 text-bold mb-0" }, "Open Session Worktree"), /* @__PURE__ */ _("button", { class: "btn", onClick: () => {
         setCurrentSession(null);
         setWorktreeStatus("checking");
         setView("sessions");
-      } }, "Back to Sessions")), /* @__PURE__ */ _("div", { class: "Box p-3" }, /* @__PURE__ */ _("div", { class: "f5 text-bold mb-2" }, "Session: ", worktreeData?.sessionName), /* @__PURE__ */ _("div", { class: "f6 color-fg-muted mb-2" }, "Worktree: ", worktreeData?.worktreeName), /* @__PURE__ */ _("div", { class: "Box p-2 mb-3", style: { background: "var(--vscode-editor-background)" } }, /* @__PURE__ */ _("div", { class: "d-flex flex-items-center gap-2" }, /* @__PURE__ */ _("span", { class: "f4" }, getStatusIcon()), /* @__PURE__ */ _("span", { class: "f6" }, getStatusMessage()))), /* @__PURE__ */ _("div", { class: "d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", { class: "d-flex gap-2" }, worktreeStatus === "missing" ? /* @__PURE__ */ _(
+      } }, "Back to Sessions")), /* @__PURE__ */ _("div", { class: "Box p-3" }, /* @__PURE__ */ _("div", { class: "f5 text-bold mb-2" }, "Session: ", worktreeData?.sessionName), /* @__PURE__ */ _("div", { class: "f6 color-fg-muted mb-2" }, "Worktree: ", worktreeData?.worktreeName), /* @__PURE__ */ _("div", { class: "Box p-2 mb-3", style: { background: "var(--vscode-editor-background)" } }, /* @__PURE__ */ _("div", { class: "d-flex d-flex flex-items-center" }, /* @__PURE__ */ _("div", { class: "f4 pr-1" }, getStatusIcon()), /* @__PURE__ */ _("div", { class: "f6" }, getStatusMessage()))), /* @__PURE__ */ _("div", { class: "d-flex flex-column gap-2" }, /* @__PURE__ */ _("div", null, worktreeStatus === "missing" ? /* @__PURE__ */ _("div", { className: "width-full mb-1" }, /* @__PURE__ */ _(
         "button",
         {
-          class: "btn btn-primary",
+          class: "btn btn-primary width-full",
           onClick: () => createWorktree(worktreeData.worktreeName || "")
         },
         "Create Worktree"
-      ) : /* @__PURE__ */ _(
+      )) : /* @__PURE__ */ _("div", { className: "width-full mb-1" }, /* @__PURE__ */ _(
         "button",
         {
-          class: "btn btn-primary",
+          class: "btn btn-primary width-full",
           onClick: () => openWorktree(worktreeData.worktreeName || ""),
           disabled: isButtonDisabled
         },
         "Open Worktree"
-      ), isNewSession && worktreeStatus === "ready" && /* @__PURE__ */ _(
+      )), worktreeStatus === "ready" && /* @__PURE__ */ _("div", { className: "width-full mb-1" }, /* @__PURE__ */ _(
         "button",
         {
-          class: "btn",
+          class: "btn width-full",
           onClick: createAnotherSession
         },
         "Create Another Session"
-      )), /* @__PURE__ */ _("div", { class: "f6 color-fg-muted" }, "\u{1F4A1} Use native git commands to push/pull changes")))));
+      ))), /* @__PURE__ */ _("div", { class: "f6 color-fg-muted" }, "\u{1F4A1} Within worktree use native git commands to commit, push/pull changes. ", /* @__PURE__ */ _("br", null), "All ", /* @__PURE__ */ _("b", null, "AI"), " changes will happen in container and will be automatically synced back to your local worktree.")))));
     }
     if (view === "create-session") {
       return /* @__PURE__ */ _(CreateSessionView, { onBack: () => setView("sessions"), onCreateSession: createSession });
@@ -17029,10 +16993,12 @@ Please report this to https://github.com/markedjs/marked.`, e3) {
           vscode,
           currentWorktreeId,
           goBackToSessions: () => setView("sessions"),
-          currentSessionId,
+          conversationId: currentConversationId,
+          sessionId: currentSession?.id || "",
           onLeaveWorktree: () => {
             setView("sessions");
-            setCurrentSessionId("");
+            setCurrentConversationId("");
+            setCurrentSession(null);
             setCurrentWorktreeId("");
           }
         }

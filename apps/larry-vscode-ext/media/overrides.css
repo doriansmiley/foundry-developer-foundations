@@ -3,6 +3,10 @@
 	--fdry-gap: 8px;
 }
 
+body {
+	padding: 0 5px !important;
+}
+
 html, body, #root, .app { height: 100%; }
 html, body, #root { font-family: var(--vscode-font-family); color: var(--vscode-foreground); margin: 0; }
 
