@@ -108,8 +108,16 @@ ${readme}
 
     if (
       context.stateId.includes('confirmUserIntent') ||
-      context.stateId.includes('architectImplementation')
+      context.stateId.includes('architectImplementation') ||
+      context.stateId.includes('pause')
     ) {
+      if (context.stateId.includes('pause')) {
+        const lastStateBeforePause = context.stack?.[context.stack?.length - 1];
+        if (!lastStateBeforePause || !context.stateId.includes('confirmUserIntent') || !context.stateId.includes('architectImplementation')) {
+          // we entered pause from some other state transition
+          return;
+        }
+      }
       // capture any edits the MD files
       const prefix = context.stateId.includes('architectImplementation') ? 'designDoc' : 'spec';
       const p = path.join(process.cwd(), `${prefix}-${executionId}.md`);
