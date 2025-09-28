@@ -4,6 +4,7 @@ import type {
   ThreadCreatedEvent,
   MachineUpdatedEvent,
   MachineResponse,
+  MachineStatus,
 } from '../../types';
 import { IdempotencyStore } from '../../services/idempotency.store';
 import { SSEService } from '../../services/sse.service';
@@ -84,31 +85,32 @@ export function threadsRoutes(idem: IdempotencyStore, sse: SSEService) {
         // Any errors here should be logged but not sent to client since response is already sent
         setImmediate(async () => {
           try {
-            // run google coding assistant call here
             const { executionId } = await googleCodingAgent(
               undefined,
               undefined,
               userTask
             );
 
-            // For v0 demo placeholders - remove and wire DAO
             const threadId = executionId;
             const machineId = executionId;
 
             const machine = await machineDao.read(executionId);
 
-            const { context } = JSON.parse(machine.state!) as {
-              context: Context;
-            };
-            const machineResponse = {
-              id: machineId,
-              status: '',
-              currentState: machine.currentState,
-              currentStateContext: context, // TODO get only context for current state
-            };
+            const context = JSON.parse(machine.state!).context;
+            const currentStateContext = context[context.stateId];
+            const humanReview = !!currentStateContext?.confirmationPrompt;
+
+            const status: MachineStatus = humanReview
+              ? 'awaiting_human'
+              : 'running';
             const machineUpdateEvt: MachineUpdatedEvent = {
               type: 'machine.updated',
-              machine: machineResponse,
+              machine: {
+                id: machineId,
+                status,
+                currentState: context.stateId,
+                context,
+              },
               clientRequestId: req.header('Client-Request-Id') || undefined,
             };
             sse.broadcastMachineUpdated(machineUpdateEvt);

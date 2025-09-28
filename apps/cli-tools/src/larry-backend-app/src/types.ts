@@ -1,3 +1,5 @@
+import { Context } from '@codestrap/developer-foundations-types';
+
 export type UUID = string;
 
 export type MachineStatus =
@@ -24,14 +26,12 @@ export interface ThreadsListResponse {
 
 export interface MachineResponse {
   id: UUID; // machineId/executionId
-  status: any;
+  status: MachineStatus;
   currentState: string | undefined;
-  // Context scoped to the CURRENT state - flexible, includes artifacts inside
-  currentStateContext: Record<string, any>; // may include { artifacts: [...] }
-  // passthroughs from DAO while you still need them
-  machine?: string; // raw JSON string from DAO
-  state?: string; // raw JSON string from DAO
-  logs?: string;
+  // Context scoped to the CURRENT state, on updates it is better to just send this than entire context
+  currentStateContext?: Record<string, any>;
+  // this is useful while getting all machine details to load up history
+  context?: Context; // entire context for the machine
 }
 
 export interface ErrorEnvelope {

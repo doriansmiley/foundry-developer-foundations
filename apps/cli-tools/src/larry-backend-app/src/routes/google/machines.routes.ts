@@ -22,23 +22,19 @@ export function machinesRoutes(idem: IdempotencyStore, sse: SSEService) {
       try {
         const { machineId } = req.params;
 
-        // TODO integrate MachineDao.read(machineId)
-        // const exec = await machineDao.read(machineId);
-        // Map DAO -> MachineResponse
-        // - Determine MachineStatus from exec.state or exec.currentState
-        // - Parse current state's context from exec.machine/exec.state and expose as currentStateContext
+        const machine = await machineDao.read(machineId);
+        const context = JSON.parse(machine.state!).context;
+        const currentStateContext = context[context.stateId];
+        const humanReview = !!currentStateContext?.confirmationPrompt;
 
-        const status: MachineStatus = 'running';
+        const status: MachineStatus = humanReview
+          ? 'awaiting_human'
+          : 'running';
         const body: MachineResponse = {
           id: machineId,
           status,
-          currentState: 'confirmUserIntent',
-          currentStateContext: {
-            // include artifacts here if available, eg: artifacts: [{ kind: 'markdown', meta: {...} }]
-          },
-          logs: undefined,
-          machine: undefined,
-          state: undefined,
+          currentState: context.stateId,
+          context,
         };
 
         res.json(body);
@@ -86,19 +82,15 @@ export function machinesRoutes(idem: IdempotencyStore, sse: SSEService) {
 
             const machine = await machineDao.read(executionId);
 
+            const context = JSON.parse(machine.state!).context;
+            const currentStateContext = context[context.stateId];
+            const humanReview = !!currentStateContext?.confirmationPrompt;
+
             const updated: MachineResponse = {
               id: machineId,
-              status: 'awaiting_human',
-              currentState: 'humanReview.spec_review',
-              currentStateContext: {
-                artifacts: [
-                  {
-                    kind: 'markdown',
-                    meta: { filename: 'spec.md', size: 1234 },
-                  },
-                ],
-                systemMessage: 'Please review the generated spec.',
-              },
+              currentState: context.stateId,
+              status: humanReview ? 'awaiting_human' : 'running',
+              currentStateContext,
             };
 
             const evt: MachineUpdatedEvent = {
