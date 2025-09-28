@@ -9,8 +9,11 @@ RUN addgroup -g 1001 -S nodejs && \
 
 USER larry
 
-EXPOSE 3000
+# Expose both ports
+EXPOSE 3000 4210
 
+# Set default port (can be overridden with -e PORT=4210)
+ENV PORT=3000
 
 ENTRYPOINT ["sh", "-c"]
-CMD ["cd /workspace/apps/cli-tools && npm run start-simple-for-test"]
+CMD ["cd /workspace/apps/cli-tools && PORT=$PORT npm run server"]
