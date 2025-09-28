@@ -1,8 +1,5 @@
-import { Session as SessionDaoType } from './sessionsDao';
-
+// Legacy types - kept for potential future use
 export type Message = {
   system?: string;
   user?: string;
 };
-
-export type Session = SessionDaoType;

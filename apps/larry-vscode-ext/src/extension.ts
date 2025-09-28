@@ -140,6 +140,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       const { stdout } = await execAsync(
         `docker run -d --name ${containerName} \
    -p 4210:4210 \
+   -e PORT=4210 \
    -v "${foundryProjectRoot}:/workspace:ro" \
    --user 1001:1001 \
    larry-server`
@@ -605,6 +606,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       const { stdout } = await execAsync(
         `docker run -d --name ${containerName} \
    -p 3000:3000 \
+   -e PORT=3000 \
    ${threadIdEnv} \
    -e WORKTREE_NAME=${worktreeName} \
    -v "${worktreePath}:/workspace:rw" \
