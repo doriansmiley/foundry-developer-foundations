@@ -1,34 +1,12 @@
 import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { makeSqlLiteThreadsDao, ThreadsDao } from './threadsDao';
-import { makeSqlLiteSessionsDao, SessionsDao } from './sessionsDao';
-import { Message } from './types';
 import { findProjectRoot } from './findProjectRoot';
 import path from 'path';
 
 const execAsync = promisify(exec);
 
 export function activate(context: vscode.ExtensionContext) {
-  // Configure DB path from settings -> env for threadsDao
-  try {
-    const config = vscode.workspace.getConfiguration('larry');
-    const configuredDbPath = config.get<string>('dbPath');
-    const defaultDbPath = path.join(
-      require('os').homedir(),
-      'larry-db',
-      'developer-foundations-threads.sqlite'
-    );
-    const effectiveDbPath =
-      configuredDbPath && configuredDbPath.trim().length > 0
-        ? configuredDbPath
-        : defaultDbPath;
-    process.env['SQL_LITE_DB_PATH'] = effectiveDbPath;
-    console.log('Larry DB path configured as:', effectiveDbPath);
-  } catch (e) {
-    console.warn('Failed to configure Larry DB path from settings:', e);
-  }
-
   const provider = new LarryViewProvider(context);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('larryHome', provider, {
@@ -48,107 +26,151 @@ export function activate(context: vscode.ExtensionContext) {
 
 class LarryViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
-  private runningContainers: Map<string, string> = new Map(); // conversationId -> containerId
-  private threadsDao: ThreadsDao;
-  private sessionsDao: SessionsDao;
+  private runningContainers: Map<string, string> = new Map(); // threadId -> containerId
+  private mainDockerContainer: string | undefined; // Main docker container for port 4210
 
   constructor(private readonly context: vscode.ExtensionContext) {
-    // Initialize ThreadsDao
-    this.threadsDao = makeSqlLiteThreadsDao();
-    this.sessionsDao = makeSqlLiteSessionsDao();
+    // No initialization needed for new flow
   }
 
-  // Database operations
-  private async loadSessions(): Promise<void> {
+  // Thread ID file management
+  private async readCurrentThreadId(
+    worktreeName: string
+  ): Promise<string | undefined> {
     try {
-      const sessions = (await this.sessionsDao.listAll?.()) || [];
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        return undefined;
+      }
 
-      this.view?.webview.postMessage({
-        type: 'sessionsLoaded',
-        sessions: sessions,
-        currentWorktreeId: await this.getCurrentWorktreeId(),
-      });
+      const threadIdFilePath = vscode.Uri.joinPath(
+        workspaceFolder.uri,
+        '.larry',
+        'worktrees',
+        worktreeName,
+        'tmp',
+        'currentThreadId.txt'
+      );
+
+      const fileContent = await vscode.workspace.fs.readFile(threadIdFilePath);
+      return fileContent.toString().trim();
     } catch (error) {
-      console.error('Error loading sessions:', error);
-      // Send empty sessions on error
-      this.view?.webview.postMessage({
-        type: 'sessionsLoaded',
-        sessions: [],
-      });
+      // File doesn't exist or can't be read
+      return undefined;
     }
   }
 
-  private async loadMessages(sessionId: string): Promise<void> {
-    try {
-      const session = await this.sessionsDao.read(sessionId);
-      const conversationId = session.threadsId;
-      console.log('Conversation ID:', conversationId);
-      if (!conversationId) {
-        return;
-      }
-      const { messages } = await this.threadsDao.read(conversationId);
-      console.log('Messages:', messages);
-      const parsedMessages = JSON.parse(messages || '[]') as Message[];
-
-      this.view?.webview.postMessage({
-        type: 'messagesLoaded',
-        messages: parsedMessages,
-      });
-    } catch (error) {
-      console.error('Error loading messages:', error);
-
-      // If it's a "thread not found" error, create an empty thread
-      if (
-        error instanceof Error &&
-        error.message.includes('Thread not found')
-      ) {
-        this.view?.webview.postMessage({
-          type: 'messagesLoaded',
-          messages: [],
-        });
-      } else {
-        // For other errors, show a user-friendly message
-        vscode.window.showErrorMessage(
-          `Failed to load messages: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`
-        );
-      }
-    }
-  }
-
-  private async saveMessage(
-    sessionId: string,
-    message: Message
+  private async writeCurrentThreadId(
+    worktreeName: string,
+    threadId: string
   ): Promise<void> {
     try {
-      // Try to read existing messages, or start with empty array if thread doesn't exist
-      let existingMessages = '[]';
-      const session = await this.sessionsDao.read(sessionId);
-      const conversationId = session.threadsId;
-      if (!conversationId) {
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
         return;
       }
-      try {
-        const thread = await this.threadsDao.read(conversationId);
-        existingMessages = thread.messages || '[]';
-      } catch (error) {
-        // Thread doesn't exist yet, start with empty messages
-        console.log('Thread not found, creating new thread with first message');
-      }
 
-      const parsedMessages = JSON.parse(existingMessages) as Message[];
+      const tmpDir = vscode.Uri.joinPath(
+        workspaceFolder.uri,
+        '.larry',
+        'worktrees',
+        worktreeName,
+        'tmp'
+      );
 
-      // Add new user message
-      parsedMessages.push(message);
+      // Create tmp directory if it doesn't exist
+      await vscode.workspace.fs.createDirectory(tmpDir);
 
-      await this.threadsDao.upsert(
-        JSON.stringify(parsedMessages),
-        'larry-coding-assistant',
-        conversationId
+      const threadIdFilePath = vscode.Uri.joinPath(
+        tmpDir,
+        'currentThreadId.txt'
+      );
+      await vscode.workspace.fs.writeFile(
+        threadIdFilePath,
+        Buffer.from(threadId, 'utf8')
       );
     } catch (error) {
-      console.error('Error saving message:', error);
+      console.error('Error writing thread ID file:', error);
+    }
+  }
+
+  // Main Docker management methods
+  private async ensureMainDockerRunning(): Promise<void> {
+    try {
+      // Check if main docker is already running
+      if (this.mainDockerContainer) {
+        try {
+          await execAsync(`docker inspect ${this.mainDockerContainer}`);
+          console.log(
+            'Main docker container already running:',
+            this.mainDockerContainer
+          );
+          return;
+        } catch (error) {
+          // Container doesn't exist, clear the reference
+          this.mainDockerContainer = undefined;
+        }
+      }
+
+      // Start main docker container
+      await this.startMainDockerContainer();
+    } catch (error) {
+      console.error('Error ensuring main docker is running:', error);
+    }
+  }
+
+  private async startMainDockerContainer(): Promise<void> {
+    try {
+      const foundryProjectRoot = await findProjectRoot();
+      if (!foundryProjectRoot) {
+        throw new Error('Project root not found.');
+      }
+
+      const containerName = 'larry-main-server';
+
+      // Clean up existing container if any
+      try {
+        await execAsync(`docker rm -f ${containerName}`);
+        console.log(`Cleaned up existing main container: ${containerName}`);
+      } catch (cleanupError) {
+        // Container doesn't exist, which is fine
+      }
+
+      // Start main container on port 4210
+      const { stdout } = await execAsync(
+        `docker run -d --name ${containerName} \
+   -p 4210:4210 \
+   -v "${foundryProjectRoot}:/workspace:ro" \
+   --user 1001:1001 \
+   larry-server`
+      );
+
+      const containerId = stdout.trim();
+      this.mainDockerContainer = containerId;
+
+      console.log('Main Larry container started:', containerId);
+    } catch (error) {
+      console.error('Error starting main Larry container:', error);
+      throw error;
+    }
+  }
+
+  private async stopMainDockerContainer(): Promise<void> {
+    try {
+      if (!this.mainDockerContainer) {
+        return;
+      }
+
+      const containerName = 'larry-main-server';
+
+      // Stop and remove container
+      await execAsync(`docker stop ${containerName}`);
+      await execAsync(`docker rm ${containerName}`);
+
+      this.mainDockerContainer = undefined;
+      console.log('Main Larry container stopped');
+    } catch (error) {
+      console.error('Error stopping main Larry container:', error);
     }
   }
 
@@ -184,79 +206,6 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       console.error('Error building Docker image:', error);
       throw error;
-    }
-  }
-
-  private async startLarryContainer(
-    sessionId: string,
-    worktreeId: string
-  ): Promise<string> {
-    // for now let's skip building the image
-    // await this.buildDockerImage();
-
-    try {
-      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-      if (!workspaceFolder) {
-        throw new Error('No workspace folder found');
-      }
-
-      const containerName = `larry-server-${sessionId}`;
-
-      try {
-        await execAsync(`docker rm -f ${containerName}`);
-        console.log(`Cleaned up existing container: ${containerName}`);
-      } catch (cleanupError) {
-        // Container doesn't exist, which is fine
-      }
-
-      const worktreePath = path.join(
-        workspaceFolder.uri.fsPath,
-        '.larry',
-        'worktrees',
-        worktreeId
-      );
-      const { stdout } = await execAsync(
-        `docker run -d --name ${containerName} \
-   -e SESSION_ID=${sessionId} \
-   -v "${worktreePath}:/workspace:rw" \
-      -v "${require('os').homedir()}/larry-db:/larry-db:rw" \
-   --user 1001:1001 \
-   larry-server`
-      );
-
-      const containerId = stdout.trim();
-      this.runningContainers.set(sessionId, containerId);
-
-      console.log(
-        `Larry container started for session ${sessionId}:`,
-        containerId
-      );
-      return containerId;
-    } catch (error) {
-      console.error('Error starting Larry container:', error);
-      throw error;
-    }
-  }
-
-  private async stopLarryContainer(sessionId: string): Promise<void> {
-    try {
-      const containerId = this.runningContainers.get(sessionId);
-      if (!containerId) {
-        console.log(`No running container found for session ${sessionId}`);
-        return;
-      }
-
-      const containerName = `larry-server-${sessionId}`;
-
-      // Stop and remove container
-      await execAsync(`docker stop ${containerName}`);
-      await execAsync(`docker rm ${containerName}`);
-
-      this.runningContainers.delete(sessionId);
-      console.log(`Larry container stopped for session ${sessionId}`);
-    } catch (error) {
-      console.error('Error stopping Larry container:', error);
-      // Don't throw error, just log it
     }
   }
 
@@ -339,60 +288,187 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     if (!this.view) return;
 
     const worktreeId = await this.getCurrentWorktreeId();
+    const isInWorktree = await this.isInWorktree();
+    let currentThreadId: string | undefined;
+
+    // If in worktree, try to read thread ID from file
+    if (isInWorktree && worktreeId) {
+      try {
+        currentThreadId = await this.readCurrentThreadId(worktreeId);
+      } catch (error) {
+        console.error('Error reading thread ID for worktree:', error);
+      }
+    }
+
     this.view.webview.postMessage({
-      type: 'worktreeChanged',
-      worktreeId,
+      type: 'worktree_detection',
+      isInWorktree,
+      currentThreadId,
     });
+
+    // Start main docker if not in worktree
+    if (!isInWorktree) {
+      await this.ensureMainDockerRunning();
+    }
   }
 
-  async createSessionWithWorktree(sessionName: string, originalTask: string) {
+  async isInWorktree(): Promise<boolean> {
     try {
-      // Transform session name to proper branch name format
-      const branchName =
-        this.transformSessionNameToBranchName(sessionName) +
-        '-' +
-        Math.random().toString(36).substring(2, 5);
-      const finalWorktreeName = branchName;
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        return false;
+      }
 
-      // Get the main repository path - try multiple approaches
+      // Check if we're in a git worktree by looking for .git file (worktree) vs .git directory (main)
+      const gitPath = vscode.Uri.joinPath(workspaceFolder.uri, '.git');
+
+      try {
+        const gitStat = await vscode.workspace.fs.stat(gitPath);
+
+        if (gitStat.type === vscode.FileType.File) {
+          const gitContent = await vscode.workspace.fs.readFile(gitPath);
+          const gitDir = gitContent.toString().trim();
+
+          // If .git is a file pointing to a worktree, we're in a worktree
+          return gitDir.includes('worktrees/');
+        } else {
+          // If .git is a directory, we're in the main repository
+          return false;
+        }
+      } catch (gitError) {
+        // If .git doesn't exist or can't be read, assume not in worktree
+        return false;
+      }
+    } catch (error) {
+      console.error('Error detecting worktree:', error);
+      return false;
+    }
+  }
+
+  async handleOpenWorktree(
+    worktreeName: string,
+    threadId: string | undefined,
+    label: string
+  ) {
+    try {
+      // Create or ensure worktree exists
+      const finalWorktreeName = await this.createOrEnsureWorktree(
+        worktreeName,
+        threadId,
+        label
+      );
+
+      if (!finalWorktreeName) {
+        throw new Error('Failed to create or find worktree');
+      }
+
+      // Setup worktree environment
+      await this.setupWorktreeEnvironment(finalWorktreeName, threadId);
+
+      // Start worktree docker container
+      await this.startWorktreeDockerContainer(finalWorktreeName, threadId);
+
+      // Notify that worktree is ready
+      this.view?.webview.postMessage({
+        type: 'worktree_ready',
+        worktreeName: finalWorktreeName,
+        threadId,
+      });
+
+      // Open worktree in new window
+      await this.openWorktree(finalWorktreeName);
+    } catch (error) {
+      console.error('Error handling open worktree:', error);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
+      // Show VSCode toast notification
+      vscode.window.showErrorMessage(
+        `Failed to setup worktree: ${errorMessage}`
+      );
+
+      this.view?.webview.postMessage({
+        type: 'worktree_setup_error',
+        error: errorMessage,
+        worktreeName,
+        threadId,
+      });
+    }
+  }
+
+  async createOrEnsureWorktree(
+    worktreeName: string,
+    threadId: string | undefined,
+    label: string
+  ): Promise<string | undefined> {
+    try {
+      // Get workspace folder
       let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-
       if (!workspaceFolder) {
-        // Fallback: try to get the active text editor's workspace
         const activeEditor = vscode.window.activeTextEditor;
-        console.log('Active editor:', !!activeEditor);
         if (activeEditor) {
-          const activeFileUri = activeEditor.document.uri;
-          workspaceFolder = vscode.workspace.getWorkspaceFolder(activeFileUri);
-          console.log('Workspace from active file:', !!workspaceFolder);
+          workspaceFolder = vscode.workspace.getWorkspaceFolder(
+            activeEditor.document.uri
+          );
         }
       }
 
       if (!workspaceFolder) {
-        // Final fallback: ask user to open a folder
-        const openFolder = await vscode.window.showErrorMessage(
-          'No workspace folder found. Please open a folder first.',
-          'Open Folder'
-        );
-        if (openFolder === 'Open Folder') {
-          await vscode.commands.executeCommand('vscode.openFolder');
-        }
-        return finalWorktreeName;
+        throw new Error('No workspace folder found');
       }
 
-      console.log('Using workspace folder:', workspaceFolder.uri.fsPath);
+      // Generate final worktree name if not provided
+      let finalWorktreeName = worktreeName;
+      if (!finalWorktreeName || finalWorktreeName.trim() === '') {
+        finalWorktreeName =
+          this.transformSessionNameToBranchName(label) +
+          '-' +
+          Math.random().toString(36).substring(2, 5);
+      }
 
-      // Use fixed .larry/worktrees path in the repository
-      const worktreesPath = vscode.Uri.joinPath(
+      // Check if worktree already exists
+      const worktreePath = vscode.Uri.joinPath(
         workspaceFolder.uri,
         '.larry',
-        'worktrees'
-      ).fsPath;
+        'worktrees',
+        finalWorktreeName
+      );
 
+      const worktreeExists = await vscode.workspace.fs.stat(worktreePath).then(
+        () => true,
+        () => false
+      );
+
+      if (!worktreeExists) {
+        // Create worktree
+        await this.createWorktreeInternal(
+          workspaceFolder,
+          finalWorktreeName,
+          threadId,
+          label
+        );
+      }
+
+      return finalWorktreeName;
+    } catch (error) {
+      console.error('Error creating or ensuring worktree:', error);
+      throw error;
+    }
+  }
+
+  async createWorktreeInternal(
+    workspaceFolder: vscode.WorkspaceFolder,
+    worktreeName: string,
+    threadId: string | undefined,
+    label: string
+  ) {
+    try {
       // Create worktree directory path
       const worktreePath = vscode.Uri.joinPath(
-        vscode.Uri.file(worktreesPath),
-        finalWorktreeName
+        workspaceFolder.uri,
+        '.larry',
+        'worktrees',
+        worktreeName
       );
 
       // Create the .larry/worktrees directory if it doesn't exist
@@ -400,111 +476,154 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         vscode.Uri.joinPath(workspaceFolder.uri, '.larry', 'worktrees')
       );
 
-      // Use exec to run git worktree add command and wait for completion
-      const { exec } = require('child_process');
-      const util = require('util');
-      const execAsync = util.promisify(exec);
+      // Create branch name in larry/ format
+      const branchName = `larry/${worktreeName}`;
+      let worktreeCreated = false;
 
       try {
-        // Create branch name in larry/ format
-        const branchName = `larry/${finalWorktreeName}`;
-        let worktreeCreated = false;
-
-        try {
-          // Get current branch name to branch from
-          const { stdout: currentBranch } = await execAsync(
-            'git rev-parse --abbrev-ref HEAD',
-            { cwd: workspaceFolder.uri.fsPath }
-          );
-          const sourceBranch = currentBranch.trim();
-
-          console.log(`Creating worktree from current branch: ${sourceBranch}`);
-
-          await execAsync(
-            `git worktree add "${worktreePath.fsPath}" -b ${branchName} ${sourceBranch}`,
-            { cwd: workspaceFolder.uri.fsPath }
-          );
-          worktreeCreated = true;
-        } catch (branchError: any) {
-          // If branch already exists, try to use existing branch
-          if (branchError.message?.includes('already exists')) {
-            console.log(
-              `Branch ${branchName} already exists, trying to use existing branch`
-            );
-            try {
-              await execAsync(
-                `git worktree add "${worktreePath.fsPath}" ${branchName}`,
-                { cwd: workspaceFolder.uri.fsPath }
-              );
-              worktreeCreated = true;
-            } catch (existingBranchError: any) {
-              // If worktree path already exists, show error
-              if (
-                existingBranchError.message?.includes('already checked out')
-              ) {
-                throw new Error(
-                  `Worktree path already exists: ${worktreePath.fsPath}`
-                );
-              } else {
-                throw existingBranchError;
-              }
-            }
-          } else {
-            throw branchError;
-          }
-        }
-
-        if (worktreeCreated) {
-          // Verify the worktree was created
-          const worktreeExists = await vscode.workspace.fs
-            .stat(worktreePath)
-            .then(
-              () => true,
-              () => false
-            );
-
-          let createdSession;
-          if (worktreeExists) {
-            try {
-              createdSession = await this.sessionsDao.upsert(
-                undefined,
-                undefined,
-                sessionName,
-                originalTask,
-                finalWorktreeName
-              );
-            } catch (error) {
-              console.error('Failed to create initial database record:', error);
-            }
-
-            // Notify webview about successful worktree creation
-            this.view?.webview.postMessage({
-              type: 'worktreeCreated',
-              sessionName,
-              worktreeId: finalWorktreeName,
-              originalTask,
-              sessionId: createdSession?.id || '',
-              updatedAt: createdSession?.updatedAt || '',
-            });
-
-            vscode.window.showInformationMessage(
-              `Session "${sessionName}" created with worktree: ${finalWorktreeName} (branch: ${branchName})`
-            );
-          } else {
-            vscode.window.showErrorMessage(
-              'Worktree was not created successfully'
-            );
-          }
-        }
-      } catch (gitError: any) {
-        vscode.window.showErrorMessage(
-          `Failed to create git worktree: ${gitError.message || gitError}`
+        // Get current branch name to branch from
+        const { stdout: currentBranch } = await execAsync(
+          'git rev-parse --abbrev-ref HEAD',
+          { cwd: workspaceFolder.uri.fsPath }
         );
+        const sourceBranch = currentBranch.trim();
+
+        console.log(`Creating worktree from current branch: ${sourceBranch}`);
+
+        await execAsync(
+          `git worktree add "${worktreePath.fsPath}" -b ${branchName} ${sourceBranch}`,
+          { cwd: workspaceFolder.uri.fsPath }
+        );
+        worktreeCreated = true;
+      } catch (branchError: any) {
+        // If branch already exists, try to use existing branch
+        if (branchError.message?.includes('already exists')) {
+          console.log(
+            `Branch ${branchName} already exists, trying to use existing branch`
+          );
+          try {
+            await execAsync(
+              `git worktree add "${worktreePath.fsPath}" ${branchName}`,
+              { cwd: workspaceFolder.uri.fsPath }
+            );
+            worktreeCreated = true;
+          } catch (existingBranchError: any) {
+            if (existingBranchError.message?.includes('already checked out')) {
+              throw new Error(
+                `Worktree path already exists: ${worktreePath.fsPath}`
+              );
+            } else {
+              throw existingBranchError;
+            }
+          }
+        } else {
+          throw branchError;
+        }
       }
 
-      return finalWorktreeName;
+      if (worktreeCreated) {
+        // Write thread ID to file only if provided (existing worktree case)
+        if (threadId && threadId.trim() !== '') {
+          try {
+            await this.writeCurrentThreadId(worktreeName, threadId);
+            console.log(
+              `Worktree created: ${worktreeName} (branch: ${branchName}) with thread ID: ${threadId}`
+            );
+          } catch (error) {
+            console.error('Failed to write thread ID file:', error);
+          }
+        } else {
+          // New worktree - no thread ID file created yet
+          console.log(
+            `New worktree created: ${worktreeName} (branch: ${branchName}) - thread ID will be assigned later`
+          );
+        }
+      }
     } catch (error) {
-      vscode.window.showErrorMessage(`Failed to create worktree: ${error}`);
+      console.error('Error creating worktree:', error);
+      throw error;
+    }
+  }
+
+  async setupWorktreeEnvironment(worktreeName: string, threadId?: string) {
+    try {
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        throw new Error('No workspace folder found');
+      }
+
+      const worktreePath = vscode.Uri.joinPath(
+        workspaceFolder.uri,
+        '.larry',
+        'worktrees',
+        worktreeName
+      ).fsPath;
+
+      // Run npm install in worktree
+      console.log('Running npm install in worktree...');
+      await execAsync('npm install', { cwd: worktreePath });
+
+      // Set environment variables (if needed)
+      // This could be extended to set specific env vars for the worktree
+
+      console.log('Worktree environment setup completed');
+    } catch (error) {
+      console.error('Error setting up worktree environment:', error);
+      throw error;
+    }
+  }
+
+  async startWorktreeDockerContainer(
+    worktreeName: string,
+    threadId: string | undefined
+  ): Promise<string> {
+    try {
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!workspaceFolder) {
+        throw new Error('No workspace folder found');
+      }
+
+      const containerName = `larry-worktree-${worktreeName}`;
+
+      // Clean up existing container if any
+      try {
+        await execAsync(`docker rm -f ${containerName}`);
+        console.log(`Cleaned up existing worktree container: ${containerName}`);
+      } catch (cleanupError) {
+        // Container doesn't exist, which is fine
+      }
+
+      const worktreePath = vscode.Uri.joinPath(
+        workspaceFolder.uri,
+        '.larry',
+        'worktrees',
+        worktreeName
+      ).fsPath;
+
+      // Start worktree container on port 3000
+      const threadIdEnv = threadId ? `-e THREAD_ID=${threadId}` : '';
+      const { stdout } = await execAsync(
+        `docker run -d --name ${containerName} \
+   -p 3000:3000 \
+   ${threadIdEnv} \
+   -e WORKTREE_NAME=${worktreeName} \
+   -v "${worktreePath}:/workspace:rw" \
+   --user 1001:1001 \
+   larry-server`
+      );
+
+      const containerId = stdout.trim();
+      // Use worktree name as key since threadId might be undefined
+      this.runningContainers.set(worktreeName, containerId);
+
+      console.log(
+        `Worktree Larry container started for ${worktreeName}:`,
+        containerId
+      );
+      return containerId;
+    } catch (error) {
+      console.error('Error starting worktree Larry container:', error);
+      throw error;
     }
   }
 
@@ -555,7 +674,9 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         );
 
         if (createWorktree === 'Create Worktree') {
-          await this.createMissingWorktree(absoluteWorktreePath);
+          vscode.window.showInformationMessage(
+            'Please use the "Open worktree" flow in the extension to create worktrees.'
+          );
         } else {
           return;
         }
@@ -568,180 +689,6 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       );
     } catch (error) {
       vscode.window.showErrorMessage(`Failed to open worktree: ${error}`);
-    }
-  }
-
-  async checkWorktreeExists(worktreeId: string): Promise<boolean> {
-    try {
-      let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-
-      if (!workspaceFolder) {
-        const activeEditor = vscode.window.activeTextEditor;
-        if (activeEditor) {
-          const activeFileUri = activeEditor.document.uri;
-          workspaceFolder = vscode.workspace.getWorkspaceFolder(activeFileUri);
-        }
-      }
-
-      if (!workspaceFolder) {
-        console.log('checkWorktreeExists: No workspace folder found');
-        return false;
-      }
-
-      const worktreePath = vscode.Uri.joinPath(
-        workspaceFolder.uri,
-        '.larry',
-        'worktrees',
-        worktreeId
-      ).fsPath;
-
-      // Convert relative path to absolute path
-      const absoluteWorktreePath = worktreePath.startsWith('.')
-        ? vscode.Uri.joinPath(workspaceFolder.uri, worktreePath).fsPath
-        : worktreePath;
-
-      console.log('checkWorktreeExists: Absolute path:', absoluteWorktreePath);
-
-      // Check if worktree exists
-      const exists = await vscode.workspace.fs
-        .stat(vscode.Uri.file(absoluteWorktreePath))
-        .then(
-          () => true,
-          () => false
-        );
-
-      console.log('checkWorktreeExists: Exists:', exists);
-      return exists;
-    } catch (error) {
-      console.error('checkWorktreeExists: Error:', error);
-      return false;
-    }
-  }
-
-  async createMissingWorktree(worktreeId: string) {
-    try {
-      // Get the main repository path
-      let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-
-      if (!workspaceFolder) {
-        const activeEditor = vscode.window.activeTextEditor;
-        if (activeEditor) {
-          const activeFileUri = activeEditor.document.uri;
-          workspaceFolder = vscode.workspace.getWorkspaceFolder(activeFileUri);
-        }
-      }
-
-      if (!workspaceFolder) {
-        vscode.window.showErrorMessage('No workspace folder found');
-        return;
-      }
-
-      const worktreePath = vscode.Uri.joinPath(
-        workspaceFolder.uri,
-        '.larry',
-        'worktrees',
-        worktreeId
-      ).fsPath;
-
-      // Convert relative path to absolute path
-      const absoluteWorktreePath = worktreePath.startsWith('.')
-        ? vscode.Uri.joinPath(workspaceFolder.uri, worktreePath).fsPath
-        : worktreePath;
-
-      // Extract worktree name from path
-      const worktreeName = absoluteWorktreePath.split('/').pop() || 'unknown';
-
-      const { exec } = require('child_process');
-      const util = require('util');
-      const execAsync = util.promisify(exec);
-
-      const branchName = `larry/${worktreeName}`;
-      let worktreeCreated = false;
-
-      try {
-        // Get current branch name to branch from
-        const { stdout: currentBranch } = await execAsync(
-          'git rev-parse --abbrev-ref HEAD',
-          { cwd: workspaceFolder.uri.fsPath }
-        );
-        const sourceBranch = currentBranch.trim();
-
-        console.log(
-          `Creating missing worktree from current branch: ${sourceBranch}`
-        );
-
-        await execAsync(
-          `git worktree add "${absoluteWorktreePath}" -b ${branchName} ${sourceBranch}`,
-          { cwd: workspaceFolder.uri.fsPath }
-        );
-        worktreeCreated = true;
-      } catch (branchError: any) {
-        // If branch already exists, try to use existing branch
-        if (branchError.message?.includes('already exists')) {
-          try {
-            await execAsync(
-              `git worktree add "${absoluteWorktreePath}" ${branchName}`,
-              { cwd: workspaceFolder.uri.fsPath }
-            );
-            worktreeCreated = true;
-          } catch (existingBranchError: any) {
-            // If worktree path already exists, show error
-            if (existingBranchError.message?.includes('already checked out')) {
-              throw new Error(
-                `Worktree path already exists: ${absoluteWorktreePath}`
-              );
-            } else {
-              throw existingBranchError;
-            }
-          }
-        } else {
-          throw branchError;
-        }
-      }
-
-      if (worktreeCreated) {
-        vscode.window.showInformationMessage(
-          `Worktree created: ${worktreeName} (branch: ${branchName})`
-        );
-      }
-    } catch (error) {
-      vscode.window.showErrorMessage(`Failed to create worktree: ${error}`);
-    }
-  }
-
-  async leaveWorktree() {
-    try {
-      // Get current worktree info
-      const currentWorktreeId = await this.getCurrentWorktreeId();
-
-      if (currentWorktreeId === 'main' || !currentWorktreeId) {
-        vscode.window.showInformationMessage('Already in main repository');
-        return;
-      }
-
-      // Find the main repository path - try multiple approaches
-      let workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-
-      if (!workspaceFolder) {
-        // Fallback: try to get the active text editor's workspace
-        const activeEditor = vscode.window.activeTextEditor;
-        if (activeEditor) {
-          const activeFileUri = activeEditor.document.uri;
-          workspaceFolder = vscode.workspace.getWorkspaceFolder(activeFileUri);
-        }
-      }
-
-      if (!workspaceFolder) {
-        vscode.window.showErrorMessage('No workspace folder found');
-        return;
-      }
-
-      // Just close the current worktree window
-      await vscode.commands.executeCommand('workbench.action.closeWindow');
-
-      vscode.window.showInformationMessage('Worktree window closed');
-    } catch (error) {
-      vscode.window.showErrorMessage(`Failed to leave worktree: ${error}`);
     }
   }
 
@@ -770,6 +717,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       `style-src ${view.webview.cspSource} 'unsafe-inline'`,
       `font-src ${view.webview.cspSource} https:`,
       `script-src 'nonce-${nonce}' ${view.webview.cspSource}`,
+      `connect-src ${view.webview.cspSource} http://localhost:3000 http://localhost:4210`,
     ].join('; ');
 
     view.webview.html = `<!DOCTYPE html>
@@ -787,95 +735,34 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 </html>`;
 
     view.webview.onDidReceiveMessage(async (msg) => {
+      // New flow message handlers
+      if (msg?.type === 'open_worktree') {
+        await this.handleOpenWorktree(
+          msg.worktreeName || '',
+          msg.threadId || undefined,
+          msg.label
+        );
+        return;
+      }
+
+      // Keep only essential legacy handlers for basic functionality
       if (msg?.type === 'getCurrentWorktree') {
         await this.notifyWorktreeChange();
-        return;
-      }
-      if (msg?.type === 'createSession') {
-        await this.createSessionWithWorktree(msg.sessionName, msg.originalTask);
-        return;
-      }
-      if (msg?.type === 'checkWorktreeExists') {
-        const exists = await this.checkWorktreeExists(msg.worktreeId);
-        view.webview.postMessage({
-          type: 'worktreeExists',
-          worktreeId: msg.worktreeId,
-          sessionId: msg.sessionId,
-          exists,
-        });
-        return;
-      }
-      if (msg?.type === 'createMissingWorktree') {
-        await this.createMissingWorktree(msg.worktreeId);
-        return;
-      }
-      if (msg?.type === 'openWorktree') {
-        await this.openWorktree(msg.worktreeId);
-        return;
-      }
-      if (msg?.type === 'leaveWorktree') {
-        await this.leaveWorktree();
-        return;
-      }
-      if (msg?.type === 'startLarryServer') {
-        try {
-          await this.startLarryContainer(msg.sessionId, msg.worktreeId);
-          view.webview.postMessage({
-            type: 'larryServerStarted',
-            sessionId: msg.sessionId,
-            success: true,
-          });
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error';
-          console.error('Error starting Larry server:', error);
-
-          // Show user-friendly error message
-          vscode.window.showErrorMessage(
-            `Failed to start Larry server: ${errorMessage}`
-          );
-
-          view.webview.postMessage({
-            type: 'larryServerStarted',
-            sessionId: msg.sessionId,
-            success: false,
-            error: errorMessage,
-          });
-        }
-        return;
-      }
-      if (msg?.type === 'stopLarryServer') {
-        try {
-          await this.stopLarryContainer(msg.sessionId);
-          view.webview.postMessage({
-            type: 'larryServerStopped',
-            sessionId: msg.sessionId,
-            success: true,
-          });
-        } catch (error) {
-          view.webview.postMessage({
-            type: 'larryServerStopped',
-            sessionId: msg.sessionId,
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
-        }
-        return;
-      }
-      if (msg?.type === 'loadSessions') {
-        await this.loadSessions();
-        return;
-      }
-      if (msg?.type === 'loadMessages') {
-        await this.loadMessages(msg.sessionId);
-        return;
-      }
-      if (msg?.type === 'sendMessage') {
-        await this.saveMessage(msg.conversationId, msg.message);
         return;
       }
     });
   }
 }
 
-export function deactivate() {}
+export function deactivate() {
+  // Cleanup main docker container if running
+  // Note: This is a best-effort cleanup, errors are ignored
+  try {
+    const { exec } = require('child_process');
+    exec('docker rm -f larry-main-server', () => {
+      // Ignore errors during cleanup
+    });
+  } catch (error) {
+    // Ignore cleanup errors
+  }
+}
