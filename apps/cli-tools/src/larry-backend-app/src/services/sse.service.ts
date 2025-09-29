@@ -86,6 +86,15 @@ export class SSEService {
   }
 
   private prepare(res: Response) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Idempotency-Key, Client-Request-Id, X-Request-Id'
+    );
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,HEAD');
+
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');

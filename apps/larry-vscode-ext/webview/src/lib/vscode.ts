@@ -14,5 +14,14 @@ export function postMessage(msg: unknown) {
 }
 
 export function onMessage(cb: (msg: any) => void) {
-  window.addEventListener('message', (e) => cb(e.data));
+  const handler = (e: MessageEvent) => {
+    cb(e.data);
+  };
+
+  window.addEventListener('message', handler);
+
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('message', handler);
+  };
 }

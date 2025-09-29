@@ -8,12 +8,6 @@ import { googleSubapp } from './routes/google';
 export function buildApp() {
   const app = express();
 
-  // - Global middleware
-  app.use(helmet());
-  app.use(compression());
-  app.use(express.json()); // per your instruction, no explicit size limit here
-  app.use(requestId());
-
   app.use((req, res, next) => {
     // Allow the VS Code webview origin (or just * since you have no auth/cookies)
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,10 +18,29 @@ export function buildApp() {
     );
     // Allow methods you use
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     // Handle preflight fast
     if (req.method === 'OPTIONS') return res.sendStatus(204);
     next();
   });
+
+  app.use(
+    compression({
+      filter: (req, res) => {
+        // Skip compression for SSE no matter what
+        const isSSE =
+          req.headers.accept?.includes('text/event-stream') ||
+          req.path.endsWith('/events') ||
+          req.originalUrl?.includes('/events');
+        if (isSSE) return false;
+
+        return compression.filter(req, res);
+      },
+    })
+  );
+  app.use(express.json()); // per your instruction, no explicit size limit here
+  app.use(requestId());
 
   // - Mount the google agent subapp
   app.use('/larry/agents/google/v1', googleSubapp());
