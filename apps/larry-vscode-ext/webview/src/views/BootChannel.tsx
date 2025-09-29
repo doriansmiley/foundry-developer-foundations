@@ -1,6 +1,6 @@
 import { useEffect } from 'preact/hooks';
 import { onMessage, postMessage } from '../lib/vscode';
-import { isInWorktree, currentThreadId, setupPhase, worktreeName, isLoadingWorktreeInfo } from '../signals/store';
+import { isInWorktree, currentThreadId, setupPhase, worktreeName, isLoadingWorktreeInfo, sseBaseMain, sseBaseWorktree } from '../signals/store';
 
 export function BootChannel() {
   useEffect(() => {
@@ -29,6 +29,11 @@ export function BootChannel() {
       
       if (msg.type === 'worktree_setup_error') {
         setupPhase.value = 'error';
+      }
+
+      if (msg?.type === 'server_endpoints' && msg.sseBase) {
+        sseBaseMain.value = msg.sseBase.main;
+        sseBaseWorktree.value = msg.sseBase.worktree;
       }
     };
 
