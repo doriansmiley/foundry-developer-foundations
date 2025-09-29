@@ -7,21 +7,49 @@ import path from 'path';
 const execAsync = promisify(exec);
 
 export function activate(context: vscode.ExtensionContext) {
-  const provider = new LarryViewProvider(context);
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider('larryHome', provider, {
-      webviewOptions: { retainContextWhenHidden: true },
-    })
-  );
+  try {
+    console.log('🚀 Larry Extension activation started...');
 
-  // Watch for workspace changes to detect worktree changes
-  const workspaceWatcher = vscode.workspace.onDidChangeWorkspaceFolders(() => {
-    provider.notifyWorktreeChange();
-  });
-  context.subscriptions.push(workspaceWatcher);
+    const provider = new LarryViewProvider(context);
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider('larryHome', provider, {
+        webviewOptions: { retainContextWhenHidden: true },
+      })
+    );
 
-  // Initial worktree detection
-  provider.notifyWorktreeChange();
+    // Watch for workspace changes to detect worktree changes
+    const workspaceWatcher = vscode.workspace.onDidChangeWorkspaceFolders(
+      () => {
+        try {
+          provider.notifyWorktreeChange();
+        } catch (error) {
+          console.error('❌ Error in worktree change handler:', error);
+        }
+      }
+    );
+    context.subscriptions.push(workspaceWatcher);
+
+    console.log('🚀 Larry Extension activated successfully!');
+    console.log(
+      '📁 Workspace folders:',
+      vscode.workspace.workspaceFolders?.map((f) => f.uri.fsPath)
+    );
+
+    // Show a notification to confirm activation (with error handling)
+    vscode.window
+      .showInformationMessage('Larry Coding Assistant is now active!')
+      .then(
+        () => console.log('✅ Activation notification shown'),
+        (error) => console.error('❌ Failed to show notification:', error)
+      );
+
+    // Note: Docker will be started when the webview is actually opened/used
+  } catch (error) {
+    console.error('❌ Critical error during extension activation:', error);
+    vscode.window.showErrorMessage(
+      `Larry Extension failed to activate: ${error}`
+    );
+  }
 }
 
 class LarryViewProvider implements vscode.WebviewViewProvider {
@@ -130,6 +158,10 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
       // Clean up existing container if any
       try {
+        // build docker image
+        await execAsync(`docker build -f Larry.Dockerfile -t larry-server .`, {
+          cwd: foundryProjectRoot,
+        });
         await execAsync(`docker rm -f ${containerName}`);
         console.log(`Cleaned up existing main container: ${containerName}`);
       } catch (cleanupError) {
@@ -172,41 +204,6 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       console.log('Main Larry container stopped');
     } catch (error) {
       console.error('Error stopping main Larry container:', error);
-    }
-  }
-
-  // Docker management methods
-  private async buildDockerImage(): Promise<void> {
-    try {
-      // Find the foundry-developer-foundations project root
-      const foundryProjectRoot = await findProjectRoot();
-      if (!foundryProjectRoot) {
-        throw new Error('Project root not found.');
-      }
-
-      const dockerfilePath = vscode.Uri.joinPath(
-        vscode.Uri.file(foundryProjectRoot),
-        'Larry.Dockerfile'
-      );
-      const dockerfileExists = await vscode.workspace.fs
-        .stat(dockerfilePath)
-        .then(
-          () => true,
-          () => false
-        );
-
-      if (!dockerfileExists) {
-        throw new Error(
-          `Larry.Dockerfile not found at ${dockerfilePath.fsPath}`
-        );
-      }
-
-      await execAsync(`docker build -f Larry.Dockerfile -t larry-server .`, {
-        cwd: foundryProjectRoot,
-      });
-    } catch (error) {
-      console.error('Error building Docker image:', error);
-      throw error;
     }
   }
 
@@ -301,15 +298,24 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       }
     }
 
-    this.view.webview.postMessage({
+    const message = {
       type: 'worktree_detection',
       isInWorktree,
       currentThreadId,
-    });
+      worktreeName: worktreeId,
+    };
 
+    console.log('📤 Sending message to webview:', message);
+    this.view.webview.postMessage(message);
+    console.log('📤 Message sent successfully');
     // Start main docker if not in worktree
     if (!isInWorktree) {
+      console.log(
+        '🐳 User is not in worktree - starting main Docker container...'
+      );
       await this.ensureMainDockerRunning();
+    } else {
+      console.log('🌿 User is in worktree - skipping main Docker container');
     }
   }
 
@@ -562,6 +568,15 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
       // Run npm install in worktree
       console.log('Running npm install in worktree...');
+
+      // TODO this is temporary until we will find a better way to manage .env files
+      // copy apps/cli-tools/.env to worktree apps/cli-tools/.env
+      await execAsync(
+        `cp ${
+          vscode.Uri.joinPath(workspaceFolder.uri, 'apps', 'cli-tools', '.env')
+            .fsPath
+        } ${worktreePath}/apps/cli-tools/.env`
+      );
       await execAsync('npm install', { cwd: worktreePath });
 
       // Set environment variables (if needed)
@@ -586,7 +601,6 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
       const containerName = `larry-worktree-${worktreeName}`;
 
-      // Clean up existing container if any
       try {
         await execAsync(`docker rm -f ${containerName}`);
         console.log(`Cleaned up existing worktree container: ${containerName}`);
@@ -695,6 +709,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
   }
 
   resolveWebviewView(view: vscode.WebviewView) {
+    console.log('🎯 Larry webview opened by user - initializing...');
     this.view = view;
     view.webview.options = {
       enableScripts: true,
@@ -753,6 +768,16 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         return;
       }
     });
+
+    // Initialize worktree detection and Docker when webview is opened
+    console.log('🚀 Starting initial worktree detection and Docker setup...');
+
+    // Add a small delay to ensure webview is ready to receive messages
+    setTimeout(() => {
+      this.notifyWorktreeChange().catch((error) => {
+        console.error('❌ Error in initial worktree detection:', error);
+      });
+    }, 100);
   }
 }
 

@@ -1,6 +1,6 @@
 
 import { useState } from 'preact/hooks';
-import { baseUrl, clientRequestId, currentThreadId, worktreeName } from '../signals/store';
+import { baseUrl, clientRequestId, currentThreadId, worktreeName, } from '../signals/store';
 import { useMachineQuery } from '../hooks/useMachineQuery';
 import { useGlobalSSE } from '../hooks/useGlobalSSE';
 import { useMachineSSE } from '../hooks/useMachineSSE';
@@ -35,7 +35,7 @@ export function WorktreeScreen() {
     if (!worktreeName.value) {
       // NOTE: Ideally extension should pass worktreeName in worktree_detection; otherwise we can prompt the user
       // For now we block and ask the user to reopen via main screen if undefined
-      alert('Worktree name is unknown. Please open from main screen or update the extension to pass worktreeName.');
+      console.error('Worktree name is unknown. Please open from main screen or update the extension to pass worktreeName.');
       return;
     }
     setProvisioning(true);
@@ -81,7 +81,7 @@ export function WorktreeScreen() {
       <div>
         <button className="btn btn-primary" disabled={!firstMessage.trim() || provisioning} onClick={startNewThread}>
           {provisioning ? (
-            <>Provisioning <AnimatedEllipsis /></>
+            <>Thinking<AnimatedEllipsis /></>
           ) : (
             'Send'
           )}

@@ -1,5 +1,5 @@
 
 
 export function AnimatedEllipsis() {
-  return <span className="AnimatedEllipsis">…</span>;
+  return <span className="AnimatedEllipsis" />;
 }

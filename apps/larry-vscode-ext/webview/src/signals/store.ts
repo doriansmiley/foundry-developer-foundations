@@ -1,5 +1,7 @@
 import { signal, computed } from '@preact/signals';
 
+// Loading state - starts as true until we get initial worktree detection
+export const isLoadingWorktreeInfo = signal(true);
 export const isInWorktree = signal(false);
 export const currentThreadId = signal<string | undefined>(undefined);
 export const worktreeName = signal<string | undefined>(undefined);

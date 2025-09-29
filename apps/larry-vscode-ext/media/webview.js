@@ -3573,6 +3573,9 @@
     return useBaseQuery(options, QueryObserver, queryClient3);
   }
 
+  // apps/larry-vscode-ext/webview/src/views/AppRoot.tsx
+  init_hooks_module();
+
   // node_modules/preact/dist/preact.module.js
   var n2;
   var l3;
@@ -4528,6 +4531,7 @@
   }
 
   // apps/larry-vscode-ext/webview/src/signals/store.ts
+  var isLoadingWorktreeInfo = d5(true);
   var isInWorktree = d5(false);
   var currentThreadId = d5(void 0);
   var worktreeName = d5(void 0);
@@ -4610,7 +4614,13 @@
     vscode.postMessage(msg);
   }
   function onMessage(cb) {
-    window.addEventListener("message", (e6) => cb(e6.data));
+    const handler = (e6) => {
+      cb(e6.data);
+    };
+    window.addEventListener("message", handler);
+    return () => {
+      window.removeEventListener("message", handler);
+    };
   }
 
   // apps/larry-vscode-ext/node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js
@@ -4644,7 +4654,7 @@
 
   // apps/larry-vscode-ext/webview/src/views/components/AnimatedEllipsis.tsx
   function AnimatedEllipsis() {
-    return /* @__PURE__ */ u6("span", { className: "AnimatedEllipsis", children: "\u2026" });
+    return /* @__PURE__ */ u6("span", { className: "AnimatedEllipsis" });
   }
 
   // apps/larry-vscode-ext/webview/src/views/MainRepoScreen.tsx
@@ -4678,44 +4688,30 @@
       setupPhase.value = "setting_up";
     }
     return /* @__PURE__ */ u6("div", { className: "Box d-flex flex-column gap-3 p-3", children: [
-      /* @__PURE__ */ u6("div", { className: "d-flex flex-justify-between flex-items-center", children: [
-        /* @__PURE__ */ u6("h2", { className: "h3 m-0", children: "Threads" }),
-        /* @__PURE__ */ u6("div", { className: "d-flex gap-2", children: /* @__PURE__ */ u6(
-          "input",
-          {
-            className: "form-control input-sm",
-            placeholder: "Filter threads\u2026",
-            value: searchText.value,
-            onInput: (e6) => searchText.value = e6.currentTarget.value
-          }
-        ) })
-      ] }),
+      /* @__PURE__ */ u6("div", { className: "d-flex flex-justify-between flex-items-center", children: /* @__PURE__ */ u6("h2", { className: "h3 m-0", children: "Threads" }) }),
+      /* @__PURE__ */ u6("div", { className: "width-full mb-1 mt-1", children: /* @__PURE__ */ u6(
+        "input",
+        {
+          className: "form-control input-sm width-full",
+          placeholder: "Search threads...",
+          value: searchText.value,
+          onInput: (e6) => searchText.value = e6.currentTarget.value
+        }
+      ) }),
       isLoading ? /* @__PURE__ */ u6("div", { className: "color-fg-muted", children: "Loading threads\u2026" }) : /* @__PURE__ */ u6(ThreadsList, { items: filtered, selectedId: selectedThreadId.value, onSelect: (id) => selectedThreadId.value = id }),
+      selectedThreadId.value ? /* @__PURE__ */ u6("div", { className: "border-top pt-3 mt-2", children: /* @__PURE__ */ u6("button", { className: "btn btn-primary", disabled: !selected || setupPhase.value === "setting_up", onClick: openWorktreeExisting, children: setupPhase.value === "setting_up" ? /* @__PURE__ */ u6(k, { children: [
+        "Setting up ",
+        /* @__PURE__ */ u6(AnimatedEllipsis, {})
+      ] }) : "Open worktree" }) }) : null,
       /* @__PURE__ */ u6("div", { className: "border-top pt-3 mt-2", children: [
-        /* @__PURE__ */ u6("h3", { className: "h4", children: "Open selected thread" }),
-        /* @__PURE__ */ u6("button", { className: "btn btn-primary", disabled: !selected || setupPhase.value === "setting_up", onClick: openWorktreeExisting, children: setupPhase.value === "setting_up" ? /* @__PURE__ */ u6(k, { children: [
-          "Setting up ",
-          /* @__PURE__ */ u6(AnimatedEllipsis, {})
-        ] }) : "Open worktree" })
-      ] }),
-      /* @__PURE__ */ u6("div", { className: "border-top pt-3 mt-2", children: [
-        /* @__PURE__ */ u6("h3", { className: "h4", children: "Create new thread" }),
-        /* @__PURE__ */ u6("div", { children: /* @__PURE__ */ u6(
+        /* @__PURE__ */ u6("h4", { className: "h4", children: "Or create a new thread" }),
+        /* @__PURE__ */ u6("div", { className: "width-full mb-2", children: /* @__PURE__ */ u6(
           "input",
           {
-            className: "form-control input-sm flex-1",
+            className: "form-control input-sm flex-1 width-full",
             placeholder: "Thread label (required)",
             value: newLabel,
             onInput: (e6) => setNewLabel(e6.currentTarget.value)
-          }
-        ) }),
-        /* @__PURE__ */ u6("div", { children: /* @__PURE__ */ u6(
-          "input",
-          {
-            className: "form-control input-sm",
-            placeholder: "Worktree name (optional)",
-            value: newWorktree,
-            onInput: (e6) => setNewWorktree(e6.currentTarget.value)
           }
         ) }),
         /* @__PURE__ */ u6("div", { children: /* @__PURE__ */ u6("button", { className: `btn ${newLabel.trim() ? "btn-primary" : ""}`, disabled: !newLabel.trim() || setupPhase.value === "setting_up", onClick: openWorktreeNew, children: setupPhase.value === "setting_up" ? /* @__PURE__ */ u6(k, { children: [
@@ -4874,7 +4870,7 @@
     async function startNewThread() {
       if (!firstMessage.trim()) return;
       if (!worktreeName.value) {
-        alert("Worktree name is unknown. Please open from main screen or update the extension to pass worktreeName.");
+        console.error("Worktree name is unknown. Please open from main screen or update the extension to pass worktreeName.");
         return;
       }
       setProvisioning(true);
@@ -4908,14 +4904,32 @@
         }
       ),
       /* @__PURE__ */ u6("div", { children: /* @__PURE__ */ u6("button", { className: "btn btn-primary", disabled: !firstMessage.trim() || provisioning, onClick: startNewThread, children: provisioning ? /* @__PURE__ */ u6(k, { children: [
-        "Provisioning ",
+        "Thinking",
         /* @__PURE__ */ u6(AnimatedEllipsis, {})
       ] }) : "Send" }) })
     ] });
   }
 
+  // apps/larry-vscode-ext/webview/src/views/components/Loader.tsx
+  function Loader({ message = "Loading" }) {
+    return /* @__PURE__ */ u6("div", { className: "flex items-center justify-center p-6", children: /* @__PURE__ */ u6("div", { className: "text-center", children: [
+      /* @__PURE__ */ u6("div", { className: "text-sm text-gray-500 mb-2", children: [
+        message,
+        /* @__PURE__ */ u6(AnimatedEllipsis, {})
+      ] }),
+      /* @__PURE__ */ u6("div", { className: "animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" })
+    ] }) });
+  }
+
   // apps/larry-vscode-ext/webview/src/views/AppRoot.tsx
   function AppRoot() {
+    const [isLoading, setIsLoading] = d2(true);
+    if (typeof window !== "undefined") {
+      window.setAppLoading = setIsLoading;
+    }
+    if (isLoading) {
+      return /* @__PURE__ */ u6("div", { className: "p-3", children: /* @__PURE__ */ u6(Loader, { message: "Initializing Larry" }) });
+    }
     return /* @__PURE__ */ u6("div", { className: "p-3", children: isInWorktree.value ? /* @__PURE__ */ u6(WorktreeScreen, {}) : /* @__PURE__ */ u6(MainRepoScreen, {}) });
   }
 
@@ -4923,12 +4937,16 @@
   init_hooks_module();
   function BootChannel() {
     y2(() => {
-      onMessage((msg) => {
+      const handleMessage = (msg) => {
         if (!msg || typeof msg !== "object") return;
         if (msg.type === "worktree_detection") {
           isInWorktree.value = !!msg.isInWorktree;
           currentThreadId.value = msg.currentThreadId || void 0;
           if (msg.worktreeName) worktreeName.value = msg.worktreeName;
+          isLoadingWorktreeInfo.value = false;
+          if (typeof window !== "undefined" && window.setAppLoading) {
+            window.setAppLoading(false);
+          }
         }
         if (msg.type === "worktree_ready") {
           setupPhase.value = "ready";
@@ -4938,7 +4956,14 @@
         if (msg.type === "worktree_setup_error") {
           setupPhase.value = "error";
         }
-      });
+      };
+      const cleanupListener = onMessage(handleMessage);
+      postMessage({ type: "getCurrentWorktree" });
+      return () => {
+        if (typeof cleanupListener === "function") {
+          cleanupListener();
+        }
+      };
     }, []);
     return null;
   }
