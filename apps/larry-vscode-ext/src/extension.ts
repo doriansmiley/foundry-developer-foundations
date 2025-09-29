@@ -734,7 +734,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       `style-src ${view.webview.cspSource} 'unsafe-inline'`,
       `font-src ${view.webview.cspSource} https:`,
       `script-src 'nonce-${nonce}' ${view.webview.cspSource}`,
-      `connect-src ${view.webview.cspSource} http://localhost:3000 http://localhost:4210`,
+      `connect-src 'self' ${view.webview.cspSource} http://localhost:3000 http://localhost:4210 https:`,
     ].join('; ');
 
     view.webview.html = `<!DOCTYPE html>
@@ -778,6 +778,21 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         console.error('❌ Error in initial worktree detection:', error);
       });
     }, 100);
+
+    // Add proxied SSE URLs to avoid webview CORS issues
+    (async () => {
+      const sseMain = await vscode.env.asExternalUri(
+        vscode.Uri.parse('http://localhost:4210/larry/agents/google/v1/events')
+      );
+      const sseWorktree = await vscode.env.asExternalUri(
+        vscode.Uri.parse('http://localhost:3000/larry/agents/google/v1/events')
+      );
+
+      this.view?.webview.postMessage({
+        type: 'server_endpoints',
+        sseBase: { main: String(sseMain), worktree: String(sseWorktree) },
+      });
+    })();
   }
 }
 

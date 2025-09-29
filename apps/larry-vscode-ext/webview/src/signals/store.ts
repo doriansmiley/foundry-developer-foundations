@@ -15,6 +15,8 @@ export const clientRequestId = signal<string>(
     ? crypto.randomUUID()
     : 'client-' + Math.random().toString(16).slice(2)
 );
+export const sseBaseMain = signal<string | undefined>(undefined);
+export const sseBaseWorktree = signal<string | undefined>(undefined);
 
 export const baseUrl = computed(() =>
   isInWorktree.value

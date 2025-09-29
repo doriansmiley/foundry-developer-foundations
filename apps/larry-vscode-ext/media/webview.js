@@ -4543,6 +4543,8 @@
   var clientRequestId = d5(
     typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "client-" + Math.random().toString(16).slice(2)
   );
+  var sseBaseMain = d5(void 0);
+  var sseBaseWorktree = d5(void 0);
   var baseUrl = w5(
     () => isInWorktree.value ? "http://localhost:3000/larry/agents/google/v1" : "http://localhost:4210/larry/agents/google/v1"
   );
@@ -4797,9 +4799,8 @@
     } = params;
     const ctrlRef = A2(null);
     y2(() => {
-      const url = `${baseUrl2}/events?topics=${encodeURIComponent(
-        topics.join(",")
-      )}`;
+      const sseBase = isInWorktree.value ? sseBaseWorktree.value : sseBaseMain.value;
+      const url = (sseBase ?? `${baseUrl2}/events`) + `?topics=${encodeURIComponent(topics.join(","))}`;
       ctrlRef.current = openSSE(url, {
         "thread.created": (evt) => {
           queryClient.setQueryData(
@@ -4830,7 +4831,14 @@
         }
       });
       return () => ctrlRef.current?.close();
-    }, [baseUrl2, topics.join(","), clientRequestId2]);
+    }, [
+      baseUrl2,
+      topics.join(","),
+      clientRequestId2,
+      sseBaseMain.value,
+      sseBaseWorktree.value,
+      isInWorktree.value
+    ]);
   }
 
   // apps/larry-vscode-ext/webview/src/hooks/useMachineSSE.ts
@@ -4839,7 +4847,11 @@
     const ctrlRef = A2(null);
     y2(() => {
       if (!machineId) return;
-      const url = `${baseUrl2}/machines/${encodeURIComponent(machineId)}/events`;
+      const proxiedBase = sseBaseWorktree.value?.replace(/\/events$/, "");
+      const baseForEvents = proxiedBase ?? baseUrl2;
+      const url = `${baseForEvents}/machines/${encodeURIComponent(
+        machineId
+      )}/events`;
       ctrlRef.current = openSSE(url, {
         "machine.updated": (evt) => {
           const m6 = evt.machine;
@@ -4847,7 +4859,7 @@
         }
       });
       return () => ctrlRef.current?.close();
-    }, [baseUrl2, machineId]);
+    }, [baseUrl2, machineId, sseBaseWorktree.value]);
   }
 
   // apps/larry-vscode-ext/webview/src/views/WorktreeScreen.tsx
@@ -4955,6 +4967,10 @@
         }
         if (msg.type === "worktree_setup_error") {
           setupPhase.value = "error";
+        }
+        if (msg?.type === "server_endpoints" && msg.sseBase) {
+          sseBaseMain.value = msg.sseBase.main;
+          sseBaseWorktree.value = msg.sseBase.worktree;
         }
       };
       const cleanupListener = onMessage(handleMessage);

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'preact/hooks';
 import { openSSE } from '../lib/sse';
 import { queryClient } from '../lib/query';
+import { sseBaseMain, sseBaseWorktree, isInWorktree } from '../signals/store';
 import type {
   MachineUpdatedEvent,
   ThreadCreatedEvent,
@@ -24,9 +25,14 @@ export function useGlobalSSE(params: {
   const ctrlRef = useRef<{ close: () => void } | null>(null);
 
   useEffect(() => {
-    const url = `${baseUrl}/events?topics=${encodeURIComponent(
-      topics.join(',')
-    )}`;
+    // Prefer proxied SSE base if available
+    const sseBase = isInWorktree.value
+      ? sseBaseWorktree.value
+      : sseBaseMain.value;
+    const url =
+      (sseBase ?? `${baseUrl}/events`) +
+      `?topics=${encodeURIComponent(topics.join(','))}`;
+
     ctrlRef.current = openSSE(url, {
       'thread.created': (evt: ThreadCreatedEvent) => {
         // push into threads list cache if present
@@ -60,5 +66,12 @@ export function useGlobalSSE(params: {
     });
 
     return () => ctrlRef.current?.close();
-  }, [baseUrl, topics.join(','), clientRequestId]);
+  }, [
+    baseUrl,
+    topics.join(','),
+    clientRequestId,
+    sseBaseMain.value,
+    sseBaseWorktree.value,
+    isInWorktree.value,
+  ]);
 }
