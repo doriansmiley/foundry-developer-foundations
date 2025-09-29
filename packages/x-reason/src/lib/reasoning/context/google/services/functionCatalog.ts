@@ -5,8 +5,16 @@ import {
     ActionType,
 } from '@codestrap/developer-foundations-types';
 
-import { confirmUserIntent, searchDocumentation, architectImplementation, generateEditMachine } from '../../../../functions';
-import { applyEdits } from 'packages/x-reason/src/lib/functions/codeAssist/applyEdits';
+import {
+    applyEdits,
+    confirmUserIntent,
+    searchDocumentation,
+    architectImplementation,
+    generateEditMachine,
+    specReview,
+    architectureReview,
+    codeReview
+} from '../../../../functions';
 
 
 function getPayload(context: Context, result: Record<string, any>) {
@@ -43,6 +51,32 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                         type: 'pause',
                         payload,
                     });
+                },
+            },
+        ],
+        [
+            "specReview",
+            {
+                description:
+                    "Use this tool to confirm with the user their intentions and requests for code changes including new code to be generated",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    console.log('specReview implementation in function catalog called');
+                    const result = await specReview(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`specReview returned: ${JSON.stringify(result)}`);
+                    console.log('dispatching pause from specReview');
+
+                    if (result.approved) {
+                        dispatch({
+                            type: 'CONTINUE',
+                            payload,
+                        });
+                    } else {
+                        dispatch({
+                            type: 'pause',
+                            payload,
+                        });
+                    }
                 },
             },
         ],
@@ -85,6 +119,32 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
             },
         ],
         [
+            "architectureReview",
+            {
+                description:
+                    "Use this tool to confirm with the user their intentions and requests for code changes including new code to be generated",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    console.log('architectureReview implementation in function catalog called');
+                    const result = await architectureReview(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`architectureReview returned: ${JSON.stringify(result)}`);
+                    console.log('dispatching pause from architectureReview');
+
+                    if (result.approved) {
+                        dispatch({
+                            type: 'CONTINUE',
+                            payload,
+                        });
+                    } else {
+                        dispatch({
+                            type: 'pause',
+                            payload,
+                        });
+                    }
+                },
+            },
+        ],
+        [
             "generateEditMachine",
             {
                 description:
@@ -100,6 +160,32 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                         type: 'pause',
                         payload,
                     });
+                },
+            },
+        ],
+        [
+            "codeReview",
+            {
+                description:
+                    "Use this tool to confirm with the user their intentions and requests for code changes including new code to be generated",
+                implementation: async (context: Context, event?: MachineEvent, task?: string) => {
+                    console.log('codeReview implementation in function catalog called');
+                    const result = await codeReview(context, event, task);
+                    const payload = getPayload(context, result);
+                    console.log(`codeReview returned: ${JSON.stringify(result)}`);
+                    console.log('dispatching pause from codeReview');
+
+                    if (result.approved) {
+                        dispatch({
+                            type: 'CONTINUE',
+                            payload,
+                        });
+                    } else {
+                        dispatch({
+                            type: 'pause',
+                            payload,
+                        });
+                    }
                 },
             },
         ],

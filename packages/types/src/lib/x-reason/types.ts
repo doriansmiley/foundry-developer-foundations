@@ -1,4 +1,5 @@
 import { EventObject, StateNode } from "xstate";
+import { Message } from "../types";
 
 export type ActionType = {
   type: string;
@@ -136,3 +137,25 @@ export type SystemStatus = {
   message: string;
 };
 
+export type Messages = {
+  user?: string;
+  system?: string;
+}
+
+export type AbstractReviewState = {
+  approved: boolean;
+  messages?: Messages[];
+  file?: string;
+}
+
+export type CodeReviewState = {
+
+} & AbstractReviewState;
+
+export type SpecReviewState = {
+
+} & AbstractReviewState;
+
+export type ArchitectureReviewState = {
+
+} & AbstractReviewState;

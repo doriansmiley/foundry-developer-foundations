@@ -4,3 +4,7 @@ export * from './architectImplementation';
 export * from './generateEditMachine';
 export * from './softwareArchitect';
 export * from './softwareDesignSpec';
+export * from './specReview';
+export * from './architectureReview';
+export * from './codeReview';
+export * from './applyEdits';
