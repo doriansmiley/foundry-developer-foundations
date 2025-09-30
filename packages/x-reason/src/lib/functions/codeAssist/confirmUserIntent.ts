@@ -16,7 +16,7 @@ export async function confirmUserIntent(
 ): Promise<UserIntent> {
   let messages;
 
-  const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+  const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
   // we use the thread because it should not aonly contain the design specification but user comments as well
   try {
     messages = await threadsDao.read(context.machineExecutionId!);
@@ -37,7 +37,7 @@ export async function confirmUserIntent(
     system: string;
   }[];
 
-  // if we are reentering the state after a clarifying questions were asked
+  // if we are reentering the state after a clarifying questions were asked 
   // but no response was received from the user return the previously generated response
   if (!userResponse && context[confirmUserIntentId]?.confirmationPrompt) {
     return {

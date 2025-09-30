@@ -3,10 +3,6 @@
 	--fdry-gap: 8px;
 }
 
-body {
-	padding: 0 5px !important;
-}
-
 html, body, #root, .app { height: 100%; }
 html, body, #root { font-family: var(--vscode-font-family); color: var(--vscode-foreground); margin: 0; }
 
@@ -41,36 +37,6 @@ html, body, #root { font-family: var(--vscode-font-family); color: var(--vscode-
 .btn-icon { display: inline-flex !important; align-items: center; justify-content: center; padding: 4px !important; }
 .btn-icon svg { display: block; }
 
-/* Session items */
-.session-item { 
-	cursor: pointer !important; 
-	transition: background-color 0.2s ease !important;
-	border: 1px solid var(--vscode-panel-border, transparent) !important;
-}
-.session-item:hover { 
-	background: var(--vscode-list-hoverBackground, var(--vscode-editor-background)) !important;
-}
-.session-item:active { 
-	background: var(--vscode-list-activeSelectionBackground, var(--vscode-editor-selectionBackground)) !important;
-}
-.sessions-list { flex: 1 1 auto; overflow: auto; }
-
-/* Form elements */
-.form-label { 
-	display: block !important; 
-	margin-bottom: 4px !important; 
-	color: var(--vscode-foreground) !important;
-}
-input[type="radio"] { 
-	margin-right: 8px !important; 
-}
-label { 
-	cursor: pointer !important; 
-	display: flex !important; 
-	align-items: center !important; 
-	padding: 4px 0 !important;
-}
-
 /* Inputs */
 .form-control {
 	font-size: 12px !important;
@@ -79,10 +45,6 @@ label {
 	background: var(--vscode-input-background) !important;
 	color: var(--vscode-input-foreground) !important;
 	border-color: var(--vscode-input-border, transparent) !important;
-
-}
-.form-control.pr-40 {
-	padding-right: 40px !important;
 }
 
 /* Markdown rendering */
@@ -93,62 +55,3 @@ label {
 .markdown-body code { background: var(--vscode-editorInlayHint-background, var(--vscode-editor-background)); padding: 1px 4px; border-radius: 4px; }
 .markdown-body pre { background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); padding: 8px; border-radius: 6px; overflow: auto; }
 .markdown-body pre code { background: transparent; padding: 0; } 
-
-/* Shimmer text effect */
-.shimmer {
-	color: var(--vscode-foreground);
-	background: linear-gradient(
-		90deg,
-		var(--vscode-foreground) 0%,
-		var(--vscode-textLink-foreground) 25%,
-		var(--vscode-textLink-activeForeground) 50%,
-		var(--vscode-textLink-foreground) 75%,
-		var(--vscode-foreground) 100%
-	);
-	background-size: 200% 100%;
-	background-clip: text;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
-	animation: shimmer 2s ease-in-out infinite;
-}
-
-.shimmer-subtle {
-	color: var(--vscode-foreground);
-	background: linear-gradient(
-		90deg,
-		rgba(var(--vscode-foreground), 0.6) 0%,
-		var(--vscode-foreground) 50%,
-		rgba(var(--vscode-foreground), 0.6) 100%
-	);
-	background-size: 200% 100%;
-	background-clip: text;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
-	animation: shimmer 3s ease-in-out infinite;
-}
-
-.shimmer-loading {
-	color: var(--vscode-descriptionForeground);
-	background: linear-gradient(
-		90deg,
-		var(--vscode-descriptionForeground) 0%,
-		var(--vscode-foreground) 50%,
-		var(--vscode-descriptionForeground) 100%
-	);
-	background-size: 200% 100%;
-	background-clip: text;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
-	animation: shimmer 3s ease-in-out infinite;
-}
-
-@keyframes shimmer {
-	0% {
-		background-position: -200% 0;
-	}
-	100% {
-		background-position: 200% 0;
-	}
-}
-
-

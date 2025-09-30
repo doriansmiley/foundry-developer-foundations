@@ -7,24 +7,14 @@ import { readThread } from './threads/read';
 import { foundryClientFactory } from '../../factory/foundryClientFactory';
 
 export function makeThreadsDao(): ThreadsDao {
-  const { getToken, url, ontologyRid } = foundryClientFactory(
-    process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE,
-    undefined
-  );
+  const { getToken, url, ontologyRid } = foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined);
 
   return {
     // TODO code out all methods using OSDK API calls
     upsert: async (messages: string, appId: string, id?: string) => {
       const token = await getToken();
 
-      const machine = await upsertThread(
-        messages,
-        appId,
-        token,
-        ontologyRid,
-        url,
-        id
-      );
+      const machine = await upsertThread(messages, appId, token, ontologyRid, url, id);
 
       return machine;
     },

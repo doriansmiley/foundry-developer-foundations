@@ -49,7 +49,7 @@ export class Larry extends Text2Action {
 
     // we need the ability for clients to pass a known threadId that they originate and still create a new task list
     try {
-      const threadDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+      const threadDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
       await threadDao.read(threadId || '');
     } catch {
       newThread = true;
@@ -99,11 +99,11 @@ export class Larry extends Text2Action {
       threadId,
       undefined,
       SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST,
-      true
+      true,
     );
 
     // get thread messages
-    const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+    const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
     const { messages } = await threadsDao.read(threadId || '');
     const parsedMessages = JSON.parse(messages || '[]') as {
       user?: string;
@@ -114,16 +114,16 @@ export class Larry extends Text2Action {
     const system = `You are a helpful AI coding assistant named Larry.
         You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Larry, Code's AI Coding Assistant" or similar.
         You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString(
-          'en-US',
-          { weekday: 'long' }
-        )}. 
+      'en-US',
+      { weekday: 'long' }
+    )}. 
         You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
         You always obey the users instructions and understand the people you work for are busy executives and sometimes need help in their personal lives
         These tasks are not beneath you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
         It means we all pull together to get things done.
         The current local date/time is ${new Date().toLocaleString('en-US', {
-          timeZone: 'America/Los_Angeles',
-        })}.
+      timeZone: 'America/Los_Angeles',
+    })}.
         The current day/time in your timezone is: ${new Date().toString()}`;
     const user = `
                 Based on the following user query
@@ -164,11 +164,7 @@ export class Larry extends Text2Action {
 
     // create or update with a summary of the results
     // if there is an existing thread messages are appended to the existing history
-    await threadsDao.upsert(
-      JSON.stringify(parsedMessages),
-      'cli-tool',
-      threadId
-    );
+    await threadsDao.upsert(JSON.stringify(parsedMessages), 'bennie', threadId);
 
     // return the structured response
     return {
