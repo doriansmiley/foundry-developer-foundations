@@ -4,6 +4,8 @@ import {
   Summaries,
   DriveSearchParams,
   DriveSearchOutput,
+  SendChatMessageInput,
+  SendChatMessageOutput,
 } from '@codestrap/developer-foundations-types';
 import { makeGSuiteClient } from './gsuiteClient';
 
@@ -11,6 +13,7 @@ import { findOptimalMeetingTimeV2 } from './delegates/findOptimalMeetingTime.v2'
 import { deriveWindowFromTimeframe } from './delegates/deriveWindowFromTimeframe';
 import { summarizeCalendars } from './delegates/summerizeCalanders';
 import { searchDriveFiles } from './delegates/searchDriveFiles';
+import { sendChatMessage } from './delegates/sendChatMessage';
 import { wallClockToUTC, workingHoursUTCForDate } from '@codestrap/developer-foundations-utils';
 import { google } from 'googleapis';
 import { loadServiceAccountFromEnv, makeGoogleAuth } from '../helpers/googleAuth';
@@ -27,9 +30,18 @@ export async function makeGSuiteClientV2(
     'https://www.googleapis.com/auth/drive.metadata.readonly',
   ];
 
-  const driveAuth = makeGoogleAuth(credentials, driveScopes, user);
+  const chatScopes = [
+    'https://www.googleapis.com/auth/chat.messages',
+  ];
 
+  const driveAuth = makeGoogleAuth(credentials, driveScopes, user);
+  const chatAuth = makeGoogleAuth(credentials, chatScopes, user);
+
+  console.log('🛠️ Creating Google API clients...');
   const driveClient = google.drive({ version: 'v3', auth: driveAuth });
+  const chatClient = google.chat({ version: 'v1', auth: chatAuth });
+  console.log('✅ Google API clients created successfully');
+  console.log('🤖 Chat client configured for scopes:', chatScopes);
 
   return {
     ...v1Client,
@@ -109,6 +121,10 @@ export async function makeGSuiteClientV2(
         incompleteSearch: result.incompleteSearch,
       };
     },
+    sendChatMessage: async (input: SendChatMessageInput): Promise<SendChatMessageOutput> => {
+      return await sendChatMessage(chatClient, input);
+    },
     getDriveClient: () => driveClient,
+    getChatClient: () => chatClient,
   };
 }

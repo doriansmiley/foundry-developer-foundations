@@ -117,6 +117,17 @@ export const Schemas = {
       message: Type.String(),
     }),
   },
+  SendChatMessage: {
+    input: Type.Object({
+      message: Type.String(),
+      channelId: Type.Optional(Type.String()),
+    }),
+    output: Type.Object({
+      messageId: Type.String(),
+      timestamp: Type.String(),
+      success: Type.Boolean(),
+    }),
+  },
 };
 
 // Types from Schemas
@@ -136,6 +147,8 @@ export type FindOptimalMeetingTimeInput = Static<
 export type FindOptimalMeetingTimeOutput = Static<
   typeof Schemas.FindOptimalMeetingTime.output
 >;
+export type SendChatMessageInput = Static<typeof Schemas.SendChatMessage.input>;
+export type SendChatMessageOutput = Static<typeof Schemas.SendChatMessage.output>;
 
 export type UserProfile = {
   name: string | undefined;
@@ -731,7 +744,9 @@ export type OfficeServiceV2 = {
     windowEndLocal: Date;
   }) => Promise<Summaries>;
   searchDriveFiles: (params: DriveSearchParams) => Promise<DriveSearchOutput>;
+  sendChatMessage: (input: SendChatMessageInput) => Promise<SendChatMessageOutput>;
   getDriveClient: () => drive_v3.Drive;
+  getChatClient: () => any;
 } & OfficeServiceV1;
 
 // V1 Google Workspace service surface (Calendar + Gmail operations and raw clients)

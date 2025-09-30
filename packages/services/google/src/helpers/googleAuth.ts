@@ -14,6 +14,11 @@ export async function loadServiceAccountFromEnv(): Promise<ServiceAccountCredent
   const credentials = JSON.parse(jsonString) as ServiceAccountCredentials;
 
   console.log('✅ Service account file loaded successfully');
+  console.log('📋 Service account details:', {
+    client_email: credentials.client_email,
+    project_id: credentials.project_id,
+    type: credentials.type
+  });
   return credentials;
 }
 
@@ -22,6 +27,13 @@ export function makeGoogleAuth(
   scopes: string[],
   user: string
 ) {
+  console.log('🔑 Creating Google Auth with:', {
+    clientEmail: credentials.client_email,
+    projectId: credentials.project_id,
+    scopes,
+    subject: user
+  });
+  
   return new google.auth.GoogleAuth({
     credentials,
     scopes,
