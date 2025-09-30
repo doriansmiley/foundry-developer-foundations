@@ -9,6 +9,7 @@ import { container } from '@codestrap/developer-foundations-di';
 import {
   Context,
   MachineDao,
+  ThreadsDao,
   TYPES,
 } from '@codestrap/developer-foundations-types';
 import { SupportedEngines } from '@codestrap/developer-foundations-x-reason';
@@ -61,8 +62,20 @@ ${readme}
 
     if (
       context.stateId.includes('confirmUserIntent') ||
-      context.stateId.includes('architectImplementation')
+      context.stateId.includes('architectImplementation') ||
+      context.stateId.includes('pause')
     ) {
+      if (context.stateId.includes('pause')) {
+        const lastStateBeforePause = context.stack?.[context.stack?.length - 1];
+        if (
+          !lastStateBeforePause ||
+          !context.stateId.includes('confirmUserIntent') ||
+          !context.stateId.includes('architectImplementation')
+        ) {
+          // we entered pause from some other state transition
+          return;
+        }
+      }
       // capture any edits the MD files
       const prefix = context.stateId.includes('architectImplementation')
         ? 'designDoc'
@@ -104,7 +117,9 @@ ${readme}
       SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST,
       true
     );
-
-    return { executionId };
   }
+
+  // TODO confirm with Dorian how it should work
+
+  return { executionId };
 }

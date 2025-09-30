@@ -1,7 +1,7 @@
 import React from 'react';
-import { useMemo, useState } from 'preact/hooks';
+import { useMemo, useState, useEffect } from 'preact/hooks';
 import { useThreadsQuery } from '../hooks/useThreadsQuery';
-import { baseUrl, searchText, selectedThreadId, setupPhase } from '../signals/store';
+import { baseUrl, setupPhase as setupPhaseSignal } from '../signals/store';
 import { postMessage } from '../lib/vscode';
 import type { ThreadListItem } from '../lib/backend-types';
 import { ThreadsList } from './components/ThreadsList';
@@ -10,19 +10,42 @@ import { AnimatedEllipsis } from './components/AnimatedEllipsis';
 export function MainRepoScreen() {
   const { data, isLoading } = useThreadsQuery(baseUrl.value);
   const [newLabel, setNewLabel] = useState('');
-  const [newWorktree, setNewWorktree] = useState('');
+  const [selectedThreadId, setSelectedThreadId] = useState<string | undefined>(undefined);
+  const [searchText, setSearchText] = useState('');
+  const [setupPhase, setSetupPhase] = useState<'idle' | 'setting_up' | 'ready' | 'error'>('idle');
+
+  useEffect(() => {
+    const unsubscribe = setupPhaseSignal.subscribe((phase) => {
+      if (phase === 'ready') {
+        // Reset all relevant states when setup is ready
+        setSetupPhase('idle');
+        setNewLabel('');
+        setSelectedThreadId(undefined);
+        setSearchText('');
+      }
+
+      if (phase === 'error') {
+        setSetupPhase('error');
+        setNewLabel('');
+        setSelectedThreadId(undefined);
+        setSearchText('');
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   const items = data?.items ?? [];
   const filtered = useMemo(() => {
-    const q = searchText.value.toLowerCase();
+    const q = searchText.toLowerCase();
     if (!q) return items;
     return items.filter((t) => (t.label + ' ' + t.worktreeName).toLowerCase().includes(q));
-  }, [items, searchText.value]);
+  }, [items, searchText]);
 
   const selected: ThreadListItem | undefined = useMemo(() => {
-    if (!selectedThreadId.value) return undefined;
-    return items.find((t) => t.id === selectedThreadId.value);
-  }, [items, selectedThreadId.value]);
+    if (!selectedThreadId) return undefined;
+    return items.find((t) => t.id === selectedThreadId);
+  }, [items, selectedThreadId]);
 
   function openWorktreeExisting() {
     if (!selected) return;
@@ -32,13 +55,13 @@ export function MainRepoScreen() {
       threadId: selected.id,
       label: selected.label,
     });
-    setupPhase.value = 'setting_up';
+    setSetupPhase('setting_up');
   }
 
   function openWorktreeNew() {
     if (!newLabel.trim()) return;
-    postMessage({ type: 'open_worktree', worktreeName: newWorktree || '', threadId: '', label: newLabel.trim() });
-    setupPhase.value = 'setting_up';
+    postMessage({ type: 'open_worktree', worktreeName: '', threadId: '', label: newLabel.trim() });
+    setSetupPhase('setting_up');
   }
 
   return (
@@ -50,21 +73,21 @@ export function MainRepoScreen() {
           <input
             className="form-control input-sm width-full"
             placeholder="Search threads..."
-            value={searchText.value}
-            onInput={(e) => (searchText.value = (e.currentTarget as HTMLInputElement).value)}
+            value={searchText}
+            onInput={(e) => setSearchText((e.currentTarget as HTMLInputElement).value)}
           />
         </div>
 
       {isLoading ? (
         <div className="color-fg-muted">Loading threads…</div>
       ) : (
-        <ThreadsList items={filtered} selectedId={selectedThreadId.value} onSelect={(id) => (selectedThreadId.value = id)} />
+        <ThreadsList items={filtered} selectedId={selectedThreadId} onSelect={(id) => setSelectedThreadId(id)} />
       )}
 
-      {selectedThreadId.value ? (
+      {selectedThreadId ? (
         <div className="border-top pt-3 mt-2">
-        <button className="btn btn-primary" disabled={!selected || setupPhase.value === 'setting_up'} onClick={openWorktreeExisting}>
-          {setupPhase.value === 'setting_up' ? (
+        <button className="btn btn-primary" disabled={!selected || setupPhase === 'setting_up'} onClick={openWorktreeExisting}>
+          {setupPhase === 'setting_up' ? (
             <>Setting up <AnimatedEllipsis /></>
           ) : (
             'Open worktree'
@@ -84,8 +107,8 @@ export function MainRepoScreen() {
           />
           </div>
           <div>
-          <button className={`btn ${newLabel.trim() ? 'btn-primary' : ''}`} disabled={!newLabel.trim() || setupPhase.value === 'setting_up'} onClick={openWorktreeNew}>
-            {setupPhase.value === 'setting_up' ? (
+          <button className={`btn ${newLabel.trim() ? 'btn-primary' : ''}`} disabled={!newLabel.trim() || setupPhase === 'setting_up'} onClick={openWorktreeNew}>
+            {setupPhase === 'setting_up' ? (
               <>Setting up <AnimatedEllipsis /></>
             ) : (
               'Open worktree'
@@ -93,6 +116,11 @@ export function MainRepoScreen() {
           </button>
         </div>
       </div>
+      {setupPhase === 'error' ? (
+        <div className="border-top pt-3 mt-2">
+          <div className="text-danger">Error setting up worktree</div>
+        </div>
+      ) : null}
     </div>
   );
 }

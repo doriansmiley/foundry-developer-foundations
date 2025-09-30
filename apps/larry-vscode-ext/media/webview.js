@@ -55164,10 +55164,10 @@
   var QueryClientContext = React.createContext(
     void 0
   );
-  var useQueryClient = (queryClient3) => {
+  var useQueryClient = (queryClient2) => {
     const client = React.useContext(QueryClientContext);
-    if (queryClient3) {
-      return queryClient3;
+    if (queryClient2) {
+      return queryClient2;
     }
     if (!client) {
       throw new Error("No QueryClient set, use QueryClientProvider to set one");
@@ -55260,7 +55260,7 @@
 
   // node_modules/@tanstack/react-query/build/modern/useBaseQuery.js
   var React5 = __toESM(require_compat(), 1);
-  function useBaseQuery(options, Observer, queryClient3) {
+  function useBaseQuery(options, Observer, queryClient2) {
     if (true) {
       if (typeof options !== "object" || Array.isArray(options)) {
         throw new Error(
@@ -55270,7 +55270,7 @@
     }
     const isRestoring = useIsRestoring();
     const errorResetBoundary = useQueryErrorResetBoundary();
-    const client = useQueryClient(queryClient3);
+    const client = useQueryClient(queryClient2);
     const defaultedOptions = client.defaultQueryOptions(options);
     client.getDefaultOptions().queries?._experimental_beforeQuery?.(
       defaultedOptions
@@ -55343,8 +55343,8 @@
   }
 
   // node_modules/@tanstack/react-query/build/modern/useQuery.js
-  function useQuery(options, queryClient3) {
-    return useBaseQuery(options, QueryObserver, queryClient3);
+  function useQuery(options, queryClient2) {
+    return useBaseQuery(options, QueryObserver, queryClient2);
   }
 
   // apps/larry-vscode-ext/webview/src/views/AppRoot.tsx
@@ -56394,12 +56394,13 @@
   // apps/larry-vscode-ext/webview/src/hooks/useThreadsQuery.ts
   function useThreadsQuery(baseUrl2) {
     return {
+      isLoading: false,
       data: {
         items: [
           {
-            id: "55eb66cb-00b3-4016-99ea-afaaedc8f791",
+            id: "8f783346-9350-4f3d-b60c-ce7863f6c7a2",
             label: "Create sending email func...",
-            worktreeName: "test-001",
+            worktreeName: "example-001-4ce",
             createdAt: "2025-09-29T10:00:00.000Z",
             updatedAt: "2025-09-29T10:00:00.000Z"
           }
@@ -56452,17 +56453,26 @@
 
   // apps/larry-vscode-ext/webview/src/views/components/ThreadsList.tsx
   function ThreadsList(props) {
+    const onItemSelect = (id) => {
+      if (selectedId === id) {
+        onSelect("");
+      } else {
+        onSelect(id);
+      }
+    };
     const { items, selectedId, onSelect } = props;
     if (!items.length) {
       return /* @__PURE__ */ u6("div", { className: "color-fg-muted", children: "No threads yet." });
     }
-    return /* @__PURE__ */ u6("div", { className: "Box overflow-auto", style: { maxHeight: "50vh" }, children: /* @__PURE__ */ u6("ul", { className: "list-style-none", children: items.map((t6) => /* @__PURE__ */ u6("li", { className: `d-flex flex-justify-between px-2 py-2 ${selectedId === t6.id ? "color-bg-subtle" : ""}`, children: [
-      /* @__PURE__ */ u6("button", { className: "btn-invisible text-left", onClick: () => onSelect(t6.id), children: [
-        /* @__PURE__ */ u6("div", { className: "text-bold", children: t6.label }),
-        /* @__PURE__ */ u6("div", { className: "color-fg-muted text-small", children: t6.worktreeName })
-      ] }),
-      /* @__PURE__ */ u6("span", { className: "Label Label--secondary", children: new Date(t6.updatedAt).toLocaleString() })
-    ] }, t6.id)) }) });
+    return /* @__PURE__ */ u6("div", { className: "Box overflow-auto", style: { maxHeight: "50vh" }, children: /* @__PURE__ */ u6("ul", { className: "list-style-none", children: items.map((t6) => /* @__PURE__ */ u6("li", { style: {
+      backgroundColor: selectedId === t6.id ? "var(--vscode-list-hoverBackground)" : "transparent",
+      border: "1px solid var(--vscode-list-hoverBackground)",
+      cursor: "pointer",
+      marginBottom: "2px"
+    }, className: `d-flex flex-justify-between`, children: /* @__PURE__ */ u6("button", { className: "btn-invisible text-left", onClick: () => onItemSelect(t6.id), children: [
+      /* @__PURE__ */ u6("div", { className: "text-bold", children: t6.label }),
+      /* @__PURE__ */ u6("div", { className: "color-fg-muted text-small", children: t6.worktreeName })
+    ] }) }, t6.id)) }) });
   }
 
   // apps/larry-vscode-ext/webview/src/views/components/AnimatedEllipsis.tsx
@@ -56474,17 +56484,36 @@
   function MainRepoScreen() {
     const { data, isLoading } = useThreadsQuery(baseUrl.value);
     const [newLabel, setNewLabel] = d2("");
-    const [newWorktree, setNewWorktree] = d2("");
+    const [selectedThreadId2, setSelectedThreadId] = d2(void 0);
+    const [searchText2, setSearchText] = d2("");
+    const [setupPhase2, setSetupPhase] = d2("idle");
+    y2(() => {
+      const unsubscribe = setupPhase.subscribe((phase) => {
+        if (phase === "ready") {
+          setSetupPhase("idle");
+          setNewLabel("");
+          setSelectedThreadId(void 0);
+          setSearchText("");
+        }
+        if (phase === "error") {
+          setSetupPhase("error");
+          setNewLabel("");
+          setSelectedThreadId(void 0);
+          setSearchText("");
+        }
+      });
+      return unsubscribe;
+    }, []);
     const items = data?.items ?? [];
     const filtered = T2(() => {
-      const q6 = searchText.value.toLowerCase();
+      const q6 = searchText2.toLowerCase();
       if (!q6) return items;
       return items.filter((t6) => (t6.label + " " + t6.worktreeName).toLowerCase().includes(q6));
-    }, [items, searchText.value]);
+    }, [items, searchText2]);
     const selected = T2(() => {
-      if (!selectedThreadId.value) return void 0;
-      return items.find((t6) => t6.id === selectedThreadId.value);
-    }, [items, selectedThreadId.value]);
+      if (!selectedThreadId2) return void 0;
+      return items.find((t6) => t6.id === selectedThreadId2);
+    }, [items, selectedThreadId2]);
     function openWorktreeExisting() {
       if (!selected) return;
       postMessage({
@@ -56493,12 +56522,12 @@
         threadId: selected.id,
         label: selected.label
       });
-      setupPhase.value = "setting_up";
+      setSetupPhase("setting_up");
     }
     function openWorktreeNew() {
       if (!newLabel.trim()) return;
-      postMessage({ type: "open_worktree", worktreeName: newWorktree || "", threadId: "", label: newLabel.trim() });
-      setupPhase.value = "setting_up";
+      postMessage({ type: "open_worktree", worktreeName: "", threadId: "", label: newLabel.trim() });
+      setSetupPhase("setting_up");
     }
     return /* @__PURE__ */ u6("div", { className: "Box d-flex flex-column gap-3 p-3", children: [
       /* @__PURE__ */ u6("div", { className: "d-flex flex-justify-between flex-items-center", children: /* @__PURE__ */ u6("h2", { className: "h3 m-0", children: "Threads" }) }),
@@ -56507,12 +56536,12 @@
         {
           className: "form-control input-sm width-full",
           placeholder: "Search threads...",
-          value: searchText.value,
-          onInput: (e6) => searchText.value = e6.currentTarget.value
+          value: searchText2,
+          onInput: (e6) => setSearchText(e6.currentTarget.value)
         }
       ) }),
-      isLoading ? /* @__PURE__ */ u6("div", { className: "color-fg-muted", children: "Loading threads\u2026" }) : /* @__PURE__ */ u6(ThreadsList, { items: filtered, selectedId: selectedThreadId.value, onSelect: (id) => selectedThreadId.value = id }),
-      selectedThreadId.value ? /* @__PURE__ */ u6("div", { className: "border-top pt-3 mt-2", children: /* @__PURE__ */ u6("button", { className: "btn btn-primary", disabled: !selected || setupPhase.value === "setting_up", onClick: openWorktreeExisting, children: setupPhase.value === "setting_up" ? /* @__PURE__ */ u6(k, { children: [
+      isLoading ? /* @__PURE__ */ u6("div", { className: "color-fg-muted", children: "Loading threads\u2026" }) : /* @__PURE__ */ u6(ThreadsList, { items: filtered, selectedId: selectedThreadId2, onSelect: (id) => setSelectedThreadId(id) }),
+      selectedThreadId2 ? /* @__PURE__ */ u6("div", { className: "border-top pt-3 mt-2", children: /* @__PURE__ */ u6("button", { className: "btn btn-primary", disabled: !selected || setupPhase2 === "setting_up", onClick: openWorktreeExisting, children: setupPhase2 === "setting_up" ? /* @__PURE__ */ u6(k, { children: [
         "Setting up ",
         /* @__PURE__ */ u6(AnimatedEllipsis, {})
       ] }) : "Open worktree" }) }) : null,
@@ -56527,11 +56556,12 @@
             onInput: (e6) => setNewLabel(e6.currentTarget.value)
           }
         ) }),
-        /* @__PURE__ */ u6("div", { children: /* @__PURE__ */ u6("button", { className: `btn ${newLabel.trim() ? "btn-primary" : ""}`, disabled: !newLabel.trim() || setupPhase.value === "setting_up", onClick: openWorktreeNew, children: setupPhase.value === "setting_up" ? /* @__PURE__ */ u6(k, { children: [
+        /* @__PURE__ */ u6("div", { children: /* @__PURE__ */ u6("button", { className: `btn ${newLabel.trim() ? "btn-primary" : ""}`, disabled: !newLabel.trim() || setupPhase2 === "setting_up", onClick: openWorktreeNew, children: setupPhase2 === "setting_up" ? /* @__PURE__ */ u6(k, { children: [
           "Setting up ",
           /* @__PURE__ */ u6(AnimatedEllipsis, {})
         ] }) : "Open worktree" }) })
-      ] })
+      ] }),
+      setupPhase2 === "error" ? /* @__PURE__ */ u6("div", { className: "border-top pt-3 mt-2", children: /* @__PURE__ */ u6("div", { className: "text-danger", children: "Error setting up worktree" }) }) : null
     ] });
   }
 
@@ -56544,8 +56574,7 @@
       {
         enabled: !!machineId,
         queryKey: ["machine", { baseUrl: baseUrl2, machineId }],
-        queryFn: () => fetchMachine(baseUrl2, machineId),
-        staleTime: Infinity
+        queryFn: () => fetchMachine(baseUrl2, machineId)
       },
       queryClient
     );
@@ -59353,6 +59382,8 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
       });
       return unsubscribe;
     }, []);
+    console.log("MACHINE ID::");
+    console.log(machineId);
     const { data: machineData, isLoading } = useMachineQuery(baseUrl.value, machineId);
     const { data: threadsData } = useThreadsQuery(baseUrl.value);
     console.log("MACHINE DATA::");
@@ -59383,13 +59414,18 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
           status: "running"
         };
       });
+      if (!machineData?.currentState) {
+        console.error("Machine data is missing current state");
+        return;
+      }
       fetch(`${baseUrl.value}/machines/${machineId}/next`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Idempotency-Key": Math.random().toString(36).substring(2, 15)
         },
-        body: JSON.stringify({ contextUpdate: { userResponse: input } })
+        // fix this
+        body: JSON.stringify({ contextUpdate: { [machineData.currentState]: { userResponse: input } } })
       });
     };
     if (machineId && machineData) {
@@ -59422,13 +59458,10 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
 
   // apps/larry-vscode-ext/webview/src/views/components/Loader.tsx
   function Loader({ message = "Loading" }) {
-    return /* @__PURE__ */ u6("div", { className: "flex items-center justify-center p-6", children: /* @__PURE__ */ u6("div", { className: "text-center", children: [
-      /* @__PURE__ */ u6("div", { className: "text-sm text-gray-500 mb-2", children: [
-        message,
-        /* @__PURE__ */ u6(AnimatedEllipsis, {})
-      ] }),
-      /* @__PURE__ */ u6("div", { className: "animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" })
-    ] }) });
+    return /* @__PURE__ */ u6("div", { className: "flex items-center justify-center p-6", children: /* @__PURE__ */ u6("div", { className: "text-center", children: /* @__PURE__ */ u6("div", { className: "text-sm mb-2", children: [
+      /* @__PURE__ */ u6("span", { className: "shimmer-loading", children: message }),
+      /* @__PURE__ */ u6(AnimatedEllipsis, {})
+    ] }) }) });
   }
 
   // apps/larry-vscode-ext/webview/src/views/AppRoot.tsx
@@ -59452,7 +59485,6 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
     try {
       if (event === "thread.created") {
         const evt = JSON.parse(data);
-        console.log("\u{1F9F5} Processing thread.created:", evt);
         queryClient.setQueryData(
           ["threads", { baseUrl: baseUrl2 }],
           (prev) => {
@@ -59471,12 +59503,12 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
                 ...prev.items
               ]
             };
-            console.log("\u{1F4DD} Updated threads cache:", updated);
+            console.log("Updated threads cache:", updated);
             return updated;
           }
         );
         if (evt.clientRequestId && evt.clientRequestId === clientRequestId.value) {
-          console.log("\u{1F3AF} Setting currentThreadId to:", evt.machineId);
+          console.log("Setting currentThreadId to:", evt.machineId);
           currentThreadId.value = evt.machineId;
         }
         return;
@@ -59534,19 +59566,8 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
   }
 
   // apps/larry-vscode-ext/webview/src/main.tsx
-  var queryClient2 = new QueryClient({
-    defaultOptions: {
-      queries: {
-        refetchOnWindowFocus: false,
-        retry: 2
-      },
-      mutations: {
-        retry: 0
-      }
-    }
-  });
   function Root() {
-    return /* @__PURE__ */ u6(QueryClientProvider, { client: queryClient2, children: /* @__PURE__ */ u6("div", { children: [
+    return /* @__PURE__ */ u6(QueryClientProvider, { client: queryClient, children: /* @__PURE__ */ u6("div", { children: [
       /* @__PURE__ */ u6(BootChannel, {}),
       /* @__PURE__ */ u6(AppRoot, {})
     ] }) });

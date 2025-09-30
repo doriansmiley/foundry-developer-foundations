@@ -4,12 +4,13 @@ import { queryClient } from '../lib/query';
 
 export function useThreadsQuery(baseUrl: string) {
   return {
+    isLoading: false,
     data: {
       items: [
         {
-          id: '55eb66cb-00b3-4016-99ea-afaaedc8f791',
+          id: '8f783346-9350-4f3d-b60c-ce7863f6c7a2',
           label: 'Create sending email func...',
-          worktreeName: 'test-001',
+          worktreeName: 'example-001-4ce',
           createdAt: '2025-09-29T10:00:00.000Z',
           updatedAt: '2025-09-29T10:00:00.000Z',
         },

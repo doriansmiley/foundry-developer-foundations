@@ -13,12 +13,28 @@ class SSEProxy {
   private req?: http.ClientRequest;
   private res?: http.IncomingMessage;
   private buffer = '';
+  private retryCount = 0;
+  private maxRetries = 3;
+  private retryDelay = 2000; // 2 seconds
+  private retryTimeout?: NodeJS.Timeout;
+  private stopped = false;
 
   start(
     url: string,
     onEvent: (evt: { event?: string; data: string }) => void,
     onError: (e: any) => void
   ) {
+    this.stopped = false;
+    this.connect(url, onEvent, onError);
+  }
+
+  private connect(
+    url: string,
+    onEvent: (evt: { event?: string; data: string }) => void,
+    onError: (e: any) => void
+  ) {
+    if (this.stopped) return;
+
     const lib = url.startsWith('https:') ? https : http;
 
     this.req = lib.request(
@@ -27,6 +43,10 @@ class SSEProxy {
       (res) => {
         this.res = res;
         res.setEncoding('utf8');
+
+        console.log('SSE connection established');
+        // Reset retry count on successful connection
+        this.retryCount = 0;
 
         res.on('data', (chunk: string) => {
           this.buffer += chunk;
@@ -52,15 +72,55 @@ class SSEProxy {
           }
         });
 
-        res.on('end', () => onError(new Error('SSE ended')));
+        res.on('end', () =>
+          this.handleError(new Error('SSE ended'), url, onEvent, onError)
+        );
       }
     );
 
-    this.req.on('error', onError);
+    this.req.on('error', (err) => this.handleError(err, url, onEvent, onError));
     this.req.end();
   }
 
+  private handleError(
+    error: any,
+    url: string,
+    onEvent: (evt: { event?: string; data: string }) => void,
+    onError: (e: any) => void
+  ) {
+    if (this.stopped) return;
+
+    console.log(
+      `❌ SSE connection error (attempt ${this.retryCount + 1}/${
+        this.maxRetries + 1
+      }):`,
+      error
+    );
+
+    if (this.retryCount < this.maxRetries) {
+      this.retryCount++;
+      console.log(
+        `🔄 Retrying SSE connection in ${this.retryDelay}ms... (${this.retryCount}/${this.maxRetries})`
+      );
+
+      this.retryTimeout = setTimeout(() => {
+        this.connect(url, onEvent, onError);
+      }, this.retryDelay);
+    } else {
+      console.log(`❌ SSE connection failed after ${this.maxRetries} retries`);
+      onError(error);
+    }
+  }
+
   stop() {
+    this.stopped = true;
+    this.retryCount = 0;
+
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = undefined;
+    }
+
     try {
       this.req?.destroy();
     } catch {}
@@ -131,32 +191,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
   private startMainSSE() {
     // topics we need for main list view
-    const url =
-      'http://localhost:3000/larry/agents/google/v1/events?topics=thread.created,machine.updated';
-    console.log('🚀 Starting main SSE connection to:', url);
-    // cleanup old
-    this.sseMain?.stop();
-    this.sseMain = new SSEProxy();
-    this.sseMain.start(
-      url,
-      (ev) => {
-        console.log('📤 Forwarding main SSE event to webview:', ev);
-        this.view?.webview.postMessage({
-          type: 'sse_event',
-          baseUrl: 'http://localhost:3000/larry/agents/google/v1', // FIX: was wrong port!
-          event: ev.event || 'message',
-          data: ev.data, // raw JSON string from backend
-        });
-      },
-      (err) => {
-        console.log('❌ Main SSE error:', err);
-        this.view?.webview.postMessage({
-          type: 'sse_error',
-          source: 'main',
-          message: String(err?.message || err),
-        });
-      }
-    );
+    console.log('Main SSE not needed for now...');
   }
 
   private startWorktreeSSE() {
@@ -177,11 +212,17 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         });
       },
       (err) => {
-        console.log('❌ Worktree SSE error:', err);
+        console.log(
+          '❌ Worktree SSE connection failed after all retries:',
+          err
+        );
         this.view?.webview.postMessage({
           type: 'sse_error',
           source: 'worktree',
-          message: String(err?.message || err),
+          message: `Connection failed after 3 retries: ${String(
+            err?.message || err
+          )}`,
+          retryable: true,
         });
       }
     );
@@ -487,6 +528,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     label: string
   ) {
     try {
+      console.log(worktreeName, threadId, label);
       // Create or ensure worktree exists
       const finalWorktreeName = await this.createOrEnsureWorktree(
         worktreeName,
@@ -502,6 +544,20 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       await this.setupWorktreeEnvironment(finalWorktreeName, threadId);
 
       // Start worktree docker container
+
+      const { stdout } = await execAsync(
+        `docker ps -q --filter "publish=3000"`
+      );
+      const containerId = stdout.trim();
+      if (containerId) {
+        await execAsync(`docker kill ${containerId}`);
+        await execAsync(`docker rm ${containerId}`);
+      }
+
+      if (threadId) {
+        await this.writeCurrentThreadId(finalWorktreeName, threadId);
+      }
+
       await this.startWorktreeDockerContainer(finalWorktreeName, threadId);
 
       // Notify that worktree is ready
@@ -511,10 +567,10 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         threadId,
       });
 
-      this.startWorktreeSSE(); // <— start SSE for worktree events
-
-      // Open worktree in new window
-      await this.openWorktree(finalWorktreeName);
+      setTimeout(() => {
+        this.startWorktreeSSE(); // <— start SSE for worktree events
+        this.openWorktree(finalWorktreeName);
+      }, 3000);
     } catch (error) {
       console.error('Error handling open worktree:', error);
       const errorMessage =

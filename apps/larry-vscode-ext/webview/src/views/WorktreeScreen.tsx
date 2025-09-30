@@ -24,6 +24,8 @@ export function WorktreeScreen() {
     return unsubscribe;
   }, []);
   
+  console.log('MACHINE ID::')
+  console.log(machineId)
   // Read machine data from React Query cache (set by SSE bridge)
   const { data: machineData, isLoading } = useMachineQuery(baseUrl.value, machineId);
 
@@ -65,13 +67,19 @@ export function WorktreeScreen() {
       }
     });
 
+    if (!machineData?.currentState) {
+      console.error('Machine data is missing current state');
+      return;
+    }
+
     fetch(`${baseUrl.value}/machines/${machineId}/next`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Idempotency-Key': Math.random().toString(36).substring(2, 15),
       },
-      body: JSON.stringify({ contextUpdate: { userResponse: input } }),
+      // fix this
+      body: JSON.stringify({ contextUpdate: { [machineData.currentState]: { userResponse: input } } }),
     });
     
   }

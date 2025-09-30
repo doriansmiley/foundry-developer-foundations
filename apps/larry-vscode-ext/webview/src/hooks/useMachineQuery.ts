@@ -8,7 +8,6 @@ export function useMachineQuery(baseUrl: string, machineId?: string) {
       enabled: !!machineId,
       queryKey: ['machine', { baseUrl, machineId }],
       queryFn: () => fetchMachine(baseUrl, machineId!),
-      staleTime: Infinity,
     },
     queryClient
   );
