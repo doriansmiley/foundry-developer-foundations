@@ -1,31 +1,100 @@
-import * as sqlite3 from 'sqlite3';
+import initSqlJs from 'sql.js';
 import * as path from 'path';
-import { mkdir } from 'fs/promises';
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import { randomUUID } from 'crypto';
 import { Threads, ThreadsDao } from '@codestrap/developer-foundations-types';
 
-let db: sqlite3.Database | null = null;
+let SQL: any = null;
+let db: any = null;
+let isInitializing = false;
+let initPromise: Promise<void> | null = null;
 
+// Note: In VSCode extension context, the DB path should be set via environment variable
+// by the extension.ts file using proper VSCode workspace APIs
 const DEFAULT_DB_PATH = path.resolve(
-  process.cwd(),
-  'db/developer-foundations-threads.sqlite'
+  require('os').homedir(),
+  'larry-db/developer-foundations-threads.sqlite'
 );
 
 async function initDatabase(
   dbPath: string = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH
 ): Promise<void> {
+  // If already initialized, return
   if (db) return;
 
+  // If currently initializing, wait for it to complete
+  if (isInitializing && initPromise) {
+    return initPromise;
+  }
+
+  // Start initialization
+  isInitializing = true;
+  initPromise = performInitialization(dbPath);
+
+  try {
+    await initPromise;
+  } finally {
+    isInitializing = false;
+    initPromise = null;
+  }
+}
+
+async function performInitialization(dbPath: string): Promise<void> {
+  console.log('Initializing database at:', dbPath);
+
+  // Initialize sql.js
+  if (!SQL) {
+    SQL = await initSqlJs();
+  }
+
   await mkdir(path.dirname(dbPath), { recursive: true });
-  sqlite3.verbose();
 
-  db = new sqlite3.Database(dbPath);
+  // Try to load existing database file
+  let data: Uint8Array | undefined;
+  try {
+    const buffer = await readFile(dbPath);
+    data = new Uint8Array(buffer);
+    console.log('Loaded existing database file, size:', data.length, 'bytes');
+  } catch (e) {
+    console.log('Database file does not exist, creating new database');
+  }
 
-  await run(
-    'CREATE TABLE IF NOT EXISTS threads (\n      id TEXT PRIMARY KEY,\n      appId TEXT,\n      messages TEXT,\n      userId TEXT,\n      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP\n    );'
+  // Create or open database
+  db = new SQL.Database(data);
+
+  // Create tables
+  db.run(`
+    CREATE TABLE IF NOT EXISTS threads (
+      id TEXT PRIMARY KEY,
+      appId TEXT,
+      messages TEXT,
+      userId TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  db.run('CREATE INDEX IF NOT EXISTS idx_threads_appId ON threads(appId);');
+
+  // Save database to file
+  await saveDatabase(dbPath);
+}
+
+async function saveDatabase(dbPath: string): Promise<void> {
+  if (!db) {
+    console.log('saveDatabase: No database instance to save');
+    return;
+  }
+
+  const data = db.export();
+  await writeFile(dbPath, Buffer.from(data));
+  console.log(
+    'saveDatabase: Saved database to',
+    dbPath,
+    'size:',
+    data.length,
+    'bytes'
   );
-
-  await run('CREATE INDEX IF NOT EXISTS idx_threads_appId ON threads(appId);');
 }
 
 function ensureDb() {
@@ -36,27 +105,19 @@ function ensureDb() {
   }
 }
 
-function run(sql: string, params: unknown[] = []): Promise<void> {
+function run(sql: string, params: unknown[] = []): void {
   ensureDb();
-  return new Promise((resolve, reject) => {
-    db!.run(sql, params, function (err) {
-      if (err) return reject(err);
-      resolve();
-    });
-  });
+  db.run(sql, params);
 }
 
-function get<T = any>(
-  sql: string,
-  params: unknown[] = []
-): Promise<T | undefined> {
+function get<T = any>(sql: string, params: unknown[] = []): T | undefined {
   ensureDb();
-  return new Promise((resolve, reject) => {
-    db!.get(sql, params, function (err, row) {
-      if (err) return reject(err);
-      resolve(row as T | undefined);
-    });
-  });
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  const hasData = stmt.step();
+  const result = hasData ? stmt.getAsObject() : undefined;
+  stmt.free();
+  return result as T | undefined;
 }
 
 async function ensureInitialized() {
@@ -73,13 +134,13 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
       await ensureInitialized();
 
       const threadId = id || randomUUID();
-
+      console.log('SAVING TO DB', threadId, appId);
       const sql = `INSERT INTO threads (id, appId, messages, userId, updated_at) VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)
         ON CONFLICT(id) DO UPDATE SET appId=excluded.appId, messages=excluded.messages, updated_at=CURRENT_TIMESTAMP`;
 
-      await run(sql, [threadId, appId, messages]);
+      run(sql, [threadId, appId, messages]);
 
-      const row = await get<{
+      const row = get<{
         id: string;
         appId: string | null;
         messages: string | null;
@@ -99,18 +160,25 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
         userId: row.userId ?? undefined,
       };
 
+      // Save to file
+      const dbPath = process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH;
+      await saveDatabase(dbPath);
+
       return thread;
     },
 
     delete: async (id: string): Promise<void> => {
       await ensureInitialized();
-      await run('DELETE FROM threads WHERE id = ?', [id]);
+      run('DELETE FROM threads WHERE id = ?', [id]);
+
+      // Save to file
+      await saveDatabase(process.env['SQL_LITE_DB_PATH'] || DEFAULT_DB_PATH);
     },
 
     read: async (id: string): Promise<Threads> => {
       await ensureInitialized();
 
-      const row = await get<{
+      const row = get<{
         id: string;
         appId: string | null;
         messages: string | null;
@@ -129,6 +197,28 @@ export function makeSqlLiteThreadsDao(): ThreadsDao {
       };
 
       return thread;
+    },
+
+    listAll: async (): Promise<Threads[]> => {
+      await ensureInitialized();
+
+      const stmt = db.prepare(
+        'SELECT id, appId, messages, userId FROM threads ORDER BY updated_at DESC'
+      );
+      const results: Threads[] = [];
+
+      while (stmt.step()) {
+        const row = stmt.getAsObject();
+        results.push({
+          id: row.id as string,
+          appId: (row.appId as string) ?? undefined,
+          messages: (row.messages as string) ?? undefined,
+          userId: (row.userId as string) ?? undefined,
+        });
+      }
+
+      stmt.free();
+      return results;
     },
   };
 }

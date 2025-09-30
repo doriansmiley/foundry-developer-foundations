@@ -9,7 +9,13 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "types": ["vscode", "node"]
+    "types": ["vscode", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@codestrap/*": ["../packages/*"]
+    },
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["webview", "media", "scripts", "node_modules", "dist"]
