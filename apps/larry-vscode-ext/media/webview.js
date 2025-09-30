@@ -59373,7 +59373,9 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
   function WorktreeScreen() {
     const [firstMessage, setFirstMessage] = d2("");
     const [provisioning, setProvisioning] = d2(false);
-    const [machineId, setMachineId] = d2(void 0);
+    console.log("CURRENT THREAD ID::");
+    console.log(currentThreadId.value);
+    const [machineId, setMachineId] = d2(currentThreadId.value);
     y2(() => {
       const unsubscribe = currentThreadId.subscribe((newValue) => {
         console.log("\u{1F504} currentThreadId changed to:", newValue);

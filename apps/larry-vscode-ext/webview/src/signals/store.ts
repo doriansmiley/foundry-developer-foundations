@@ -8,6 +8,7 @@ export const worktreeName = signal<string | undefined>(undefined);
 export const setupPhase = signal<'idle' | 'setting_up' | 'ready' | 'error'>(
   'idle'
 );
+
 export const selectedThreadId = signal<string | undefined>(undefined);
 export const searchText = signal('');
 export const clientRequestId = signal<string>(

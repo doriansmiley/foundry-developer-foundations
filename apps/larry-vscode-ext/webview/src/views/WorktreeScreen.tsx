@@ -12,7 +12,9 @@ import { MachineResponse } from '../lib/backend-types';
 export function WorktreeScreen() {
   const [firstMessage, setFirstMessage] = useState('');
   const [provisioning, setProvisioning] = useState(false);
-  const [machineId, setMachineId] = useState<string | undefined>(undefined);
+  console.log('CURRENT THREAD ID::')
+  console.log(currentThreadId.value)
+  const [machineId, setMachineId] = useState<string | undefined>(currentThreadId.value);
 
   // Subscribe to currentThreadId signal changes
   useEffect(() => {

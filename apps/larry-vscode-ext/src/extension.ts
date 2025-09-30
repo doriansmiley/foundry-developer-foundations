@@ -14,7 +14,7 @@ class SSEProxy {
   private res?: http.IncomingMessage;
   private buffer = '';
   private retryCount = 0;
-  private maxRetries = 3;
+  private maxRetries = 10;
   private retryDelay = 2000; // 2 seconds
   private retryTimeout?: NodeJS.Timeout;
   private stopped = false;
@@ -240,9 +240,6 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
       const threadIdFilePath = vscode.Uri.joinPath(
         workspaceFolder.uri,
-        '.larry',
-        'worktrees',
-        worktreeName,
         'tmp',
         'currentThreadId.txt'
       );
@@ -468,7 +465,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     const message = {
       type: 'worktree_detection',
       isInWorktree,
-      currentThreadId,
+      currentThreadId: currentThreadId || undefined,
       worktreeName: worktreeId,
     };
 
@@ -528,7 +525,6 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     label: string
   ) {
     try {
-      console.log(worktreeName, threadId, label);
       // Create or ensure worktree exists
       const finalWorktreeName = await this.createOrEnsureWorktree(
         worktreeName,
