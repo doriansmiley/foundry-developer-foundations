@@ -17,7 +17,6 @@ export function handleForwardedSSE(msg: {
   try {
     if (event === 'thread.created') {
       const evt: ThreadCreatedEvent = JSON.parse(data);
-      console.log('🧵 Processing thread.created:', evt);
       // Update threads list cache for THIS baseUrl
       queryClient.setQueryData(
         ['threads', { baseUrl }],
@@ -37,7 +36,7 @@ export function handleForwardedSSE(msg: {
               ...prev.items,
             ],
           };
-          console.log('📝 Updated threads cache:', updated);
+          console.log('Updated threads cache:', updated);
           return updated;
         }
       );
@@ -47,7 +46,7 @@ export function handleForwardedSSE(msg: {
         evt.clientRequestId &&
         evt.clientRequestId === clientRequestId.value
       ) {
-        console.log('🎯 Setting currentThreadId to:', evt.machineId);
+        console.log('Setting currentThreadId to:', evt.machineId);
         currentThreadId.value = evt.machineId; // machineId == threadId for now
       }
       return;
