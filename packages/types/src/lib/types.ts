@@ -1006,7 +1006,6 @@ export type ThreadsDao = {
   upsert: (messages: string, appId: string, id?: string) => Promise<Threads>;
   delete: (id: string) => Promise<void>;
   read: (id: string) => Promise<Threads>;
-  listAll?: () => Promise<Threads[]>;
 };
 
 export type RfpRequestsDao = {

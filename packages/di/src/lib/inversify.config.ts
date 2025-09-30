@@ -78,8 +78,7 @@ container.bind(TYPES.TelemetryDao).toConstantValue(makeTelemetryDao());
 container.bind(TYPES.ThreadsDao).toConstantValue(makeThreadsDao());
 container
   .bind(TYPES.SQLLiteThreadsDao)
-  .toDynamicValue(() => makeSqlLiteThreadsDao())
-  .inSingletonScope();
+  .toConstantValue(makeSqlLiteThreadsDao());
 
 container.bind(TYPES.RfpRequestsDao).toConstantValue(makeRfpRequestsDao());
 

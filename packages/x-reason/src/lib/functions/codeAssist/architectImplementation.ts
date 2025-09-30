@@ -57,11 +57,7 @@ For example:
 
   const raw = await gemini(user, system);
   const cleaned = extractJsonFromBackticks(raw);
-  const parsed = JSON.parse(cleaned) as {
-    file: string;
-    modified: boolean;
-    contents?: string;
-  }[];
+  const parsed = JSON.parse(cleaned) as { file: string, modified: boolean, contents?: string }[]
 
   return parsed;
 }
@@ -71,7 +67,8 @@ export async function architectImplementation(
   event?: MachineEvent,
   task?: string
 ): Promise<UserIntent> {
-  const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+
+  const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
   // we use the thread because it should not aonly contain the design specification but user comments as well
   const { messages } = await threadsDao.read(context.machineExecutionId!);
   const parsedMessages = JSON.parse(messages || '[]') as {
@@ -84,19 +81,14 @@ export async function architectImplementation(
       ?.slice()
       .reverse()
       .find((item) => item.includes('architectImplementation')) || '';
-  const userResponseToArchitectQuestions = (
-    context[architectImplementationId] as UserIntent
-  )?.userResponse;
+  const userResponseToArchitectQuestions = (context[architectImplementationId] as UserIntent)
+    ?.userResponse;
 
-  // if we are reentering the state after a clarifying questions were asked
+  // if we are reentering the state after a clarifying questions were asked 
   // but no response was received from the user return the previously generated response
-  if (
-    !userResponseToArchitectQuestions &&
-    context[architectImplementationId]?.confirmationPrompt
-  ) {
+  if (!userResponseToArchitectQuestions && context[architectImplementationId]?.confirmationPrompt) {
     return {
-      confirmationPrompt:
-        context[architectImplementationId]?.confirmationPrompt,
+      confirmationPrompt: context[architectImplementationId]?.confirmationPrompt,
     };
   }
 
@@ -112,32 +104,22 @@ export async function architectImplementation(
 
   // load the contents of the listed file where modified is true and await Promise.all
   const root = process.cwd();
-  const repoRoot = root.split('foundry-developer-foundations')[0];
+  const repoRoot = root.split('foundry-developer-foundations')[0]
   const promises = files
-    .filter((f) => f.modified)
-    .map(
-      (f) =>
-        new Promise((resolve, reject) => {
-          const filePath = path.join(
-            `${repoRoot}/foundry-developer-foundations`,
-            f.file
-          );
-          fs.readFile(filePath, 'utf8')
-            .then((value) => {
-              f.contents = value;
-              resolve(f);
-            })
-            .catch((e) => {
-              reject(e);
-            });
-        })
-    );
+    .filter(f => f.modified)
+    .map(f => new Promise((resolve, reject) => {
+      const filePath = path.join(`${repoRoot}/foundry-developer-foundations`, f.file);
+      fs.readFile(filePath, 'utf8')
+        .then((value) => {
+          f.contents = value;
+          resolve(f);
+        }).catch(e => {
+          reject(e);
+        });
+    }
+    ));
 
-  const fileContents = (await Promise.all(promises)) as {
-    file: string;
-    modified: boolean;
-    contents?: string;
-  }[];
+  const fileContents = await Promise.all(promises) as { file: string, modified: boolean, contents?: string }[];
 
   const fileBlocks = fileContents.reduce((acc, cur) => {
     acc = `${acc}

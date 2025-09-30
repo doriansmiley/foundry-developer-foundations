@@ -12,26 +12,11 @@
     "Other"
   ],
   "main": "./dist/extension.js",
-  "files": [
-    "dist/**",
-    "media/**"
-  ],
   "activationEvents": [
     "onView:larryHome",
     "onStartupFinished"
   ],
   "contributes": {
-    "configuration": {
-      "title": "Larry Coding Assistant",
-      "properties": {
-        "larry.dbPath": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "Absolute path for Larry's SQLite DB file. If empty, defaults to '<workspace>/.larry/db/developer-foundations-threads.sqlite'.",
-          "scope": "application"
-        }
-      }
-    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -58,22 +43,18 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/sql.js": "^1.4.9",
     "@types/vscode": "^1.93.0",
     "esbuild": "^0.21.0",
     "preact": "^10.22.0",
     "typescript": "^5.4.0",
-    "vsce": "^2.15.0" 
+    "vsce": "^2.15.0"
   },
   "dependencies": {
     "@primer/css": "^22.0.2",
-    "@primer/primitives": "^11.0.0",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "dompurify": "^3.2.7",
     "highlight.js": "^11.11.1",
     "marked": "^16.2.1",
-    "marked-highlight": "^2.2.2",
-    "react": "^18.0.0",
-    "sql.js": "^1.13.0"
+    "marked-highlight": "^2.2.2"
   }
 }

@@ -16,7 +16,7 @@ export async function searchDocumentation(
   event?: MachineEvent,
   task?: string
 ): Promise<SearchDocumentationResults> {
-  const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+  const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
 
   const { messages } = await threadsDao.read(context.machineExecutionId || '');
   const parsedMessages = JSON.parse(messages || '[]') as {
