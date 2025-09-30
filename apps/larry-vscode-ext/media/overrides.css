@@ -79,6 +79,10 @@ label {
 	background: var(--vscode-input-background) !important;
 	color: var(--vscode-input-foreground) !important;
 	border-color: var(--vscode-input-border, transparent) !important;
+
+}
+.form-control.pr-40 {
+	padding-right: 40px !important;
 }
 
 /* Markdown rendering */
@@ -89,3 +93,62 @@ label {
 .markdown-body code { background: var(--vscode-editorInlayHint-background, var(--vscode-editor-background)); padding: 1px 4px; border-radius: 4px; }
 .markdown-body pre { background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); padding: 8px; border-radius: 6px; overflow: auto; }
 .markdown-body pre code { background: transparent; padding: 0; } 
+
+/* Shimmer text effect */
+.shimmer {
+	color: var(--vscode-foreground);
+	background: linear-gradient(
+		90deg,
+		var(--vscode-foreground) 0%,
+		var(--vscode-textLink-foreground) 25%,
+		var(--vscode-textLink-activeForeground) 50%,
+		var(--vscode-textLink-foreground) 75%,
+		var(--vscode-foreground) 100%
+	);
+	background-size: 200% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer 2s ease-in-out infinite;
+}
+
+.shimmer-subtle {
+	color: var(--vscode-foreground);
+	background: linear-gradient(
+		90deg,
+		rgba(var(--vscode-foreground), 0.6) 0%,
+		var(--vscode-foreground) 50%,
+		rgba(var(--vscode-foreground), 0.6) 100%
+	);
+	background-size: 200% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer 3s ease-in-out infinite;
+}
+
+.shimmer-loading {
+	color: var(--vscode-descriptionForeground);
+	background: linear-gradient(
+		90deg,
+		var(--vscode-descriptionForeground) 0%,
+		var(--vscode-foreground) 50%,
+		var(--vscode-descriptionForeground) 100%
+	);
+	background-size: 200% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+

@@ -1,6 +1,7 @@
 import { useEffect } from 'preact/hooks';
 import { onMessage, postMessage } from '../lib/vscode';
-import { isInWorktree, currentThreadId, setupPhase, worktreeName, isLoadingWorktreeInfo, sseBaseMain, sseBaseWorktree } from '../signals/store';
+import { isInWorktree, currentThreadId, setupPhase, worktreeName, isLoadingWorktreeInfo } from '../signals/store';
+import { handleForwardedSSE } from '../lib/extension-sse-bridge';
 
 export function BootChannel() {
   useEffect(() => {
@@ -31,10 +32,13 @@ export function BootChannel() {
         setupPhase.value = 'error';
       }
 
-      if (msg?.type === 'server_endpoints' && msg.sseBase) {
-        sseBaseMain.value = msg.sseBase.main;
-        sseBaseWorktree.value = msg.sseBase.worktree;
+      console.log('📨 Webview received message:', msg);
+      // NEW: forwarded SSE
+      if (msg.type === 'sse_event' && msg.baseUrl && msg.event && typeof msg.data === 'string') {
+        console.log('📨 Webview received SSE event:', msg);
+        handleForwardedSSE({ baseUrl: msg.baseUrl, event: msg.event, data: msg.data });
       }
+
     };
 
     // Set up message listener

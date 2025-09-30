@@ -3,8 +3,72 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { findProjectRoot } from './findProjectRoot';
 import path from 'path';
+import * as http from 'http';
+import * as https from 'https';
 
 const execAsync = promisify(exec);
+
+// --- SSE relay (extension host) ---
+class SSEProxy {
+  private req?: http.ClientRequest;
+  private res?: http.IncomingMessage;
+  private buffer = '';
+
+  start(
+    url: string,
+    onEvent: (evt: { event?: string; data: string }) => void,
+    onError: (e: any) => void
+  ) {
+    const lib = url.startsWith('https:') ? https : http;
+
+    this.req = lib.request(
+      url,
+      { headers: { Accept: 'text/event-stream', 'Cache-Control': 'no-cache' } },
+      (res) => {
+        this.res = res;
+        res.setEncoding('utf8');
+
+        res.on('data', (chunk: string) => {
+          this.buffer += chunk;
+          let idx: number;
+          while ((idx = this.buffer.indexOf('\n\n')) >= 0) {
+            const frame = this.buffer.slice(0, idx);
+            this.buffer = this.buffer.slice(idx + 2);
+
+            let eventName: string | undefined;
+            const dataLines: string[] = [];
+            for (const line of frame.split(/\r?\n/)) {
+              if (!line || line.startsWith(':')) continue;
+              if (line.startsWith('event:')) eventName = line.slice(6).trim();
+              else if (line.startsWith('data:'))
+                dataLines.push(line.slice(5).trim());
+            }
+
+            if (eventName) {
+              // handle only named events
+              console.log('Bypassing SEE event:', eventName);
+              onEvent({ event: eventName, data: dataLines.join('\n') });
+            }
+          }
+        });
+
+        res.on('end', () => onError(new Error('SSE ended')));
+      }
+    );
+
+    this.req.on('error', onError);
+    this.req.end();
+  }
+
+  stop() {
+    try {
+      this.req?.destroy();
+    } catch {}
+    try {
+      this.res?.destroy();
+    } catch {}
+  }
+}
 
 export function activate(context: vscode.ExtensionContext) {
   try {
@@ -57,8 +121,70 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
   private runningContainers: Map<string, string> = new Map(); // threadId -> containerId
   private mainDockerContainer: string | undefined; // Main docker container for port 4210
 
+  // NEW: SSE relays
+  private sseMain?: SSEProxy;
+  private sseWorktree?: SSEProxy;
+
   constructor(private readonly context: vscode.ExtensionContext) {
     // No initialization needed for new flow
+  }
+
+  private startMainSSE() {
+    // topics we need for main list view
+    const url =
+      'http://localhost:3000/larry/agents/google/v1/events?topics=thread.created,machine.updated';
+    console.log('🚀 Starting main SSE connection to:', url);
+    // cleanup old
+    this.sseMain?.stop();
+    this.sseMain = new SSEProxy();
+    this.sseMain.start(
+      url,
+      (ev) => {
+        console.log('📤 Forwarding main SSE event to webview:', ev);
+        this.view?.webview.postMessage({
+          type: 'sse_event',
+          baseUrl: 'http://localhost:3000/larry/agents/google/v1', // FIX: was wrong port!
+          event: ev.event || 'message',
+          data: ev.data, // raw JSON string from backend
+        });
+      },
+      (err) => {
+        console.log('❌ Main SSE error:', err);
+        this.view?.webview.postMessage({
+          type: 'sse_error',
+          source: 'main',
+          message: String(err?.message || err),
+        });
+      }
+    );
+  }
+
+  private startWorktreeSSE() {
+    const url =
+      'http://localhost:3000/larry/agents/google/v1/events?topics=thread.created,machine.updated';
+    console.log('🚀 Starting worktree SSE connection to:', url);
+    this.sseWorktree?.stop();
+    this.sseWorktree = new SSEProxy();
+    this.sseWorktree.start(
+      url,
+      (ev) => {
+        console.log('📤 Forwarding worktree SSE event to webview:', ev);
+        this.view?.webview.postMessage({
+          type: 'sse_event',
+          baseUrl: 'http://localhost:3000/larry/agents/google/v1',
+          event: ev.event || 'message',
+          data: ev.data,
+        });
+      },
+      (err) => {
+        console.log('❌ Worktree SSE error:', err);
+        this.view?.webview.postMessage({
+          type: 'sse_error',
+          source: 'worktree',
+          message: String(err?.message || err),
+        });
+      }
+    );
   }
 
   // Thread ID file management
@@ -308,14 +434,17 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     console.log('📤 Sending message to webview:', message);
     this.view.webview.postMessage(message);
     console.log('📤 Message sent successfully');
-    // Start main docker if not in worktree
+
+    // Start appropriate SSE based on worktree state
     if (!isInWorktree) {
       console.log(
         '🐳 User is not in worktree - starting main Docker container...'
       );
       await this.ensureMainDockerRunning();
+      this.startMainSSE(); // <— start SSE for main list
     } else {
-      console.log('🌿 User is in worktree - skipping main Docker container');
+      console.log('🌿 User is in worktree - starting worktree SSE');
+      this.startWorktreeSSE(); // <— start SSE for worktree
     }
   }
 
@@ -381,6 +510,8 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         worktreeName: finalWorktreeName,
         threadId,
       });
+
+      this.startWorktreeSSE(); // <— start SSE for worktree events
 
       // Open worktree in new window
       await this.openWorktree(finalWorktreeName);
@@ -734,7 +865,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       `style-src ${view.webview.cspSource} 'unsafe-inline'`,
       `font-src ${view.webview.cspSource} https:`,
       `script-src 'nonce-${nonce}' ${view.webview.cspSource}`,
-      `connect-src 'self' ${view.webview.cspSource} http://localhost:3000 http://localhost:4210 https:`,
+      `connect-src 'self' ${view.webview.cspSource} http://localhost:3000 http://localhost:4210`,
     ].join('; ');
 
     view.webview.html = `<!DOCTYPE html>
@@ -778,21 +909,6 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         console.error('❌ Error in initial worktree detection:', error);
       });
     }, 100);
-
-    // Add proxied SSE URLs to avoid webview CORS issues
-    (async () => {
-      const sseMain = await vscode.env.asExternalUri(
-        vscode.Uri.parse('http://localhost:4210/larry/agents/google/v1/events')
-      );
-      const sseWorktree = await vscode.env.asExternalUri(
-        vscode.Uri.parse('http://localhost:3000/larry/agents/google/v1/events')
-      );
-
-      this.view?.webview.postMessage({
-        type: 'server_endpoints',
-        sseBase: { main: String(sseMain), worktree: String(sseWorktree) },
-      });
-    })();
   }
 }
 
@@ -800,6 +916,9 @@ export function deactivate() {
   // Cleanup main docker container if running
   // Note: This is a best-effort cleanup, errors are ignored
   try {
+    // Stop SSE connections (if we keep a reference to provider)
+    // For now, they'll be cleaned up when the extension process ends
+
     const { exec } = require('child_process');
     exec('docker rm -f larry-main-server', () => {
       // Ignore errors during cleanup

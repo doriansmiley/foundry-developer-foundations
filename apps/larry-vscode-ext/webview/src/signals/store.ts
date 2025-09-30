@@ -3,7 +3,9 @@ import { signal, computed } from '@preact/signals';
 // Loading state - starts as true until we get initial worktree detection
 export const isLoadingWorktreeInfo = signal(true);
 export const isInWorktree = signal(false);
-export const currentThreadId = signal<string | undefined>(undefined);
+export const currentThreadId = signal<string | undefined>(
+  '55eb66cb-00b3-4016-99ea-afaaedc8f791'
+);
 export const worktreeName = signal<string | undefined>(undefined);
 export const setupPhase = signal<'idle' | 'setting_up' | 'ready' | 'error'>(
   'idle'
@@ -15,8 +17,6 @@ export const clientRequestId = signal<string>(
     ? crypto.randomUUID()
     : 'client-' + Math.random().toString(16).slice(2)
 );
-export const sseBaseMain = signal<string | undefined>(undefined);
-export const sseBaseWorktree = signal<string | undefined>(undefined);
 
 export const baseUrl = computed(() =>
   isInWorktree.value
