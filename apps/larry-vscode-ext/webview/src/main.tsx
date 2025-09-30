@@ -1,20 +1,10 @@
+/* jsx preact */
+/* @jsxImportSource preact */
 import { render } from 'preact';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppRoot } from './views/AppRoot';
 import { BootChannel } from './views/BootChannel';
-
-// Create a single QueryClient for the webview lifetime
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 2,
-    },
-    mutations: {
-      retry: 0,
-    },
-  },
-});
+import { queryClient } from './lib/query';
 
 function Root() {
   return (
