@@ -12,17 +12,17 @@ import { MachineResponse } from '../lib/backend-types';
 export function WorktreeScreen() {
   const [firstMessage, setFirstMessage] = useState('');
   const [provisioning, setProvisioning] = useState(false);
-  const [machineId, setMachineId] = useState<string | undefined>('55eb66cb-00b3-4016-99ea-afaaedc8f791');
+  const [machineId, setMachineId] = useState<string | undefined>(undefined);
 
   // Subscribe to currentThreadId signal changes
-  // useEffect(() => {
-  //   const unsubscribe = currentThreadId.subscribe((newValue) => {
-  //     console.log('🔄 currentThreadId changed to:', newValue);
-  //     setMachineId(newValue);
-  //     setProvisioning(false); // Stop provisioning when thread is created
-  //   });
-  //   return unsubscribe;
-  // }, []);
+  useEffect(() => {
+    const unsubscribe = currentThreadId.subscribe((newValue) => {
+      console.log('🔄 currentThreadId changed to:', newValue);
+      setMachineId(newValue);
+      setProvisioning(false); // Stop provisioning when thread is created
+    });
+    return unsubscribe;
+  }, []);
   
   // Read machine data from React Query cache (set by SSE bridge)
   const { data: machineData, isLoading } = useMachineQuery(baseUrl.value, machineId);

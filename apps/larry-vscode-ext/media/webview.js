@@ -56318,9 +56318,7 @@
   // apps/larry-vscode-ext/webview/src/signals/store.ts
   var isLoadingWorktreeInfo = d5(true);
   var isInWorktree = d5(false);
-  var currentThreadId = d5(
-    "55eb66cb-00b3-4016-99ea-afaaedc8f791"
-  );
+  var currentThreadId = d5(void 0);
   var worktreeName = d5(void 0);
   var setupPhase = d5(
     "idle"
@@ -59346,7 +59344,15 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
   function WorktreeScreen() {
     const [firstMessage, setFirstMessage] = d2("");
     const [provisioning, setProvisioning] = d2(false);
-    const [machineId, setMachineId] = d2("55eb66cb-00b3-4016-99ea-afaaedc8f791");
+    const [machineId, setMachineId] = d2(void 0);
+    y2(() => {
+      const unsubscribe = currentThreadId.subscribe((newValue) => {
+        console.log("\u{1F504} currentThreadId changed to:", newValue);
+        setMachineId(newValue);
+        setProvisioning(false);
+      });
+      return unsubscribe;
+    }, []);
     const { data: machineData, isLoading } = useMachineQuery(baseUrl.value, machineId);
     const { data: threadsData } = useThreadsQuery(baseUrl.value);
     console.log("MACHINE DATA::");
