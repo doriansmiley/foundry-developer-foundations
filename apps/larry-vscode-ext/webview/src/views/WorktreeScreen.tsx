@@ -1,34 +1,41 @@
-
-import { useState } from 'preact/hooks';
+import React from 'react';
+import { useState, useEffect } from 'preact/hooks';
 import { baseUrl, clientRequestId, currentThreadId, worktreeName, } from '../signals/store';
-import { useMachineQuery } from '../hooks/useMachineQuery';
-import { useGlobalSSE } from '../hooks/useGlobalSSE';
-import { useMachineSSE } from '../hooks/useMachineSSE';
 import { createThread } from '../lib/http';
 import { AnimatedEllipsis } from './components/AnimatedEllipsis';
+import { useThreadsQuery } from '../hooks/useThreadsQuery';
+import { useMachineQuery } from '../hooks/useMachineQuery';
+import { StateVisualization } from './components/StateVisualization';
+import { queryClient } from '../lib/query';
+import { MachineResponse } from '../lib/backend-types';
 
 export function WorktreeScreen() {
   const [firstMessage, setFirstMessage] = useState('');
   const [provisioning, setProvisioning] = useState(false);
-  const machineId = currentThreadId.value; // for us, threadId === machineId in your model
+  const [machineId, setMachineId] = useState<string | undefined>('55eb66cb-00b3-4016-99ea-afaaedc8f791');
 
-  // When we already have a thread, load latest snapshot + keep live via SSE
-  const { data, isLoading } = useMachineQuery(baseUrl.value, machineId);
-  useMachineSSE(baseUrl.value, machineId);
+  // Subscribe to currentThreadId signal changes
+  // useEffect(() => {
+  //   const unsubscribe = currentThreadId.subscribe((newValue) => {
+  //     console.log('🔄 currentThreadId changed to:', newValue);
+  //     setMachineId(newValue);
+  //     setProvisioning(false); // Stop provisioning when thread is created
+  //   });
+  //   return unsubscribe;
+  // }, []);
+  
+  // Read machine data from React Query cache (set by SSE bridge)
+  const { data: machineData, isLoading } = useMachineQuery(baseUrl.value, machineId);
 
-  // During new session provisioning, we want global SSE to capture thread.created
-  useGlobalSSE({
-    baseUrl: baseUrl.value,
-    topics: ['thread.created', 'machine.updated'],
-    clientRequestId: clientRequestId.value,
-    onThreadCreated: (evt) => {
-      // Scope by clientRequestId when provided
-      if (evt.clientRequestId && evt.clientRequestId !== clientRequestId.value) return;
-      // Adopt created machine
-      currentThreadId.value = evt.machineId;
-      setProvisioning(false);
-    },
-  });
+  // Read threads data to get the session label
+  const { data: threadsData } = useThreadsQuery(baseUrl.value);
+  console.log('MACHINE DATA::')
+  console.log(machineData)
+  console.log('THREADS DATA::')
+  console.log(threadsData)
+  // Find current thread label from threads list
+  const currentThread = threadsData?.items?.find(t => t.id === machineId);
+  const sessionLabel = currentThread?.label || 'Session';
 
   async function startNewThread() {
     if (!firstMessage.trim()) return;
@@ -41,7 +48,7 @@ export function WorktreeScreen() {
     setProvisioning(true);
     await createThread({
       baseUrl: baseUrl.value,
-      worktreeName: worktreeName.value,
+      worktreeName: worktreeName.value || 'test-001',
       userTask: firstMessage.trim(),
       label: firstMessage.trim(),
       clientRequestId: clientRequestId.value,
@@ -49,19 +56,36 @@ export function WorktreeScreen() {
     // Now we wait for thread.created via SSE -> handled in onThreadCreated
   }
 
-  if (machineId) {
+  const handleSubmit = async (input: string) => {
+    // update optimistacly machine status to running
+    queryClient.setQueryData(['machine', { baseUrl: baseUrl.value, machineId }], (prev) => {
+      return {
+        ...prev as MachineResponse,
+        status: 'running',
+      }
+    });
+
+    fetch(`${baseUrl.value}/machines/${machineId}/next`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': Math.random().toString(36).substring(2, 15),
+      },
+      body: JSON.stringify({ contextUpdate: { userResponse: input } }),
+    });
+    
+  }
+
+  if (machineId && machineData) {
     return (
-      <div className="Box p-3">
+      <div className="min-h-screen">
         <div className="d-flex flex-justify-between flex-items-center mb-2">
-          <h2 className="h3 m-0">Session</h2>
-          <span className="Label Label--primary">{data?.status || 'running'}</span>
+          <h4 className="h3 m-0">{sessionLabel}</h4>
         </div>
         {isLoading ? (
           <div className="color-fg-muted">Loading history…</div>
         ) : (
-          <pre className="p-2 overflow-auto" style={{ maxHeight: '60vh' }}>
-            {JSON.stringify(data?.context ?? data?.currentStateContext ?? {}, null, 2)}
-          </pre>
+          <StateVisualization data={machineData} onSubmit={handleSubmit} />
         )}
       </div>
     );
@@ -79,13 +103,16 @@ export function WorktreeScreen() {
         onInput={(e) => setFirstMessage((e.currentTarget as HTMLTextAreaElement).value)}
       />
       <div>
-        <button className="btn btn-primary" disabled={!firstMessage.trim() || provisioning} onClick={startNewThread}>
-          {provisioning ? (
-            <>Thinking<AnimatedEllipsis /></>
-          ) : (
-            'Send'
-          )}
-        </button>
+        {provisioning && (
+          <div className="mt-1">
+            <span className="shimmer-loading">Working on it</span><AnimatedEllipsis />
+          </div>
+        )}
+        {!provisioning && (
+          <button className="btn btn-primary" disabled={!firstMessage.trim()} onClick={startNewThread}>
+            Send
+          </button>
+        )}
       </div>
     </div>
   );
