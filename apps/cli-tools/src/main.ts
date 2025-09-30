@@ -79,7 +79,7 @@ ${readme}
       messages
         ?.slice()
         .reverse()
-        .find((item) => item.system !== undefined);
+        .find((item) => item.user === undefined);
 
     if (lastMessage) {
       const approved = (await select({ message: 'Approved', choices: ['yes', 'no'] })) === 'yes';
