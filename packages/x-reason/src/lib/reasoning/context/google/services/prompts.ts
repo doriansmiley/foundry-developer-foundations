@@ -334,25 +334,9 @@ export async function aiTransition(
   ${JSON.stringify(possibleTransitions || [], null, 2)}
   `;
 
-  if (
-    parsedContext.stateId.includes('confirmUserIntent') ||
-    parsedContext.stateId.includes('architectImplementation')) {
-    const systemResponse = parsedContext[parsedState.id].confirmationPrompt;
-    const userResponse = parsedContext[parsedState.id].userResponse;
-
-    instructions = `${instructions}
-
-      The System Response is:
-      ${systemResponse}
-
-      The User Response is:
-      ${userResponse ? userResponse : 'The user has not provided feedback yet'}
-      `;
-  } else {
-    instructions = `${instructions}
+  instructions = `${instructions}
     The output of the current state (make sure the output fulfills the task list!):
   ${JSON.stringify(parsedContext[parsedState.id])}`
-  }
 
   // TODO use parsedContext.stateId to determine if we are on a state that requires user feedback.
   // if so add conditional prompts that collect the confirmationPrompt and userResponse string
@@ -461,30 +445,30 @@ export async function aiTransition(
   A: IngredientDatabase
 
   Q:
-  1. The current state confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654 corresponds to the first task: "Clarify Design with User".
+  1. The current state specReview|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654 and the system message for that state is: "Please review the spec file.".
   2.  The current state has includesLogic set to true and transitions defined as:
-    *   { "on": "confirmUserIntent", "target": "confirmUserIntent" }
-    *   { "on": "CONTINUE", "target": "searchDocumentation" }
+    *   { "on": "specReview", "target": "specReview|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654" }
+    *   { "on": "CONTINUE", "target": "searchDocumentation|ec49b261-9e38-47fa-aa93-7f6ab94eba85" }
     *   { "on": "ERROR", "target": "failure" }
-    The user has provided some information in userResponse, but its likely not sufficient to consider all questions answered 
-    and the software specification acceptable. Therefore, we should loop back to the confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654 state to gather more information from the user. 
-  3. Therefore, the target should be confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654.
+    But the approved attribute of the state is false.
+  3. Therefore, the target should be specReview|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654.
 
   Return the target for the next state.
-  A: confirmUserIntent|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654
+  A: specReview|8bcdd515-1ef8-40a8-a3a2-fc7b1d25f654
 
   Q:
-  1. The current state is \`architectImplementation|bf83af61-3ecb-48dd-ba3e-ec3466fac872\`, which corresponds to the "Architect Implementation" task.
-  2. The user has provided feedback and instructions related to the architected implementation through the \`userResponse\`. Because the task description states "If the user approves the spec continue, otherwise try again taking into account the feedback from the user.", and the user has responded, this state should be entered again.
-  3. Since the task description states "If the user approves the spec continue, otherwise try again taking into account the feedback from the user.", the transition target should be \`architectImplementation|bf83af61-3ecb-48dd-ba3e-ec3466fac872\`.
+  1. The current state is \`architectureReview|bf83af61-3ecb-48dd-ba3e-ec3466fac872\`, and the system message for that state is: "please review the architecture file".
+  2.  The current state has includesLogic set to true and transitions defined as:
+    *   { "on": "architectureReview", "target": "architectureReview|bf83af61-3ecb-48dd-ba3e-ec3466fac872" }
+    *   { "on": "CONTINUE", "target": "generateEditMachine|ec49b261-9e38-47fa-aa93-7f6ab94eba85" }
+    *   { "on": "ERROR", "target": "failure" }
+    And the approved attribute of the state is true.
+  3. Since approved is true it is save to transition to generateEditMachine|ec49b261-9e38-47fa-aa93-7f6ab94eba85.
 
   Return the target for the next state.
-  A: architectImplementation|bf83af61-3ecb-48dd-ba3e-ec3466fac872
+  A: generateEditMachine|ec49b261-9e38-47fa-aa93-7f6ab94eba85
 
   ### End training data ###
-
-  If the user orders you to move on or to proceed without answering all questions you do it.
-  you always obey the user's instructions!!! Do not ever disobey the user.
 
   ${instructions}
 

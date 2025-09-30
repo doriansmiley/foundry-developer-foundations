@@ -3,6 +3,7 @@ import {
     MachineEvent,
     Task,
     ActionType,
+    UserIntent,
 } from '@codestrap/developer-foundations-types';
 
 import {
@@ -48,7 +49,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log('dispatching pause from confirmUserIntent');
                     // example of how to pause
                     dispatch({
-                        type: 'pause',
+                        type: 'CONTINUE',
                         payload,
                     });
                 },
@@ -72,8 +73,32 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                             payload,
                         });
                     } else {
+                        // target the most recent confirmUserIntent passing the latest feedback from the end user
+                        const specReviewId =
+                            context.stack
+                                ?.slice()
+                                .reverse()
+                                .find((item) => item.includes('specReview')) || '';
+
+                        // extract the user response if any. It will be the last message where user is defined
+                        const lastMessage =
+                            result.messages
+                                ?.slice()
+                                .reverse()
+                                .find((item) => item.user !== undefined);
+
+                        const payload = {
+                            specReviewId,
+                            [specReviewId]: {
+                                // we destructure to preserve other keys like result which holds values from user interaction
+                                ...context[specReviewId],
+                                userResponse: lastMessage?.user,
+                                // we must set confirmationPrompt to undefined to retrigger spec creation
+                                confirmationPrompt: undefined,
+                            }
+                        };
                         dispatch({
-                            type: 'pause',
+                            type: specReviewId,
                             payload,
                         });
                     }
@@ -136,6 +161,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                             payload,
                         });
                     } else {
+                        // refactor to target the most recent architectImplementation passing the latest feedback from the end user
                         dispatch({
                             type: 'pause',
                             payload,
@@ -181,6 +207,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                             payload,
                         });
                     } else {
+                        // refactor to target the most recent generateEditMachine passing the latest feedback from the end user
                         dispatch({
                             type: 'pause',
                             payload,

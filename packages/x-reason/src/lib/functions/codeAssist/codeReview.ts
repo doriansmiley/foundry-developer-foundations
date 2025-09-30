@@ -53,7 +53,7 @@ export async function codeReview(
         throw new Error('no edit machine json found!');
     }
 
-    const abs = path.resolve(process.env.BASE_FILE_STORAGE, `editMachine-${context.machineExecutionId}.json`);
+    const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `editMachine-${context.machineExecutionId}.json`);
     await fs.promises.writeFile(abs, editMachineJSON, 'utf8');
 
     return {

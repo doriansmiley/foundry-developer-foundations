@@ -53,7 +53,7 @@ export async function architectureReview(
         throw new Error('no design specification found!');
     }
 
-    const abs = path.resolve(process.env.BASE_FILE_STORAGE, `designDoc-${context.machineExecutionId}.md`);
+    const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `designDoc-${context.machineExecutionId}.md`);
     await fs.promises.writeFile(abs, architecture, 'utf8');
 
     return {

@@ -4,6 +4,7 @@ import { SupportedFoundryClients } from "@codestrap/developer-foundations-types"
 declare global {
     namespace NodeJS {
         interface ProcessEnv {
+            BASE_FILE_STORAGE: string;
             FOUNDRY_STACK_URL: string;
             FOUNDRY_TOKEN: string;
             FOUNDRY_TEST_USER: string;
