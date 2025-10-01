@@ -65,20 +65,28 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const result = await specReview(context, event, task);
                     const payload = getPayload(context, result);
                     console.log(`specReview returned: ${JSON.stringify(result)}`);
-                    console.log('dispatching pause from specReview');
 
                     if (result.approved) {
+                        console.log('dispatching CONTINUE from specReview');
                         dispatch({
                             type: 'CONTINUE',
                             payload,
                         });
+                    } else if (result.reviewRequired) {
+                        console.log('dispatching pause from specReview');
+                        // pause so the user can review the state machine
+                        dispatch({
+                            type: 'pause',
+                            payload,
+                        });
                     } else {
-                        // target the most recent confirmUserIntent passing the latest feedback from the end user
-                        const specReviewId =
+                        // the user has provided feedback we need to capture and rerun the confirm user intent state
+                        // target the most recent confirmUserIntentId passing the latest feedback from the end user
+                        const confirmUserIntentId =
                             context.stack
                                 ?.slice()
                                 .reverse()
-                                .find((item) => item.includes('specReview')) || '';
+                                .find((item) => item.includes('confirmUserIntent')) || '';
 
                         // extract the user response if any. It will be the last message where user is defined
                         const lastMessage =
@@ -88,17 +96,19 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                                 .find((item) => item.user !== undefined);
 
                         const payload = {
-                            specReviewId,
-                            [specReviewId]: {
+                            confirmUserIntentId,
+                            [confirmUserIntentId]: {
                                 // we destructure to preserve other keys like result which holds values from user interaction
-                                ...context[specReviewId],
+                                ...context[confirmUserIntentId],
                                 userResponse: lastMessage?.user,
-                                // we must set confirmationPrompt to undefined to retrigger spec creation
-                                confirmationPrompt: undefined,
+                                file: result.file,
                             }
                         };
+
+                        console.log(`dispatching ${confirmUserIntentId} from specReview`);
+
                         dispatch({
-                            type: specReviewId,
+                            type: confirmUserIntentId,
                             payload,
                         });
                     }

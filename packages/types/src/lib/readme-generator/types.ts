@@ -208,6 +208,7 @@ export type ToolCallingTask = {
 export type UserIntent = {
     confirmationPrompt: string;
     userResponse?: string;
+    file?: string;
 }
 
 /** Keep this union small, explicit, and auditable for v0 */

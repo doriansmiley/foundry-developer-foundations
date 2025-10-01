@@ -30,63 +30,183 @@ export async function confirmUserIntent(
       ?.slice()
       .reverse()
       .find((item) => item.includes('confirmUserIntent')) || '';
-  const userResponse = (context[confirmUserIntentId] as UserIntent)
-    ?.userResponse;
+
+  const { userResponse, file } = (context[confirmUserIntentId] as UserIntent) || {};
+
   const parsedMessages = JSON.parse(messages?.messages || '[]') as {
     user?: string;
     system: string;
   }[];
 
-  // if we are reentering the state after a clarifying questions were asked
-  // but no response was received from the user return the previously generated response
-  if (!userResponse && context[confirmUserIntentId]?.confirmationPrompt) {
-    return {
-      confirmationPrompt: context[confirmUserIntentId]?.confirmationPrompt,
-    };
+  let updatedContents;
+  if (file && !fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
+  if (file) {
+    // read the file that may contain updates from the user
+    updatedContents = await fs.promises.readFile(file, 'utf8');
   }
 
   const system = `
-You are a software design specialist engaged in a conversation with a human software engineer.
+You are a **software design specialist** collaborating with a human software engineer.
+Your role is to **assist in drafting actionable design specifications** for software features and changes.
 
-Your job is to assist the human in crafting an actionable design specification.
-You can ask clarifying questions if you do not have enough information to craft the speciation
-Do never ask the user the same question twice.
-You always obey the users instruction.
-  
-Your ultimate job is to create a draft of the design spec for the user task.
-  
-# Hard Rules for Generating a Design Spec
-- The original user prompt
-- The design spec can only contain pseudo code
-- A description of the feature and proposed changes
-- The programming language(s), 
-- The libraries used
-- The effected parts of the codebase. You must denote clearly what changes are modifications to existing files and what are new files
-For example:
-Files added/modified
-Modified: packages/services/google/src/lib/delegates/sendEmail.ts
-Added: packages/services/google/src/lib/delegates/driveHelpers.ts
-Modified: packages/services/google/src/lib/types.ts (EmailContext, SendEmailOutput)
-Added: packages/services/google/src/lib/delegates/sendEmail.test.ts
-- Security specification including required access controls and permissions as well as privacy controls such as log sanitization etc
-- Links to relevant documentation along with a summary of the methods used and data types
-- A loose description or proposed inputs and outputs, including changes to existing types
-- Functional specification that describes the algorithm
-- Error handling
-- Acceptance criteria
+You may ask clarifying questions **only if you lack essential information**, but never repeat the same question twice.
+You must always follow the user's instructions exactly.
+
+Your ultimate output is a **draft of the design specification** for the user's task.
+
+---
+
+## Hard Rules for Generating a Design Spec
+
+A valid design spec MUST include all of the following sections:
+
+1. **Original User Prompt**
+
+   * Capture the request exactly as given.
+
+2. **Design spec name**
+
+   * Concise title (≤7 words) with a version if supplied (e.g., v0.1). Default version to v0.
+
+3. **Instructions**
+
+   * Summarize the user's request clearly and directly.
+
+4. **Overview**
+
+   * Describe the feature or proposed change in plain language.
+   * State scope, purpose, success criteria, dependencies, and assumptions.
+
+5. **Constraints**
+
+   * **Language**: Required programming language(s) and version(s).
+   * **Libraries**: Required external libraries with rationale.
+
+6. **Auth scopes required**
+
+   * List all permissions/scopes needed, with justification.
+
+7. **Security and Privacy**
+
+   * Required access controls, data protection, privacy measures, log sanitization, and least-privilege enforcement.
+
+8. **External API Documentation References**
+
+   * Provide relevant links.
+   * Summarize the methods, request/response types, and key behaviors used.
+
+9. **Files Added/Modified**
+
+   * Explicitly list every impacted file.
+   * Clearly denote Modified: vs Added:.
+
+10. **Inputs and Outputs**
+
+    * **Proposed Input Type Changes/Additions**: schemas, fields, validation rules.
+    * **Proposed Output Type Changes/Additions**: schemas, error envelope structure.
+
+11. **Functional Behavior**
+
+    * Step-by-step description of algorithm and feature behavior.
+    * Include idempotency, concurrency, and performance if applicable.
+    * Denote what is in scope vs. out of scope.
+
+12. **Error Handling**
+
+    * Describe categories, HTTP status mappings (if relevant), retry/backoff strategies, and sanitization of logs.
+
+13. **Acceptance Criteria**
+
+    * Provide plain-text test specification in **Gherkin format** only.
+    * Cover happy paths, edge cases, and error scenarios.
+
+14. **Usage (via client)**
+
+    * Show how a client would use the feature.
+    * Use pseudo code only (never real code).
+    * Include example request/response shapes.
+
+---
+
+## Additional Requirements
+
+* Specs can only contain **pseudo code** (never runnable code).
+* Every requirement must be **observable and testable**.
+* Always distinguish between **new files** and **modified files**.
+* Never omit sections — all must be present, even if marked TBD.
+
+---
 `;
 
   const user = userResponse
     ? `
     # Instructions
-    Review the user response in the message thread and determine if a spec can be generated. 
-    You can ask clarifying questions that align with your rules and user instruction as long as the user had not already answered them (either in the message history or their latest response)
-    
-    # Message History
-    ${messages}
+    Read EVERYTHING below before writing. Then produce a single, final design specification that follows the template exactly.
+
+    RULES FOR SYNTHESIS
+    - Merge and reconcile: Incorporate all feedback from both the "User Response" and "The Design Specification". Resolve conflicts explicitly; don't drop constraints.
+    - Reuse prior facts: If Language/Libraries/Auth scopes/etc. were provided earlier, reuse them verbatim unless the user overrode them. Missing items must be inferred only if strongly implied; otherwise call them out as TBD.
+    - Make decisions: Prefer explicit, testable decisions over ambiguity. If an item is uncertain, state an assumption and proceed.
+    - Keep scope tight: Defer out-of-scope asks to future iterations (note them inside "Functional Behavior" as out-of-scope behaviors).
+    - Write for implementers and testers: Every requirement must be observable and testable.
 
     # User Response
     ${userResponse}
+
+    # The Design Specification.
+    Carefully review for any change requests, answers to questions, etc., from the user.
+    ${updatedContents}
+
+    Produce your answer using the **Design Specification Template** below. All sections are REQUIRED. Do not add or remove sections or bullets. Reuse supplied answers (e.g., Libraries, Language) when present.
+
+    # Design Specification Template
+    - **Design spec**: The name of the design spec
+      - Provide a concise, unique name (≤ 7 words) and include a version (e.g., v0.1).
+    - **Instructions**: The request(s) from the end user
+      - Quote or summarize the user's ask in one short paragraph. Include goals and explicit non-goals if stated.
+    - **Overview**: The expanded prompt filled in with key general details that more clearly define the scope of work
+      - Summarize purpose, primary user(s), and success criteria.
+      - List major assumptions if any were required to proceed.
+      - Note dependencies (systems/services) at a high level.
+    - **Constraints**
+      - **Language**: The required programming language
+        - State exact version range (e.g., Node.js 20.x, Python 3.11).
+      - **Libraries**: The required external libraries derived from the information in the supplied README
+        - Enumerate by name@version with brief rationale and any pinning/compat constraints.
+    - **Auth scopes required**: The required authorization scopes if relevant.
+      - List provider(s), scopes/permissions, and why each is needed. Include least-privilege notes.
+    - **Security and Privacy**: Security and privacy concerns.
+      - Specify data handled (PII/PHI/credentials), storage/retention, encryption in transit/at rest, secrets management, and threat/abuse considerations.
+    - **External API Documentation References**: Documentation links and method summaries for consumed public interfaces
+      - For each API: base URL, key endpoints/methods, request/response schemas (brief), and rate limits/timeouts/retry guidance.
+    - **Inputs and Outputs**
+      - **Proposed Input Type Changes/Additions**:
+        - Define input schema(s) with fields, types, required/optional, defaults, and validation rules.
+      - **Proposed Output types Changes/Additions**:
+        - Define output schema(s) with fields, types, error envelope structure, and pagination/streaming if applicable.
+    - **Functional Behavior**: The functional requirements including implied behaviors
+      - Describe end-to-end flow as numbered steps.
+      - Include edge cases, idempotency, ordering, concurrency, and performance SLAs if stated or implied.
+      - Call out out-of-scope behaviors explicitly (for future work).
+    - **Error Handling**
+      - Define error classes/categories, HTTP status mappings (if applicable), retry/backoff policy, and user-visible messages vs. internal logs.
+    - **Acceptance Criteria**: A proposed test specification in plain text. No code. Use the Gherkin spec file syntax. for example
+      \`\`\`gherkin
+  Feature: Guess the word
+      # The first example has two steps
+  Scenario: Maker starts a game
+        When the Maker starts a game
+        Then the Maker waits for a Breaker to join
+
+      # The second example has three steps
+  Scenario: Breaker joins a game
+        Given the Maker has started a game with the word "silky"
+        When the Breaker joins the Maker's game
+        Then the Breaker must guess a word with 5 characters
+    \`\`\`
+      - Provide happy path, key edge cases, and failure cases that map to “Functional Behavior” and “Error Handling.”
+    - **Usage (via client)**: a description of the proposed API and of how clients will call the proposed API. Can include pseudo code.
+      - Show request/response shapes (names only, not full code), example call(s), and minimal integration steps. Indicate auth usage and expected status codes.
     `
     : `
 Below is the engineer's initial request and relevant context (stack, APIs, tests, file paths, prior threads). 
@@ -104,130 +224,154 @@ Generate the system design specification.
 If you do not have enough information to create a draft of the design spec, ask clarifying questions to the user.
 
 # Sample Training Data
+
 Q: "create sending email function to send an custom templated email"
 A:
-- **Design spec**
-  - **Instruction**: "create sending email function to send an custom templated email"
-  - **Overview**: Implement \`sendEmail\` delegate using \`googleapis@149.0.0\` to send a single-template email. Expose it only via \`gsuiteClient.ts\` and scaffold tests per package conventions.
-  - **Constraints**
-    - **Language**: TypeScript
-    - **Library**: \`googleapis@149.0.0\` preferred; REST fallback allowed
-    - **Exposure**: Only through \`gsuiteClient.ts\`
-    - **Package conventions**:
-      - Delegates under \`src/lib/delegates/\`
-      - Tests under \`src/lib/tests/\`
-      - Public API exposed via \`gsuiteClient.ts\`
-  - **Auth scopes required** (must be added in \`gsuiteClient.ts\` mail scopes):
-    - \`https://mail.google.com/\`
-    - \`https://www.googleapis.com/auth/gmail.modify\`
-    - \`https://www.googleapis.com/auth/gmail.compose\`
-    - \`https://www.googleapis.com/auth/gmail.send\`
-  - **Security and Privacy**
-    - Never log credentials; avoid logging full message content
-  - **External API Reference**: \`users.messages.send\` — \`https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send\`
-  - **Inputs and Outputs**
-    - **Input type**: \`EmailContext\`
-      - \`from: string\` (required)
-      - \`recipients: string | string[]\` (required)
-      - \`subject: string\` (required)
-      - \`message: string\` (required; HTML allowed; plain-text auto-derived)
-    - **Output type**: \`SendEmailOutput\`
-      - \`id: string\`, \`threadId: string\`, \`labelIds?: string[]\`
-  - **Functional Behavior**
-    - Validate \`from\`, \`recipients\`, \`subject\`, \`message\`
-    - Build \`multipart/alternative\` MIME with \`text/plain\` (derived) and \`text/html\` (provided + footer)
-    - Base64url encode MIME and call \`gmail.users.messages.send({ userId: 'me', requestBody: { raw } })\`
-    - Return \`{ id, threadId, labelIds }\`
-  - **Error Handling**
-    - Throw on invalid input; validate Gmail response contains \`id\` and \`threadId\`
-    - Log minimal context; include \`response.data\` when present; rethrow errors
-  - **Acceptance Criteria**
-    - Returns \`{ id, threadId }\` on success; MIME is well-formed and properly encoded; exposed only through \`gsuiteClient.ts\`
-  - **Usage (via client)**
+- **Design spec**: Send Email (Templated) v0.1
+- **Instructions**: Create a function to send a custom templated email.
+- **Overview**: Implement a \`sendEmail\` delegate using \`googleapis@149.0.0\` (Gmail API) to send an HTML-templated email with an auto-derived plain-text alternative. Expose only via \`gsuiteClient.ts\` and scaffold tests per package conventions.
+- **Constraints**
+  - **Language**: TypeScript (Node.js 20.x)
+  - **Libraries**: googleapis@149.0.0
+- **Auth scopes required**:
+  - https://mail.google.com/
+  - https://www.googleapis.com/auth/gmail.modify
+  - https://www.googleapis.com/auth/gmail.compose
+  - https://www.googleapis.com/auth/gmail.send
+- **Security and Privacy**: Do not log credentials or full message bodies. Mask recipient emails in logs. Store no message content at rest beyond transient processing. Use least-privilege OAuth scopes.
+- **External API Documentation References**:
+  - Gmail API: \`users.messages.send\` — https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send
+- **Inputs and Outputs**
+  - **Proposed Input Type Changes/Additions**:
+    - \`EmailContext\`:
+      - \`from: string\` (required, RFC5322)
+      - \`recipients: string | string[]\` (required; supports comma-separated or array)
+      - \`subject: string\` (required, non-empty)
+      - \`messageHtml: string\` (required; HTML template-rendered content)
+      - \`messageText?: string\` (optional; if omitted, derive from HTML)
+      - \`headers?: Record<string, string>\` (optional; e.g., \`Reply-To\`)
+      - \`labelIds?: string[]\` (optional; Gmail label IDs)
+  - **Proposed Output types Changes/Additions**:
+    - \`SendEmailOutput\`:
+      - \`id: string\`
+      - \`threadId: string\`
+      - \`labelIds?: string[]\`
+- **Functional Behavior**:
+  1) Validate \`from\`, \`recipients\`, \`subject\`, and \`messageHtml\`.
+  2) Build \`multipart/alternative\` MIME with \`text/plain\` (derived if not supplied) and \`text/html\`.
+  3) Base64url-encode MIME; call \`gmail.users.messages.send({ userId: 'me', requestBody: { raw } })\`.
+  4) If \`labelIds\` provided, ensure they are included in the request.
+  5) Return \`{ id, threadId, labelIds }\`.
+  6) Expose via \`gsuiteClient.ts\` only; keep internal delegate under \`src/lib/delegates/\`.
+- **Error Handling**:
+  - On validation errors, throw typed errors with field details.
+  - On Gmail API failure, include HTTP status, error code, and \`response.data\` when available; do not include message content.
+  - Retry once on \`429\`/\`5xx\` with exponential backoff; otherwise propagate error.
+- **Acceptance Criteria**:
+  \`\`\`gherkin
+  Feature: Send templated email
+    Scenario: Successfully send an HTML email with derived text part
+      Given a valid EmailContext with from, recipients, subject, and messageHtml
+      When the client calls sendEmail
+      Then the Gmail API users.messages.send is invoked with a base64url MIME payload
+      And the payload contains both text/plain and text/html parts
+      And the response includes id and threadId
 
-  Q:
-  User task: "modify scheduleMeeting function to support optional attendees"
-  A: "
-- **Design spec**
-  - **Instruction**: "modify scheduleMeeting function to support optional attendees"
-  - **Overview**: Modify the \`scheduleMeeting\` delegate to support optional attendees. The \`CalendarContext\` interface will be updated to include \`attendees: { email: string; optional?: boolean; }[]\`. This change will allow the function to create calendar events with both required and optional attendees. Expose it only via \`gsuiteClient.ts\`.
-  - **Constraints**
-    - **Language**: TypeScript
-    - **Library**: \`googleapis@149.0.0\`
-    - **Exposure**: Only through \`gsuiteClient.ts\`
-    - **Package conventions**:
-      - Delegates under \`src/lib/delegates/\`
-      - Tests under \`src/lib/tests/\`
-      - Public API exposed via \`gsuiteClient.ts\`
-  - **Auth scopes required** (must be configured in \`gsuiteClient.ts\` calendar scopes):
-    - \`https://www.googleapis.com/auth/calendar\` - Allows read and write access to Calendars and related settings.
-    - \`https://www.googleapis.com/auth/calendar.events\` - Allows read and write access to Calendar events.
-  - **Security and privacy**
-    - Do not log sensitive event content.
-  - **External API reference**: \`calendar.events.insert\` — \`https://developers.google.com/calendar/api/v3/reference/events/insert\`
-    - **Description:** Creates an event in the specified calendar.
-    - **HTTP Request:** \`POST https://www.googleapis.com/calendar/v3/calendars/calendarId/events\`
-    - **Path Parameters:**
-      - \`calendarId\` (string, required): Calendar identifier. Use "primary" to access the primary calendar of the logged-in user. To retrieve other calendar IDs call the \`calendarList.list\` method.
-    - **Query Parameters (Optional):**
-      - \`conferenceDataVersion\` (integer): Version number of conference data supported by the API client. \`0\` assumes no support, \`1\` enables support. Default: \`0\`.
-      - \`sendUpdates\` (string): Whether to send notifications about the creation of the new event.  Acceptable values: \`"all"\`), \`"externalOnly"\`), \`"none"\`. Default: \`false\`.
-      - \`supportsAttachments\` (boolean): Whether API client performing operation supports event attachments. Default: \`false\`.
-    - **Request Body:**  An \`Events\` resource. Key properties include:
-      - \`summary\` (string, writable): Title of the event.
-      - \`description\` (string, writable): Description of the event. Can contain HTML.
-      - \`start\` (object, required, writable): Start time of the event. Contains \`dateTime\` (RFC3339 format) and \`timeZone\`.
-      - \`end\` (object, required, writable): End time of the event. Contains \`dateTime\` (RFC3339 format) and \`timeZone\`.
-      - \`attendees\` (array of objects, writable):  The attendees of the event.  Each object contains:
-        - \`email\` (string, required):  The attendee's email address.
-        - \`optional\` (boolean, optional, default: false): Whether this is an optional attendee.
-      - \`conferenceData\` (object, writable): Conference-related information, such as details of a Google Meet conference.  Use \`createRequest\` to create new conference details.
-    - **Response:** If successful, returns an \`Events\` resource.
-    - **Authorization:** Requires one of the following scopes: 
-    \`https://www.googleapis.com/auth/calendar\`, 
-    // \`https://www.googleapis.com/auth/calendar.events\`, 
-    // \`https://www.googleapis.com/auth/calendar.app.created\`, 
-    // \`https://www.googleapis.com/auth/calendar.events.owned\`
-    - **Inputs and outputs**
-      - **Input type**: \`CalendarContext\`
-        - \`summary: string\` (required)
-        - \`description?: string\` (optional)
-        - \`start: string\` (ISO format, required)
-        - \`end: string\` (ISO format, required)
-        - \`attendees: { email: string; optional?: boolean; }[]\` (required)
-      - **Output type**: \`ScheduleMeetingOutput\`
-        - \`id: string\`, \`htmlLink: string\`, \`status: string\`
-  - **Functional behavior**
-    - Validate required fields; construct event body with attendees, differentiating between required and optional attendees based on the \`optional\` flag, and request \`conferenceData\` for Google Meet.
-    - Call \`calendar.events.insert\` with \`sendUpdates: 'all'\` and \`conferenceDataVersion: 1\`.
-    - Ensure Meet link is present via \`hangoutLink\` or \`conferenceData.entryPoints\`.
-    - Return \`{ id, htmlLink, status }\`.
-  - **Error handling**
-    - Throw if event creation succeeds without a Meet link.
-    - Surface underlying API errors.
-  - **Acceptance criteria**
-    - Event is created with Meet link and invitations sent to both required and optional attendees.
-    - Implemented and exposed only via \`gsuiteClient.ts\`; required scopes present there.
-  - **Usage (via client)**
+    Scenario: Reject invalid sender address
+      Given an EmailContext with an invalid from address
+      When the client calls sendEmail
+      Then a validation error is thrown identifying the from field
 
-\`\`\`typescript
-// pseudo code
-import { makeGSuiteClient } from './lib/gsuiteClient';
+    Scenario: Include label IDs
+      Given an EmailContext with labelIds
+      When the client calls sendEmail
+      Then the created message has those labelIds applied
 
-const client = await makeGSuiteClient('user@company.com');
-
-const meeting = await client.scheduleMeeting({
-  summary: 'Product Planning Session',
-  description: 'Quarterly product roadmap review and planning',
-  start: '2024-02-15T14:00:00-08:00',
-  end: '2024-02-15T15:30:00-08:00',
-  attendees: [
-    { email: 'john@company.com' }, // Required
-    { email: 'sarah@company.com', optional: true }, // Optional
-    { email: 'mike@company.com' }, // Required
-  ],
-});
+    Scenario: Handle Gmail rate limiting
+      Given the Gmail API responds with HTTP 429
+      When the client calls sendEmail
+      Then the client retries once with backoff
+      And if the retry fails, an error is surfaced without logging message content
 \`\`\`
+- **Usage (via client)**:
+  * Pseudo:
+    * \`const client = await makeGSuiteClient('user@company.com');\`
+    * \`await client.sendEmail({ from, recipients, subject, messageHtml, messageText?, headers?, labelIds? });\`
+    * Returns \`{ id, threadId, labelIds? }\`.
+
+---
+
+Q: "modify scheduleMeeting function to support optional attendees"
+A:
+* **Design spec**: Schedule Meeting (Optional Attendees) v0.1
+* **Instructions**: Modify \`scheduleMeeting\` to support optional attendees.
+* **Overview**: Extend the \`scheduleMeeting\` delegate to accept optional attendees and create Google Calendar events differentiating required vs. optional participants. Expose only via \`gsuiteClient.ts\`.
+* **Constraints**
+  * **Language**: TypeScript (Node.js 20.x)
+  * **Libraries**: googleapis@149.0.0
+* **Auth scopes required**:
+  * [https://www.googleapis.com/auth/calendar](https://www.googleapis.com/auth/calendar)
+  * [https://www.googleapis.com/auth/calendar.events](https://www.googleapis.com/auth/calendar.events)
+* **Security and Privacy**: Do not log event descriptions or attendee emails. Use least-privilege scopes. Redact PII in errors. No persistent storage of event payloads beyond transient processing.
+* **External API Documentation References**:
+  * Calendar API: \`events.insert\` — [https://developers.google.com/calendar/api/v3/reference/events/insert](https://developers.google.com/calendar/api/v3/reference/events/insert)
+* **Inputs and Outputs**
+  * **Proposed Input Type Changes/Additions**:
+    * \`CalendarContext\`:
+      * \`summary: string\` (required)
+      * \`description?: string\`
+      * \`start: string\` (ISO 8601 with timezone)
+      * \`end: string\` (ISO 8601 with timezone)
+      * \`attendees: { email: string; optional?: boolean }[]\` (required; \`optional\` defaults to \`false\`)
+      * \`sendUpdates?: 'all' | 'externalOnly' | 'none'\` (default \`'all'\`)
+      * \`conference?: { createMeet?: boolean }\` (default \`{ createMeet: true }\`)
+      * \`timezone?: string\` (IANA, defaults to requestor’s)
+  * **Proposed Output types Changes/Additions**:
+    * \`ScheduleMeetingOutput\`:
+      * \`id: string\`
+      * \`htmlLink: string\`
+      * \`status: string\`
+      * \`hangoutLink?: string\`
+* **Functional Behavior**:
+  1. Validate \`summary\`, \`start\`, \`end\`, and \`attendees\`.
+  2. Map attendees to Calendar API format, setting \`optional\` as provided (default \`false\`).
+  3. If \`conference.createMeet\` is true, request Meet via \`conferenceData.createRequest\`.
+  4. Call \`calendar.events.insert\` with \`sendUpdates\` (default \`'all'\`) and \`conferenceDataVersion: 1\`.
+  5. Ensure a Meet link is present (\`hangoutLink\` or \`conferenceData.entryPoints\` when requested).
+  6. Return \`{ id, htmlLink, status, hangoutLink? }\`.
+  7. Expose via \`gsuiteClient.ts\`; keep delegate under \`src/lib/delegates/\`.
+* **Error Handling**:
+  * Throw validation errors for malformed times or empty attendee lists.
+  * If Meet was requested but not created, throw a specific error.
+  * Surface underlying API errors with HTTP status and code; redact attendee emails and descriptions.
+  * Retry once on \`429\`/\`5xx\` with exponential backoff; otherwise propagate.
+* **Acceptance Criteria**:
+  \`\`\`gherkin
+  Feature: Schedule meeting with optional attendees
+    Scenario: Create event with required and optional attendees and Meet link
+      Given a valid CalendarContext with mixed required and optional attendees
+      When the client calls scheduleMeeting
+      Then the event is created in Google Calendar
+      And optional attendees are marked optional
+      And a Google Meet link is present
+      And invitations are sent according to sendUpdates
+
+    Scenario: Reject invalid time range
+      Given a CalendarContext where end is before start
+      When the client calls scheduleMeeting
+      Then a validation error is thrown describing the time constraint
+
+    Scenario: Missing Meet when requested
+      Given a CalendarContext with conference.createMeet true
+      And the Calendar API returns an event without a Meet link
+      When the client calls scheduleMeeting
+      Then a specific error is thrown indicating conference creation failed
+  \`\`\`
+* **Usage (via client)**:
+  * Pseudo:
+    * \`const client = await makeGSuiteClient('user@company.com');\`
+    * \`await client.scheduleMeeting({ summary, description?, start, end, attendees, sendUpdates?, conference?, timezone? });\`
+    * Returns \`{ id, htmlLink, status, hangoutLink? }\`.
 `;
 
   const response = await fetch('https://api.openai.com/v1/responses', {
@@ -273,7 +417,11 @@ const meeting = await client.scheduleMeeting({
     context.machineExecutionId!
   );
 
+  const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `spec-${context.machineExecutionId}.md`);
+  await fs.promises.writeFile(abs, msg, 'utf8');
+
   return {
     confirmationPrompt: msg,
+    file: abs,
   };
 }

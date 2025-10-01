@@ -144,6 +144,7 @@ export type Messages = {
 
 export type AbstractReviewState = {
   approved: boolean;
+  reviewRequired?: boolean;
   messages?: Messages[];
   file?: string;
 }

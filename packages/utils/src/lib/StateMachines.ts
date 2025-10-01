@@ -40,46 +40,88 @@ export function getUniqueStateIds(
       case 'pause':
         break;
       default:
-        // transition states can be ahead of the current state or behind in the states array, ahead is more common thus proffered
-        // so we slice the array to find all possible candidates
-        const futureStates = statesArray.slice(index + 1);
-        const pastStates = statesArray.slice(0, index).reverse();
+        {
+          // transition states can be ahead of the current state or behind in the states array, ahead is more common thus proffered
+          // so we slice the array to find all possible candidates
+          const futureStates = statesArray.slice(index + 1);
+          const pastStates = statesArray.slice(0, index).reverse();
 
-        // Helper function to find target in future first, then past
-        const findTargetState = (target: string) => {
-          return (
-            futureStates.find((s) => s.id.includes(target)) ||
-            pastStates.find((s) => s.id.includes(target))
-          );
-        };
+          // Helper function to find target in future first, then past, then the entire array
+          const findTargetState = (target: string) => {
+            return (
+              futureStates.find((s) => s.id.includes(target)) ||
+              pastStates.find((s) => s.id.includes(target)) ||
+              statesArray.find((s) => s.id.includes(target))
+            );
+          };
 
-        // Update transitions
-        state.transitions = state.transitions?.map((transition) => {
-          const targetState = findTargetState(transition.target);
-          transition.target = targetState ? targetState.id : transition.target;
-          return transition;
-        });
+          // Update transitions
+          state.transitions = state.transitions?.map((transition) => {
+            const targetState = findTargetState(transition.target);
+            transition.target = targetState ? targetState.id : transition.target;
+            if (
+              transition.target.includes('|') &&
+              transition.on !== 'CONTINUE' &&
+              transition.on !== 'ERROR' &&
+              transition.on !== 'failure' &&
+              transition.on !== 'pause'
+            ) {
+              /** 
+              states like this result from the need to re-enter a state for user review,
+              such as spec review taking feedback from a user that requires we renter the spec generation state
+              or a self transition when restarting the state machine
+              For example:
+              {
+                    "id": "codeReview",
+                    "task": "If approved, continue, else if review is required, renter the code review state. If review is not required but the design is not been approved this means the user has provided feedback that needs to be incorporated, thus renter the generateEditMachine state.",
+                    "includesLogic": true,
+                    "transitions": [
+                  {
+                            "on": "codeReview",
+                            "target": "codeReview"
+                        },
+                  {
+                            "on": "generateEditMachine",
+                            "target": "generateEditMachine"
+                        },
+                        {
+                            "on": "CONTINUE",
+                            "target": "applyEdits"
+                        },
+                        {
+                            "on": "ERROR",
+                            "target": "failure"
+                        }
+                    ]
+                },
+              In these cases I need to reset the on handler to the state with the unique ID
+              */
+              transition.on = transition.target;
+            }
+            return transition;
+          });
 
-        // Update onDone
-        if (state.onDone) {
-          // sometimes the programmer model fucks up and send back an object array instead of a string
-          if ((state.onDone as any) instanceof Array) {
-            state.onDone = (state.onDone as any)[0].target;
+          // Update onDone
+          if (state.onDone) {
+            // sometimes the programmer model fucks up and send back an object array instead of a string
+            if ((state.onDone as any) instanceof Array) {
+              state.onDone = (state.onDone as any)[0].target;
+            }
+            // sometimes the programmer model fucks up and send back an object instead of a string
+            if ((state.onDone as any) instanceof Object) {
+              state.onDone = (state.onDone as any).target;
+            }
+            // set the transition target to the new ID or default back to the original
+            const targetState = findTargetState(state.onDone as string);
+            state.onDone = targetState ? targetState.id : state.onDone;
           }
-          // sometimes the programmer model fucks up and send back an object instead of a string
-          if ((state.onDone as any) instanceof Object) {
-            state.onDone = (state.onDone as any).target;
-          }
-          // set the transition target to the new ID or default back to the original
-          const targetState = findTargetState(state.onDone as string);
-          state.onDone = targetState ? targetState.id : state.onDone;
-        }
 
-        // Handle parallel states recursively
-        if (state.states) {
-          getUniqueStateIds(state.states, state);
+          // Handle parallel states recursively
+          if (state.states) {
+            getUniqueStateIds(state.states, state);
+          }
+          break;
         }
-        break;
     }
     return state;
   });
