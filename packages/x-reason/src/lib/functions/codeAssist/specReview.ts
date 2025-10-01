@@ -64,7 +64,7 @@ export async function specReview(
     // if the user has responded we want to push the system and user response onto the thread history
     // this lets us capture the user feedback as part of the broader message history
     if (user) {
-        const threadsDao = container.get<ThreadsDao>(TYPES.SQLLiteThreadsDao);
+        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
         const messageThread = await threadsDao.read(context.machineExecutionId!);
         const parsedMessages = JSON.parse(messageThread?.messages || '[]') as {
             user?: string;
