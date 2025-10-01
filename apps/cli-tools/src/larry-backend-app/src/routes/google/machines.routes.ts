@@ -6,7 +6,7 @@ import type {
 } from '../../types';
 import { IdempotencyStore } from '../../services/idempotency.store';
 import { SSEService } from '../../services/sse.service';
-import { googleCodingAgent } from 'apps/cli-tools/src/googleCodingAgentStandalone';
+import { googleCodingAgent } from '../../../../googleCodingAgentStandalone';
 import { container } from '@codestrap/developer-foundations-di';
 import { MachineDao, TYPES } from '@codestrap/developer-foundations-types';
 
