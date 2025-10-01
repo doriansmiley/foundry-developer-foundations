@@ -56329,7 +56329,7 @@
     typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "client-" + Math.random().toString(16).slice(2)
   );
   var baseUrl = w5(
-    () => isInWorktree.value ? "http://localhost:3000/larry/agents/google/v1" : "http://localhost:4210/larry/agents/google/v1"
+    () => isInWorktree.value ? "http://localhost:4220/larry/agents/google/v1" : "http://localhost:4210/larry/agents/google/v1"
   );
 
   // apps/larry-vscode-ext/webview/src/views/MainRepoScreen.tsx
@@ -59197,7 +59197,7 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
   // apps/larry-vscode-ext/webview/src/views/components/StateVisualization.tsx
   var ArchitecturePhase = () => /* @__PURE__ */ u6("div", { children: "Architecture Phase Component" });
   var stateComponentMap = {
-    confirmUserIntent: ConfirmUserIntent,
+    specReview: ConfirmUserIntent,
     architecturePhase: ArchitecturePhase
     // Add more mappings as needed
   };

@@ -19,6 +19,6 @@ export const clientRequestId = signal<string>(
 
 export const baseUrl = computed(() =>
   isInWorktree.value
-    ? 'http://localhost:3000/larry/agents/google/v1'
+    ? 'http://localhost:4220/larry/agents/google/v1'
     : 'http://localhost:4210/larry/agents/google/v1'
 );
