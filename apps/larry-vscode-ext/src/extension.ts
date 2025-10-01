@@ -196,7 +196,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
   private startWorktreeSSE() {
     const url =
-      'http://localhost:3000/larry/agents/google/v1/events?topics=thread.created,machine.updated';
+      'http://localhost:4220/larry/agents/google/v1/events?topics=thread.created,machine.updated';
     console.log('🚀 Starting worktree SSE connection to:', url);
     this.sseWorktree?.stop();
     this.sseWorktree = new SSEProxy();
@@ -206,7 +206,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         console.log('📤 Forwarding worktree SSE event to webview:', ev);
         this.view?.webview.postMessage({
           type: 'sse_event',
-          baseUrl: 'http://localhost:3000/larry/agents/google/v1',
+          baseUrl: 'http://localhost:4220/larry/agents/google/v1',
           event: ev.event || 'message',
           data: ev.data,
         });
@@ -542,7 +542,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       // Start worktree docker container
 
       const { stdout } = await execAsync(
-        `docker ps -q --filter "publish=3000"`
+        `docker ps -q --filter "publish=4220"`
       );
       const containerId = stdout.trim();
       if (containerId) {
@@ -760,6 +760,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
             .fsPath
         } ${worktreePath}/apps/cli-tools/.env`
       );
+      // run custom safe script to run npm install
       await execAsync('npm install', { cwd: worktreePath });
 
       // Set environment variables (if needed)
@@ -798,12 +799,12 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         worktreeName
       ).fsPath;
 
-      // Start worktree container on port 3000
+      // Start worktree container on port 4220
       const threadIdEnv = threadId ? `-e THREAD_ID=${threadId}` : '';
       const { stdout } = await execAsync(
         `docker run -d --name ${containerName} \
-   -p 3000:3000 \
-   -e PORT=3000 \
+   -p 4220:4220 \
+   -e PORT=4220 \
    ${threadIdEnv} \
    -e WORKTREE_NAME=${worktreeName} \
    -v "${worktreePath}:/workspace:rw" \
@@ -917,7 +918,7 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       `style-src ${view.webview.cspSource} 'unsafe-inline'`,
       `font-src ${view.webview.cspSource} https:`,
       `script-src 'nonce-${nonce}' ${view.webview.cspSource}`,
-      `connect-src 'self' ${view.webview.cspSource} http://localhost:3000 http://localhost:4210`,
+      `connect-src 'self' ${view.webview.cspSource} http://localhost:4220 http://localhost:4210`,
     ].join('; ');
 
     view.webview.html = `<!DOCTYPE html>

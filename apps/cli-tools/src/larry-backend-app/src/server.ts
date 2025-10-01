@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { buildApp } from './app';
 
-const PORT = Number(process.env.PORT || 3000);
+const PORT = Number(process.env.PORT || 4220);
 
 const app = buildApp();
 const server = createServer(app);

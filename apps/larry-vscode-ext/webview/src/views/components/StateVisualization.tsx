@@ -12,7 +12,7 @@ import { AnimatedEllipsis } from "./AnimatedEllipsis.tsx";
 const ArchitecturePhase = () => <div>Architecture Phase Component</div>;
 
 const stateComponentMap: Record<string, any> = {
-  confirmUserIntent: ConfirmUserIntent,
+  specReview: ConfirmUserIntent,
   architecturePhase: ArchitecturePhase,
   // Add more mappings as needed
 };
