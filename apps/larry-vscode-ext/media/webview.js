@@ -56570,7 +56570,7 @@
 
   // apps/larry-vscode-ext/webview/src/hooks/useMachineQuery.ts
   function useMachineQuery(baseUrl2, machineId) {
-    return useQuery(
+    const query = useQuery(
       {
         enabled: !!machineId,
         queryKey: ["machine", { baseUrl: baseUrl2, machineId }],
@@ -56578,6 +56578,7 @@
       },
       queryClient
     );
+    return query;
   }
 
   // apps/larry-vscode-ext/webview/src/views/components/StateVisualization.tsx
@@ -59198,22 +59199,33 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
   var ArchitecturePhase = () => /* @__PURE__ */ u6("div", { children: "Architecture Phase Component" });
   var stateComponentMap = {
     specReview: ConfirmUserIntent,
+    confirmUserIntent: ConfirmUserIntent,
     architecturePhase: ArchitecturePhase
     // Add more mappings as needed
   };
   function StateVisualization({ data, onSubmit }) {
     const getDeduplicatedStack = () => {
       if (!data.context?.stack) return [];
-      const seen = /* @__PURE__ */ new Set();
-      const deduplicatedStack = [];
-      for (let i7 = data.context.stack.length - 1; i7 >= 0; i7--) {
-        const stateKey = data.context.stack[i7];
-        if (!seen.has(stateKey)) {
-          seen.add(stateKey);
-          deduplicatedStack.unshift(stateKey);
+      const currentState = data.context?.currentState || data.context?.stateId;
+      const processedStack = [];
+      const stateOccurrences = /* @__PURE__ */ new Map();
+      for (const stateKey of data.context.stack) {
+        const count = stateOccurrences.get(stateKey) || 0;
+        stateOccurrences.set(stateKey, count + 1);
+      }
+      const seenStates = /* @__PURE__ */ new Map();
+      for (const stateKey of data.context.stack) {
+        const seenCount = seenStates.get(stateKey) || 0;
+        const totalOccurrences = stateOccurrences.get(stateKey) || 0;
+        seenStates.set(stateKey, seenCount + 1);
+        const isLastOccurrenceOfCurrentState = stateKey === currentState && seenCount + 1 === totalOccurrences;
+        if (seenCount > 0 && !isLastOccurrenceOfCurrentState) {
+          processedStack.push(`${stateKey}|prev-${seenCount}`);
+        } else {
+          processedStack.push(stateKey);
         }
       }
-      return deduplicatedStack;
+      return processedStack;
     };
     const initializeCollapsedStates = () => {
       const collapsed = /* @__PURE__ */ new Set();
@@ -59270,13 +59282,18 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
       setCollapsedStates(newCollapsed);
     };
     const parseStateKey = (stateKey) => {
-      const [stateName, stateId] = stateKey.split("|");
-      return { stateName, stateId };
+      const parts = stateKey.split("|");
+      const stateName = parts[0];
+      const stateId = parts[1];
+      const isPrevious = parts.length > 2 && parts[2].startsWith("prev-");
+      const previousNumber = isPrevious ? parts[2].replace("prev-", "") : null;
+      return { stateName, stateId, isPrevious, previousNumber };
     };
     const renderStateComponent = (stateKey) => {
-      const { stateName, stateId } = parseStateKey(stateKey);
+      const { stateName, stateId, isPrevious } = parseStateKey(stateKey);
       const Component = stateComponentMap[stateName];
-      const stateData = data.context?.[stateKey];
+      const originalKey = isPrevious ? `${stateName}|${stateId}` : stateKey;
+      const stateData = data.context?.[originalKey];
       if (!Component) {
         return /* @__PURE__ */ u6("div", { className: "p-4 bg-red-50 rounded border", children: /* @__PURE__ */ u6("p", { className: "text-red-600", children: [
           "Unknown state type: ",
@@ -59286,6 +59303,8 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
       return /* @__PURE__ */ u6(Component, { data: stateData, id: stateId });
     };
     const isCurrentState = (stateKey) => {
+      const { isPrevious } = parseStateKey(stateKey);
+      if (isPrevious) return false;
       return data.context?.currentState === stateKey || data.context?.stateId === stateKey;
     };
     const handleSubmit = (e6) => {
@@ -59300,8 +59319,8 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
         /* @__PURE__ */ u6("div", { className: "space-y-4", children: [
           data.context?.solution && /* @__PURE__ */ u6("div", { className: "p-4 bg-gray-50 rounded border", children: /* @__PURE__ */ u6(ConfirmUserIntent, { data: { confirmationPrompt: data.context.solution }, id: "solution-123" }) }),
           getDeduplicatedStack().map((stateKey, index3) => {
-            const { stateName } = parseStateKey(stateKey);
-            const formattedName = stateName;
+            const { stateName, isPrevious, previousNumber } = parseStateKey(stateKey);
+            const formattedName = isPrevious ? `${stateName} (previous ${previousNumber})` : stateName;
             const isCurrent = isCurrentState(stateKey);
             const isCollapsed = collapsedStates.has(stateKey) && !isCurrent;
             return /* @__PURE__ */ u6(
@@ -59410,6 +59429,8 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
       });
     }
     const handleSubmit = async (input) => {
+      console.log("HANDLE SUBMIT::");
+      console.log(input);
       queryClient.setQueryData(["machine", { baseUrl: baseUrl.value, machineId }], (prev) => {
         return {
           ...prev,

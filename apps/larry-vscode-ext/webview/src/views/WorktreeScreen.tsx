@@ -33,10 +33,14 @@ export function WorktreeScreen() {
 
   // Read threads data to get the session label
   const { data: threadsData } = useThreadsQuery(baseUrl.value);
-  console.log('MACHINE DATA::')
-  console.log(machineData)
-  console.log('THREADS DATA::')
-  console.log(threadsData)
+  
+  useEffect(() => {
+    // This effect is only for debug purposes, not doing anything more
+    console.log('MACHINE DATA::')
+    console.log(machineData)
+    console.log('THREADS DATA::')
+    console.log(threadsData)
+  }, [machineData, threadsData]);
   // Find current thread label from threads list
   const currentThread = threadsData?.items?.find(t => t.id === machineId);
   const sessionLabel = currentThread?.label || 'Session';
@@ -80,7 +84,6 @@ export function WorktreeScreen() {
         'Content-Type': 'application/json',
         'Idempotency-Key': Math.random().toString(36).substring(2, 15),
       },
-      // fix this
       body: JSON.stringify({ contextUpdate: { [machineData.currentState]: { userResponse: input } } }),
     });
     
@@ -101,7 +104,7 @@ export function WorktreeScreen() {
     );
   }
 
-  // No session yet - show first message composer
+
   return (
     <div className="Box p-3 d-flex flex-column gap-2">
       <h2 className="h3 m-0">New Session</h2>

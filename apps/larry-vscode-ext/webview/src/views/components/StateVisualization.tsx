@@ -13,28 +13,42 @@ const ArchitecturePhase = () => <div>Architecture Phase Component</div>;
 
 const stateComponentMap: Record<string, any> = {
   specReview: ConfirmUserIntent,
+  confirmUserIntent: ConfirmUserIntent,
   architecturePhase: ArchitecturePhase,
   // Add more mappings as needed
 };
 
 export function StateVisualization({data, onSubmit}: {data: MachineResponse, onSubmit: (input: string) => void}) {
-  // Deduplicate stack while preserving order (keep last occurrence)
   const getDeduplicatedStack = () => {
     if (!data.context?.stack) return [];
     
-    const seen = new Set<string>();
-    const deduplicatedStack: string[] = [];
+    const currentState = data.context?.currentState || data.context?.stateId;
+    const processedStack: string[] = [];
     
-    // Process in reverse to keep the last occurrence of each state
-    for (let i = data.context.stack.length - 1; i >= 0; i--) {
-      const stateKey = data.context.stack[i];
-      if (!seen.has(stateKey)) {
-        seen.add(stateKey);
-        deduplicatedStack.unshift(stateKey); // Add to beginning to maintain original order
+    // First pass: count total occurrences
+    const stateOccurrences = new Map<string, number>();
+    for (const stateKey of data.context.stack) {
+      const count = stateOccurrences.get(stateKey) || 0;
+      stateOccurrences.set(stateKey, count + 1);
+    }
+    
+    const seenStates = new Map<string, number>();
+    
+    for (const stateKey of data.context.stack) {
+      const seenCount = seenStates.get(stateKey) || 0;
+      const totalOccurrences = stateOccurrences.get(stateKey) || 0;
+      seenStates.set(stateKey, seenCount + 1);
+      
+      const isLastOccurrenceOfCurrentState = stateKey === currentState && seenCount + 1 === totalOccurrences;
+      
+      if (seenCount > 0 && !isLastOccurrenceOfCurrentState) {
+        processedStack.push(`${stateKey}|prev-${seenCount}`);
+      } else {
+        processedStack.push(stateKey);
       }
     }
     
-    return deduplicatedStack;
+    return processedStack;
   };
 
   // Initialize collapsed states - all previous states should be collapsed by default
@@ -108,14 +122,21 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
   };
 
   const parseStateKey = (stateKey: string) => {
-    const [stateName, stateId] = stateKey.split('|');
-    return { stateName, stateId };
+    const parts = stateKey.split('|');
+    const stateName = parts[0];
+    const stateId = parts[1];
+    const isPrevious = parts.length > 2 && parts[2].startsWith('prev-');
+    const previousNumber = isPrevious ? parts[2].replace('prev-', '') : null;
+    return { stateName, stateId, isPrevious, previousNumber };
   };
 
   const renderStateComponent = (stateKey: string) => {
-    const { stateName, stateId } = parseStateKey(stateKey);
+    const { stateName, stateId, isPrevious } = parseStateKey(stateKey);
     const Component = stateComponentMap[stateName];
-    const stateData = data.context?.[stateKey];
+    
+    // For previous states, look up data using the original key (without |prev-01)
+    const originalKey = isPrevious ? `${stateName}|${stateId}` : stateKey;
+    const stateData = data.context?.[originalKey];
 
     if (!Component) {
       return (
@@ -129,6 +150,10 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
   };
 
   const isCurrentState = (stateKey: string) => {
+    const { isPrevious } = parseStateKey(stateKey);
+    // Previous states are never current
+    if (isPrevious) return false;
+    
     return data.context?.currentState === stateKey || data.context?.stateId === stateKey;
   };
 
@@ -152,8 +177,8 @@ return (
             </div>
           )}
            {getDeduplicatedStack().map((stateKey, index) => {
-            const { stateName } = parseStateKey(stateKey);
-            const formattedName = stateName;
+            const { stateName, isPrevious, previousNumber } = parseStateKey(stateKey);
+            const formattedName = isPrevious ? `${stateName} (previous ${previousNumber})` : stateName;
             const isCurrent = isCurrentState(stateKey);
             const isCollapsed = collapsedStates.has(stateKey) && !isCurrent;
 
