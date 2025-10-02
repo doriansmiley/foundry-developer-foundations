@@ -1,5 +1,5 @@
-import { promises as fs } from 'fs';
 import * as path from 'path';
+import * as fs from 'fs';
 
 import {
   Context,
@@ -84,29 +84,29 @@ export async function architectImplementation(
       ?.slice()
       .reverse()
       .find((item) => item.includes('architectImplementation')) || '';
-  const userResponseToArchitectQuestions = (
-    context[architectImplementationId] as UserIntent
-  )?.userResponse;
 
-  // if we are reentering the state after a clarifying questions were asked
-  // but no response was received from the user return the previously generated response
-  if (
-    !userResponseToArchitectQuestions &&
-    context[architectImplementationId]?.confirmationPrompt
-  ) {
-    return {
-      confirmationPrompt:
-        context[architectImplementationId]?.confirmationPrompt,
-    };
+  const { userResponse, file } = (context[architectImplementationId] as UserIntent) || {};
+
+  let updatedContents;
+  if (file && !fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
+  if (file) {
+    // read the file that may contain updates from the user
+    updatedContents = await fs.promises.readFile(file, 'utf8');
   }
 
+  // if there is a user response regenerate pass it along with the updated contents
+  // else generate a new architecture plan
   const confirmUserIntentId =
     context.stack
       ?.slice()
       .reverse()
       .find((item) => item.includes('confirmUserIntent')) || '';
-  // extract the design specification from the result of the last confirmUserIntent state executed
-  const plan = (context[confirmUserIntentId] as UserIntent)?.confirmationPrompt;
+
+  const { file: designSpec } = (context[confirmUserIntentId] as UserIntent) || {};
+
+  if (!designSpec || !fs.existsSync(designSpec)) throw new Error(`File does not exist: ${designSpec}`);
+
+  const plan = await fs.promises.readFile(designSpec, 'utf8');
 
   const files = await getEffectedFileList(plan);
 
@@ -122,7 +122,7 @@ export async function architectImplementation(
             `${repoRoot}/foundry-developer-foundations`,
             f.file
           );
-          fs.readFile(filePath, 'utf8')
+          fs.promises.readFile(filePath, 'utf8')
             .then((value) => {
               f.contents = value;
               resolve(f);
@@ -150,41 +150,85 @@ ${cur.contents}
     return acc;
   }, `# Current contents of the Files to be Modified`);
 
-  // get any user response that is incoming from the cli
-  const searchDocumentationId =
-    context.stack
-      ?.slice()
-      .reverse()
-      .find((item) => item.includes('architectImplementation')) || '';
+  const user = userResponse
+    ? `
+# Instructions
+Generate the code blocks for the design specification below. Ensure you adhere to the specified programming language
+style, and rules. Incorporate the feedback in the user response by carefully reviewing them along with your previous response.
 
-  const userResponse = (context[searchDocumentationId] as UserIntent)
-    ?.userResponse;
+# Rules for answer synthesis
+- For modified files output a diff view of the changes. Output the smallest change set possible. For example do not output the entire contents of the types file if all you are doing is adding a single property to a type. Just output a diff of that type with your changes applied.
+- Do not nest type definitions inside functions
+- Make sure you code is complete and free form error
+- Prefer use of array methods like map, forEach, reduce etc and chain operations to achieve the desired output state as much as possible
+- Always use Maps when you need key/value lookups. When populating a map prefer an array of tuples passed to the constructor over multiple calls to set or loops.
+- Never use await inside loops, collect promises and use Promise.all or Promise.allSettled for operations where failure of some promises is acceptable
+- Prefer pure functions
+- Prefer stateless functions when possible.
+- Always clear references that might block garbage collection and cause memory leaks
+- Leave all test cases blank for the developer to fill in. In the comments for each test scenario include the gherkin specification as comments.
+
+# User Response
+${userResponse}
+
+# The Results of Your Previous attempt at generating the final design specification .
+Carefully review for any change requests, answers to questions, etc., from the user.
+${updatedContents}
+
+# The Design Specification
+${plan}
+
+# And the complete file contents of files to be modified.
+${fileBlocks}
+
+Generate the code blocks. Produce your answer using the **Code Edit Template** below. 
+- **Code Blocks**:
+  - For each file added/modified output the code block as follows:
+    File: the path to the file extracted from the design specifications followed by either (MODIFIED) or (ADDED), for example: packages/services/google/src/lib/delegates/sendEmail.ts (MODIFIED)
+    \`\`\`<language (for added files) or diff (for modified files)>
+    <YOUR_CODE_HERE>
+    \`\`\`
+`
+    : `
+# Instructions
+Generate the code blocks for the design specification below. Ensure you adhere to the specified programming language
+style, and rules. 
+
+# Rules for answer synthesis
+- For modified files output a diff view of the changes. Output the smallest change set possible. For example do not output the entire contents of the types file if all you are doing is adding a single property to a type. Just output a diff of that type with your changes applied.
+- Do not nest type definitions inside functions
+- Make sure you code is complete and free form error
+- Prefer use of array methods like map, forEach, reduce etc and chain operations to achieve the desired output state as much as possible
+- Always use Maps when you need key/value lookups. When populating a map prefer an array of tuples passed to the constructor over multiple calls to set or loops.
+- Never use await inside loops, collect promises and use Promise.all or Promise.allSettled for operations where failure of some promises is acceptable
+- Prefer pure functions
+- Prefer stateless functions when possible.
+- Always clear references that might block garbage collection and cause memory leaks
+
+# The Design Specification
+${plan}
+
+# And the complete file contents of files to be modified.
+${fileBlocks}
+
+Generate the code blocks. Produce your answer using the **Code Edit Template** below. 
+- **Code Blocks**:
+  - For each file added/modified output the code block as follows:
+    File: the path to the file extracted from the design specifications followed by either (MODIFIED) or (ADDED), for example: packages/services/google/src/lib/delegates/sendEmail.ts (MODIFIED)
+    \`\`\`<language (for added files) or diff (for modified files)>
+    <YOUR_CODE_HERE>
+    \`\`\`
+`;
+
+  const response = await softwareArchitect(user);
 
   if (userResponse) {
-    parsedMessages.push({
-      user: userResponse,
-    });
     // reset the user response so they can respond again!
-    context[architectImplementationId].userResponse = undefined;
-  } else {
-    // this should only happen on the first iteration,
-    // but there may be edge cases where this task was reentered without asking the user a question
-    parsedMessages.push({
-      user: task,
-    });
+    context[confirmUserIntentId].userResponse = undefined;
   }
 
-  const prompt = `
-    The software specification
-    ${plan}
-
-    And the complete file contents of files to be modified. Be sure to review carefully to construct your response.
-    ${fileBlocks}
-    `;
-
-  const response = await softwareArchitect(prompt);
-
   parsedMessages.push({
+    user: user,
     system: response,
   });
 
@@ -194,14 +238,19 @@ ${cur.contents}
     context.machineExecutionId!
   );
 
-  return {
-    confirmationPrompt: `# The Architect's Response
-Hello there, it's the architect here. Please review my proposed final design spec and let me know if we are good to proceed.
-        
+  const msg = `
+# Proposed Code Edits
 ${response}
 
-# The Current Contents of the Files to Be Modified
-Use the information below when generating edits.
-${fileBlocks}`,
+# The complete current contents of all files being modified without any changes applied
+${fileBlocks}
+  `;
+
+  const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `proposedCodeEdits-${context.machineExecutionId}.md`);
+  await fs.promises.writeFile(abs, msg, 'utf8');
+
+  return {
+    confirmationPrompt: msg,
+    file: abs,
   };
 }

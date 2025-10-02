@@ -166,14 +166,48 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log('dispatching pause from architectureReview');
 
                     if (result.approved) {
+                        console.log('dispatching CONTINUE from architectureReview');
                         dispatch({
                             type: 'CONTINUE',
                             payload,
                         });
-                    } else {
-                        // refactor to target the most recent architectImplementation passing the latest feedback from the end user
+                    } else if (result.reviewRequired) {
+                        console.log('dispatching pause from architectureReview');
+                        // pause so the user can review the state machine
                         dispatch({
                             type: 'pause',
+                            payload,
+                        });
+                    } else {
+                        // the user has provided feedback we need to capture and rerun the confirm user intent state
+                        // target the most recent confirmUserIntentId passing the latest feedback from the end user
+                        const architectImplementationId =
+                            context.stack
+                                ?.slice()
+                                .reverse()
+                                .find((item) => item.includes('architectImplementation')) || '';
+
+                        // extract the user response if any. It will be the last message where user is defined
+                        const lastMessage =
+                            result.messages
+                                ?.slice()
+                                .reverse()
+                                .find((item) => item.user !== undefined);
+
+                        const payload = {
+                            architectImplementationId,
+                            [architectImplementationId]: {
+                                // we destructure to preserve other keys like result which holds values from user interaction
+                                ...context[architectImplementationId],
+                                userResponse: lastMessage?.user,
+                                file: result.file,
+                            }
+                        };
+
+                        console.log(`dispatching ${architectImplementationId} from specReview`);
+
+                        dispatch({
+                            type: architectImplementationId,
                             payload,
                         });
                     }

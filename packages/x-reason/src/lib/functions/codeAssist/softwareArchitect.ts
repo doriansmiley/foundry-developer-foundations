@@ -1,5 +1,5 @@
 export async function softwareArchitect(
-    userInput: string,
+    user: string,
     num = 5,
     dateRestrict?: string,
     siteSearch?: string,
@@ -21,33 +21,6 @@ The specification includes citations to ground you in the sources of documentati
 - A user task/question.
 
 You always carefully evaluate user input before generating your response.
-  `;
-
-    const user = `
-Generate a complete specification that fulfils the provided design specification.
-Include the proposed code changes. You must code the solution!
-
-# Hard Rules for Answer Synthesis
-You must denote clearly what changes are modifications to existing files and what are new files
-For example
-Files added/modified
-- Modified: packages/services/google/src/lib/delegates/sendEmail.ts
-- Added: packages/services/google/src/lib/delegates/driveHelpers.ts
-- Modified: packages/services/google/src/lib/types.ts (EmailContext, SendEmailOutput)
-- Added: packages/services/google/src/lib/delegates/sendEmail.test.ts
-This ensures our code editor can distinguish how to handle the changes with ts-morph
-Be sure you have captured changes that are required for the existing public API such as new parameters, methods, etc
-Be sure you prevent developer foot gunning by designing the solution to handle errors, retries, and backoff policies
-Do not over engineer the solution, engineer for a v0
-Include the relevant code blocks at the appropriate places in the specification. 
-Again specify what is an entirely new file and what is a modification to an existing file above the code block
-The path to the effected file must be above the code block
-Organize your code such that you don't nest function declarations or type definitions inside functions
-Include optional suggested enhancements over the v0 solution
-Make sure you code is complete and free form error
-
-# User Input
-${userInput}
   `;
 
     const response = await fetch('https://api.openai.com/v1/responses', {

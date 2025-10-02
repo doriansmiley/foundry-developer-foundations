@@ -74,14 +74,14 @@ ${readme}
   ) {
 
     // get the system response by grabbing the last instance of system response from the messages array
-    const { messages } = context[context.stateId] as AbstractReviewState;
+    const { messages, reviewRequired } = context[context.stateId] as AbstractReviewState;
     const lastMessage =
       messages
         ?.slice()
         .reverse()
         .find((item) => item.user === undefined);
 
-    if (lastMessage) {
+    if (reviewRequired) {
       const approved = (await select({ message: 'Approved', choices: ['yes', 'no'] })) === 'yes';
 
       if (!approved) {

@@ -60,67 +60,71 @@ Your ultimate output is a **draft of the design specification** for the user's t
 
 A valid design spec MUST include all of the following sections:
 
-1. **Original User Prompt**
+**Original User Prompt**
 
    * Capture the request exactly as given.
 
-2. **Design spec name**
+ **Design spec name**
 
    * Concise title (≤7 words) with a version if supplied (e.g., v0.1). Default version to v0.
 
-3. **Instructions**
+**Instructions**
 
    * Summarize the user's request clearly and directly.
 
-4. **Overview**
+**Overview**
 
    * Describe the feature or proposed change in plain language.
    * State scope, purpose, success criteria, dependencies, and assumptions.
 
-5. **Constraints**
+**Constraints**
 
    * **Language**: Required programming language(s) and version(s).
    * **Libraries**: Required external libraries with rationale.
 
-6. **Auth scopes required**
+**Auth scopes required**
 
    * List all permissions/scopes needed, with justification.
 
-7. **Security and Privacy**
+**Security and Privacy**
 
    * Required access controls, data protection, privacy measures, log sanitization, and least-privilege enforcement.
 
-8. **External API Documentation References**
+**External API Documentation References**
 
    * Provide relevant links.
    * Summarize the methods, request/response types, and key behaviors used.
 
-9. **Files Added/Modified**
+ **Files Added/Modified**:
+  For example:
+    Files added/modified
+    - Modified: packages/services/google/src/lib/delegates/sendEmail.ts
+    - Added: packages/services/google/src/lib/delegates/driveHelpers.ts
+    - Modified: packages/services/google/src/lib/types.ts (EmailContext, SendEmailOutput)
+    - Added: packages/services/google/src/lib/delegates/sendEmail.test.ts
+  This ensures our code editor can distinguish how to handle the changes with ts-morph
 
-   * Explicitly list every impacted file.
-   * Clearly denote Modified: vs Added:.
-
-10. **Inputs and Outputs**
+**Inputs and Outputs**
 
     * **Proposed Input Type Changes/Additions**: schemas, fields, validation rules.
     * **Proposed Output Type Changes/Additions**: schemas, error envelope structure.
 
-11. **Functional Behavior**
+**Functional Behavior**
 
     * Step-by-step description of algorithm and feature behavior.
     * Include idempotency, concurrency, and performance if applicable.
     * Denote what is in scope vs. out of scope.
 
-12. **Error Handling**
+**Error Handling**
 
     * Describe categories, HTTP status mappings (if relevant), retry/backoff strategies, and sanitization of logs.
 
-13. **Acceptance Criteria**
+**Acceptance Criteria**
 
     * Provide plain-text test specification in **Gherkin format** only.
     * Cover happy paths, edge cases, and error scenarios.
 
-14. **Usage (via client)**
+**Usage (via client)**
 
     * Show how a client would use the feature.
     * Use pseudo code only (never real code).
@@ -146,9 +150,7 @@ A valid design spec MUST include all of the following sections:
     RULES FOR SYNTHESIS
     - Merge and reconcile: Incorporate all feedback from both the "User Response" and "The Design Specification". Resolve conflicts explicitly; don't drop constraints.
     - Reuse prior facts: If Language/Libraries/Auth scopes/etc. were provided earlier, reuse them verbatim unless the user overrode them. Missing items must be inferred only if strongly implied; otherwise call them out as TBD.
-    - Make decisions: Prefer explicit, testable decisions over ambiguity. If an item is uncertain, state an assumption and proceed.
-    - Keep scope tight: Defer out-of-scope asks to future iterations (note them inside "Functional Behavior" as out-of-scope behaviors).
-    - Write for implementers and testers: Every requirement must be observable and testable.
+    - ALWAYS REUSE PATHS IN THE DESIGN SPECIFICATION! If a user asks for a new file to be created in their response infer based on existing paths in the spec where to place that fil. This ensure paths are resolvable!
 
     # User Response
     ${userResponse}
@@ -157,7 +159,9 @@ A valid design spec MUST include all of the following sections:
     Carefully review for any change requests, answers to questions, etc., from the user.
     ${updatedContents}
 
-    Produce your answer using the **Design Specification Template** below. All sections are REQUIRED. Do not add or remove sections or bullets. Reuse supplied answers (e.g., Libraries, Language) when present.
+    Produce your answer using the **Design Specification Template** below. 
+    All sections are REQUIRED. Do not add or remove sections or bullets. 
+    Reuse supplied sections unmodified (e.g., Overview, Constraints, Files Added/Modified) when no changes are required.
 
     # Design Specification Template
     - **Design spec**: The name of the design spec
@@ -173,6 +177,13 @@ A valid design spec MUST include all of the following sections:
         - State exact version range (e.g., Node.js 20.x, Python 3.11).
       - **Libraries**: The required external libraries derived from the information in the supplied README
         - Enumerate by name@version with brief rationale and any pinning/compat constraints.
+    - **Files Added/Modified**:
+      For example:
+        Files added/modified
+        - Modified: packages/services/google/src/lib/delegates/sendEmail.ts
+        - Added: packages/services/google/src/lib/delegates/driveHelpers.ts
+        - Modified: packages/services/google/src/lib/types.ts (EmailContext, SendEmailOutput)
+        - Added: packages/services/google/src/lib/delegates/sendEmail.test.ts
     - **Auth scopes required**: The required authorization scopes if relevant.
       - List provider(s), scopes/permissions, and why each is needed. Include least-privilege notes.
     - **Security and Privacy**: Security and privacy concerns.
@@ -233,6 +244,15 @@ A:
 - **Constraints**
   - **Language**: TypeScript (Node.js 20.x)
   - **Libraries**: googleapis@149.0.0
+- **Files Added/Modified**:
+  For example:
+    Files added/modified
+    - Modified: packages/services/google/src/lib/delegates/sendEmail.ts
+    - Added: packages/services/google/src/lib/delegates/driveHelpers.ts
+    - Modified: packages/services/google/src/lib/types.ts (EmailContext, SendEmailOutput)
+    - Added: packages/services/google/src/lib/delegates/sendEmail.test.ts
+  This ensures our code editor can distinguish how to handle the changes with ts-morph. 
+  File paths can be inferred from the Initial user request. It includes the complete listing of existing files and their exposed members (functions, types, etc).
 - **Auth scopes required**:
   - https://mail.google.com/
   - https://www.googleapis.com/auth/gmail.modify
@@ -309,6 +329,14 @@ A:
 * **Constraints**
   * **Language**: TypeScript (Node.js 20.x)
   * **Libraries**: googleapis@149.0.0
+**Files Added/Modified**:
+  For example:
+    Files added/modified
+    - Modified: packages/services/google/src/lib/delegates/sendEmail.ts
+    - Added: packages/services/google/src/lib/delegates/driveHelpers.ts
+    - Modified: packages/services/google/src/lib/types.ts (EmailContext, SendEmailOutput)
+    - Added: packages/services/google/src/lib/delegates/sendEmail.test.ts
+  This ensures our code editor can distinguish how to handle the changes with ts-morph
 * **Auth scopes required**:
   * [https://www.googleapis.com/auth/calendar](https://www.googleapis.com/auth/calendar)
   * [https://www.googleapis.com/auth/calendar.events](https://www.googleapis.com/auth/calendar.events)
