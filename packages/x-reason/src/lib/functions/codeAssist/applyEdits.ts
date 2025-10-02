@@ -41,7 +41,7 @@ export async function applyEdits(
 
   if (!updatedContents) throw new Error(`updatedContents is empty!`);
   // TODO wrap in try catch
-  const edits = JSON.parse(updatedContents) as EditOp[];
+  const edits = JSON.parse(updatedContents) as { ops: EditOp[] };
 
   const root = process.cwd();
   const baseDir = root.split('foundry-developer-foundations')[0];
@@ -55,7 +55,7 @@ export async function applyEdits(
     onLog: () => { },
   };
 
-  const results = await executeEditMachine(edits, options);
+  const results = await executeEditMachine(edits.ops, options);
 
   parsedMessages.push({
     system: `applied edits to the following files: ${results.changedFiles.join(
