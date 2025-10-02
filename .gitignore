@@ -20,6 +20,7 @@ project-graph.json
 **/spec-**.md
 **/designDoc-**.md
 **/proposedCodeEdits-**.md
+**/codeEdits-**.json
 
 # dev TLS certs/keys
 apps/**/certificates/*.pem

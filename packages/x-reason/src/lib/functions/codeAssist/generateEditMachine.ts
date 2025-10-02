@@ -436,8 +436,8 @@ Return ONLY JSON.
     context.machineExecutionId!
   );
 
-  const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `codeEdits-${context.machineExecutionId}.md`);
-  await fs.promises.writeFile(abs, msg, 'utf8');
+  const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `codeEdits-${context.machineExecutionId}.json`);
+  await fs.promises.writeFile(abs, JSON.stringify(parsed, null, 2), 'utf8');
 
   return {
     file: abs,
