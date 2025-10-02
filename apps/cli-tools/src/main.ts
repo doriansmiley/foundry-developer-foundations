@@ -70,11 +70,23 @@ ${readme}
   // handle human review states
   if (context.stateId.includes('specReview') ||
     context.stateId.includes('architectureReview') ||
-    context.stateId.includes('codeReview')
+    context.stateId.includes('codeReview') ||
+    context.stateId.includes('pause')
   ) {
-
+    let stateId = context.stateId;
+    // sometimes we land on pause due to race conditions. I need to track them down. Once fixed we should be able to remove this
+    if (context.stateId.includes('pause')) {
+      // reset to the first state that is not pause
+      stateId = context.stack
+        ?.slice()
+        .reverse()
+        .find((item) => !item.includes('pause')) || '';
+    }
+    if (!stateId) {
+      throw new Error('unable to resolve stateID')
+    }
     // get the system response by grabbing the last instance of system response from the messages array
-    const { messages, reviewRequired } = context[context.stateId] as AbstractReviewState;
+    const { messages, reviewRequired } = context[stateId] as AbstractReviewState;
     const lastMessage =
       messages
         ?.slice()
