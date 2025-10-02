@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+
 import { container } from '@codestrap/developer-foundations-di';
 import {
   Context,
@@ -28,10 +30,18 @@ export async function applyEdits(
       .reverse()
       .find((item) => item.includes('generateEditMachine')) || '';
 
-  const edits =
-    typeof context[generateEditMachineId] === 'string'
-      ? (JSON.parse(context[generateEditMachineId]) as { ops: EditOp[] })
-      : (context[generateEditMachineId] as { ops: EditOp[] });
+  const { file } = context[generateEditMachineId] as { file: string };
+
+  let updatedContents;
+  if (file && !fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
+  if (file) {
+    // read the file that may contain updates from the user
+    updatedContents = await fs.promises.readFile(file, 'utf8');
+  }
+
+  if (!updatedContents) throw new Error(`updatedContents is empty!`);
+  // TODO wrap in try catch
+  const edits = JSON.parse(updatedContents) as EditOp[];
 
   const root = process.cwd();
   const baseDir = root.split('foundry-developer-foundations')[0];
@@ -42,10 +52,10 @@ export async function applyEdits(
     write: true,
     format: true,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    onLog: () => {},
+    onLog: () => { },
   };
 
-  const results = await executeEditMachine(edits.ops, options);
+  const results = await executeEditMachine(edits, options);
 
   parsedMessages.push({
     system: `applied edits to the following files: ${results.changedFiles.join(

@@ -88,7 +88,6 @@ export async function architectImplementation(
   const { userResponse, file } = (context[architectImplementationId] as UserIntent) || {};
 
   let updatedContents;
-  if (file && !fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
   if (file) {
     // read the file that may contain updates from the user
     updatedContents = await fs.promises.readFile(file, 'utf8');

@@ -3,62 +3,87 @@ import {
     CodeReviewState,
     Context,
     MachineEvent,
+    ThreadsDao,
+    TYPES,
     UserIntent,
 } from '@codestrap/developer-foundations-types';
-import * as path from 'path';
 import * as fs from 'fs';
+import { container } from '@codestrap/developer-foundations-di';
 
 export async function codeReview(
     context: Context,
     event?: MachineEvent,
     task?: string
 ): Promise<CodeReviewState> {
-    // has the user approved the spec? if so return with the spec file
-    // get the proposed design specification and save it
-    const codeReviewId =
-        context.stack
-            ?.slice()
-            .reverse()
-            .find((item) => item.includes('generateEditMachine')) || '';
-    const { approved, file, messages } = context[codeReviewId] as AbstractReviewState
-
-    if (approved) {
-        // reload the file to get the latest contents
-        // return with the latest contents
-        if (file) {
-            const abs = file;
-            if (!fs.existsSync(abs)) throw new Error(`File does not exist: ${abs}`);
-            const contents = await fs.promises.readFile(abs, 'utf8');
-
-            return {
-                approved,
-                messages,
-                file: contents,
-            }
-        }
-    }
-
-    // else get the proposed spec file and save it to disk, then return 
-    // we assume the last instance of confirmUserIntent will contain the generated spec file
+    // get the previous confirm user intent state that generated the spec we are reviewing
     const generateEditMachineId =
         context.stack
             ?.slice()
             .reverse()
             .find((item) => item.includes('generateEditMachine')) || '';
+    const { file } = context[generateEditMachineId] as UserIntent || { approved: false };
+    // there must be a spec file generated in the previous architectureReview state
+    if (!file || !fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
 
-    const editMachineJSON = (context[generateEditMachineId] as UserIntent)
-        ?.confirmationPrompt;
+    // get the state
+    const codeReviewId =
+        context.stack
+            ?.slice()
+            .reverse()
+            .find((item) => item.includes('codeReview')) || '';
+    const { approved, messages } = context[codeReviewId] as AbstractReviewState || { approved: false }
 
-    if (!editMachineJSON) {
-        throw new Error('no edit machine json found!');
+    if (approved) {
+        // reload the file to get the latest contents so we can capture user edits
+        const contents = await fs.promises.readFile(file, 'utf8');
+
+        return {
+            approved,
+            messages,
+            reviewRequired: false,
+            file: contents,
+        }
     }
 
-    const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `editMachine-${context.machineExecutionId}.json`);
-    await fs.promises.writeFile(abs, editMachineJSON, 'utf8');
+    // get the most recent message as part of review
+    const { user, system } = messages?.[messages?.length - 1] || {};
+
+    // if the user has responded we want to push the system and user response onto the thread history
+    // this lets us capture the user feedback as part of the broader message history
+    if (user) {
+        const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+        const messageThread = await threadsDao.read(context.machineExecutionId!);
+        const parsedMessages = JSON.parse(messageThread?.messages || '[]') as {
+            user?: string;
+            system?: string;
+        }[];
+
+        parsedMessages?.push({ user, system });
+
+        await threadsDao.upsert(
+            JSON.stringify(parsedMessages),
+            'cli-tool',
+            context.machineExecutionId!
+        );
+
+        messages?.push({ system: 'Please incorporate the user\'s feedback into the code edits.' });
+
+        // there is a user response, reset review required to false since the user has supplied feedback
+        // this will allow the function catalog to re-enter the the confirm user intent state
+        return {
+            approved: false,
+            reviewRequired: false,
+            file,
+            messages: messages,
+        }
+    }
+
+    messages?.push({ system: 'Please review the code edits.' });
 
     return {
         approved: false,
-        file: abs,
-        messages: [{ system: 'please review the proposed edits file' }],
+        reviewRequired: true,
+        file,
+        messages: messages || [{ system: 'Please review the code edits.' }],
     }
 }
