@@ -251,7 +251,7 @@ export async function programmer(query: string, functionCatalog: string) {
 Let's take this step by step:
 1. Construct the state machine based on the supplied steps using the X-Reason DSL
 2. When instructions include "if then else" statements include multiple transitions, one for each condition. 
-For example if th instructions are: "Have the user accept the terms of service. If the user accepts the TOS go to age confirmation else exit." the state machine would be:
+For example if teh instructions are: "Have the user accept the terms of service. If the user accepts the TOS go to age confirmation else exit." the state machine would be:
 [
   {
     "id": "AcceptTOS",
@@ -299,6 +299,12 @@ The "includesLogic": true, correctly reflects that there is logic present in the
 The failure transition is reserved for application errors that occur at runtime.
 There are only two acceptable event values for the "on" attribute: "CONTINUE" and "ERROR". The "ERROR" event can only target the "failure" state
 4. Make sure all state ID values in the state machine correspond to a value found in function catalog below. DO NOT INVENT YOUR OWN STATES!!!
+
+# Rules for answer synthesis
+1. The specReview state must contain the following transitions: specReview, confirmUserIntent, CONTINUE, and ERROR. If the user asks for changes in the spec it must be able to re-enter confirmUserIntent. Ensure all states are in the transitions.
+2. The architectureReview state must contain the following transitions: architectureReview, architectImplementation, CONTINUE, ERROR. Again if the user asks for changes we have to be able to re-enter architectImplementation. 
+3. The codeReview must contain the following transitions: codeReview, generateEditMachine, CONTINUE, ERROR. Again if changes are requested we must be able to transition back to generateEditMachine.
+
 Function Catalog:
 ${functionCatalog}
 
