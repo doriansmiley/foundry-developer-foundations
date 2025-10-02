@@ -203,6 +203,7 @@ style, and rules.
 - Prefer pure functions
 - Prefer stateless functions when possible.
 - Always clear references that might block garbage collection and cause memory leaks
+- Leave all test cases blank for the developer to fill in. In the comments for each test scenario include the gherkin specification as comments.
 
 # The Design Specification
 ${plan}
