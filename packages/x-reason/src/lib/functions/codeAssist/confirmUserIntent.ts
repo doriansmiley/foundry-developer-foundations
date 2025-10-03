@@ -45,6 +45,11 @@ export async function confirmUserIntent(
     updatedContents = await fs.promises.readFile(file, 'utf8');
   }
 
+  // load the README associated with the codepath/agent/machine execution
+  const readmePath = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `readme-${context.machineExecutionId}.md`);
+  if (readmePath && !fs.existsSync(readmePath)) throw new Error(`README file does not exist: ${readmePath}`);
+  const readme = await fs.promises.readFile(readmePath, 'utf8');
+
   const system = `
 You are a **software design specialist** collaborating with a human software engineer.
 Your role is to **assist in drafting actionable design specifications** for software features and changes.
@@ -155,7 +160,7 @@ A valid design spec MUST include all of the following sections:
     # User Response
     ${userResponse}
 
-    # The Design Specification.
+    # The spec file
     Carefully review for any change requests, answers to questions, etc., from the user.
     ${updatedContents}
 
@@ -224,12 +229,7 @@ Below is the engineer's initial request and relevant context (stack, APIs, tests
 Your job: ask only clarifications questions (≤5, one-liners) to build intended design spec with confidence and then produce a crisp spec. 
 
 Initial user request:
----
-${(globalThis as any).initialMessage}
----
-
-The current conversation thread with the user
-'this is the start of the conversation
+${task}
 
 Generate the system design specification.
 If you do not have enough information to create a draft of the design spec, ask clarifying questions to the user.
@@ -412,7 +412,16 @@ A:
       model: 'gpt-5-mini',
       input: [
         { role: 'system', content: [{ type: 'input_text', text: system }] },
-        { role: 'user', content: [{ type: 'input_text', text: user }] },
+        {
+          role: 'user', content: [{
+            // we don't store the README is thread messages as it will lead to massive token bloat
+            type: 'input_text', text: `${user}\n# 
+            The README that explains the layout of the codebase you are working in. 
+            You must carefully review this to understand effected files, methodologies, APIs etc. 
+            It is your rosetta stone for understanding how to write code in our codebase:
+            ${readme}`
+          }]
+        },
       ],
       reasoning: { effort: 'low' },
       store: true,

@@ -23,26 +23,11 @@ export async function googleCodingAgent(executionId?: string, contextUpdateInput
   const larry = new Larry();
   let result: LarryResponse | undefined;
   let answer;
-  let readme;
-  const readmePath = path.resolve(
-    process.cwd(),
-    '../../packages/services/google/src/lib/README.LLM.md'
-  );
 
   if (!executionId) {
     // start a new execution and thread using the input task
-    readme = await fs.readFileSync(readmePath, 'utf8');
     answer = task;
     executionId = uuidv4();
-    const initialMessage = `# User Question
-      ${answer}
-      
-      # Repo and Environment Setup
-      Use the documentation from the README below to understand the current package and environment setup, programming language, and libraries use as well as current public apis, tests, etc
-${readme}
-      `;
-    // TODO replace with a scoped context
-    globalThis.initialMessage = initialMessage;
 
     result = await larry.askLarry(
       `# User Question

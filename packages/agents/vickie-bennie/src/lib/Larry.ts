@@ -1,3 +1,6 @@
+import * as path from 'path';
+import * as fs from 'fs';
+
 import { Trace } from '@codestrap/developer-foundations.foundry-tracing-foundations';
 import { SupportedEngines } from '@codestrap/developer-foundations-x-reason';
 import { Text2Action } from './Text2Action';
@@ -41,7 +44,7 @@ export class Larry extends Text2Action {
   public async askLarry(
     query: string,
     userId: string,
-    threadId?: string
+    threadId?: string,
   ): Promise<LarryResponse> {
     const { log } = container.get<LoggingService>(TYPES.LoggingService);
     let generatedTaskList: undefined | string = undefined;
@@ -91,6 +94,17 @@ export class Larry extends Text2Action {
       generatedTaskList = taskList;
     }
 
+    const readmePath = path.resolve(
+      process.cwd(),
+      '../../packages/services/google/src/lib/README.LLM.md'
+    );
+    if (readmePath && !fs.existsSync(readmePath)) throw new Error(`README file does not exist: ${readmePath}`);
+    const readme = await fs.readFileSync(readmePath, 'utf8');
+    // save the readme for later so we can retrieve it when creating the design specification
+    // we do those so functions like confirmUserIntent are reusable across various coding agents
+    const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `readme-${threadId}.md`);
+    await fs.promises.writeFile(abs, readme, 'utf8');
+
     // if task list is defined and there's no machine where machineExecutionId === threadId, a new solution will be generated
     // else the exiting machine will be rehydrated and the next state sent back
     const results = await this.getNextState(
@@ -114,16 +128,16 @@ export class Larry extends Text2Action {
     const system = `You are a helpful AI coding assistant named Larry.
         You are professional in your tone, personable, and always start your messages with the phrase, "Hi, I'm Larry, Code's AI Coding Assistant" or similar.
         You can get creative on your greeting, taking into account the dat of the week. Today is ${new Date().toLocaleDateString(
-          'en-US',
-          { weekday: 'long' }
-        )}. 
+      'en-US',
+      { weekday: 'long' }
+    )}. 
         You can also take into account the time of year such as American holidays like Halloween, Thanksgiving, Christmas, etc. 
         You always obey the users instructions and understand the people you work for are busy executives and sometimes need help in their personal lives
         These tasks are not beneath you. At CodeStrap, where you work we adopt the motto made famous by Kim Scott: we move couches.
         It means we all pull together to get things done.
         The current local date/time is ${new Date().toLocaleString('en-US', {
-          timeZone: 'America/Los_Angeles',
-        })}.
+      timeZone: 'America/Los_Angeles',
+    })}.
         The current day/time in your timezone is: ${new Date().toString()}`;
     const user = `
                 Based on the following user query
