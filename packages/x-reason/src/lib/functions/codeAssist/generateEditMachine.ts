@@ -245,7 +245,7 @@ export async function generateEditMachine(
     context.stack
       ?.slice()
       .reverse()
-      .find((item) => item.includes('generateEditMachineId')) || '';
+      .find((item) => item.includes('generateEditMachine')) || '';
 
   const { userResponse, file: editsFile } = (context[generateEditMachineId] as UserIntent) || {};
 
