@@ -82,9 +82,18 @@ ${readme}
         .reverse()
         .find((item) => !item.includes('pause')) || '';
     }
+
     if (!stateId) {
       throw new Error('unable to resolve stateID')
     }
+
+    if (!stateId.includes('specReview') &&
+      !stateId.includes('architectureReview') &&
+      !stateId.includes('codeReview')
+    ) {
+      return;
+    }
+
     // get the system response by grabbing the last instance of system response from the messages array
     const { messages, reviewRequired } = context[stateId] as AbstractReviewState;
     const lastMessage =

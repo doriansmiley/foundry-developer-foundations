@@ -361,7 +361,9 @@ Never include prose outside the JSON.
 ${plan}
 
 # Your previous response
+\`\`\`json
 ${updatedContents}
+\`\`\`
 
 # Feedback from the user
 ${userResponse}
