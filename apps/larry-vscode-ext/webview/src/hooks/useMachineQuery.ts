@@ -3,7 +3,7 @@ import { fetchMachine } from '../lib/http';
 import { queryClient } from '../lib/query';
 
 export function useMachineQuery(baseUrl: string, machineId?: string) {
-  return useQuery(
+  const query = useQuery(
     {
       enabled: !!machineId,
       queryKey: ['machine', { baseUrl, machineId }],
@@ -11,4 +11,6 @@ export function useMachineQuery(baseUrl: string, machineId?: string) {
     },
     queryClient
   );
+
+  return query;
 }

@@ -1,40 +1,70 @@
 /* JSX */
 /* @jsxImportSource preact */
-import { useState, useEffect, useRef } from "preact/hooks";
-import { MachineResponse } from "../../lib/backend-types";
+import { useState, useEffect, useRef, useMemo } from "preact/hooks";
+import { MachineResponse, MachineStatus } from "../../lib/backend-types";
 import { ConfirmUserIntent } from "./states/ConfirmUserIntent.tsx";
 import { ChevronRight, SendIcon } from "lucide-preact";
 import { ChevronDown } from "lucide-preact";
 import TextareaAutosize from "react-textarea-autosize";
 import { AnimatedEllipsis } from "./AnimatedEllipsis.tsx";
-
+import { baseUrl } from "../../signals/store";
+import { SpecReview } from "./states/SpecReview.tsx";
+import { useNextMachineState } from "../../hooks/useNextState.ts";
 // TODO: Import ArchitecturePhase component when it's created
-const ArchitecturePhase = () => <div>Architecture Phase Component</div>;
+const ArchitecturePhase = () => <div>TODO</div>;
+const SearchDocumentation = () => <div></div>;
 
 const stateComponentMap: Record<string, any> = {
-  specReview: ConfirmUserIntent,
-  architecturePhase: ArchitecturePhase,
-  // Add more mappings as needed
+  specReview: SpecReview,
+  confirmUserIntent: ConfirmUserIntent,
+  architectImplementation: ArchitecturePhase,
+  searchDocumentation: SearchDocumentation,
 };
 
 export function StateVisualization({data, onSubmit}: {data: MachineResponse, onSubmit: (input: string) => void}) {
-  // Deduplicate stack while preserving order (keep last occurrence)
+  const { fetch: fetchGetNextState } = useNextMachineState(baseUrl.value);
+  const [specReviewRejected, setSpecReviewRejected] = useState(false);
+  const [input, setInput] = useState<{placeholder: string, value}>({placeholder: 'Tell me more...', value: ''});
+  const showInput = useMemo(() => {
+    // state computation for confirmUserIntent state
+    if (data?.currentState?.startsWith('confirmUserIntent') && data.status === 'awaiting_human') {
+      return true;
+    }
+
+    if (data?.currentState?.startsWith('specReview') && specReviewRejected) {
+      return true;
+    }
+  }, [data, specReviewRejected]);
   const getDeduplicatedStack = () => {
     if (!data.context?.stack) return [];
     
-    const seen = new Set<string>();
-    const deduplicatedStack: string[] = [];
+    const processedStack: string[] = [];
     
-    // Process in reverse to keep the last occurrence of each state
-    for (let i = data.context.stack.length - 1; i >= 0; i--) {
-      const stateKey = data.context.stack[i];
-      if (!seen.has(stateKey)) {
-        seen.add(stateKey);
-        deduplicatedStack.unshift(stateKey); // Add to beginning to maintain original order
+    // First pass: count total occurrences
+    const stateOccurrences = new Map<string, number>();
+    for (const stateKey of data.context.stack) {
+      const count = stateOccurrences.get(stateKey) || 0;
+      stateOccurrences.set(stateKey, count + 1);
+    }
+    
+    const seenStates = new Map<string, number>();
+    
+    for (const stateKey of data.context.stack) {
+      const seenCount = seenStates.get(stateKey) || 0;
+      const totalOccurrences = stateOccurrences.get(stateKey) || 0;
+      seenStates.set(stateKey, seenCount + 1);
+      
+      // Check if this is the last occurrence of this state
+      const isLastOccurrence = seenCount + 1 === totalOccurrences;
+      
+      if (!isLastOccurrence) {
+        processedStack.push(`${stateKey}|prev-${seenCount + 1}`);
+      } else {
+        processedStack.push(stateKey);
       }
     }
     
-    return deduplicatedStack;
+    return processedStack;
   };
 
   // Initialize collapsed states - all previous states should be collapsed by default
@@ -53,7 +83,6 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
   };
 
   const [collapsedStates, setCollapsedStates] = useState<Set<string>>(initializeCollapsedStates());
-  const [inputValue, setInputValue] = useState('');
   const currentStateRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -108,14 +137,22 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
   };
 
   const parseStateKey = (stateKey: string) => {
-    const [stateName, stateId] = stateKey.split('|');
-    return { stateName, stateId };
+    const parts = stateKey.split('|');
+    const stateName = parts[0];
+    const stateId = parts[1];
+    const isPrevious = parts.length > 2 && parts[2].startsWith('prev-');
+    const previousNumber = isPrevious ? parts[2].replace('prev-', '') : null;
+    return { stateName, stateId, isPrevious, previousNumber };
   };
 
-  const renderStateComponent = (stateKey: string) => {
-    const { stateName, stateId } = parseStateKey(stateKey);
+  const renderStateComponent = (stateKey: string, onAction: (action: string) => void, machineStatus: MachineStatus) => {
+    const { stateName, stateId, isPrevious } = parseStateKey(stateKey);
+
     const Component = stateComponentMap[stateName];
-    const stateData = data.context?.[stateKey];
+    
+    // For previous states, look up data using the original key (without |prev-01)
+    const originalKey = isPrevious ? `${stateName}|${stateId}` : stateKey;
+    const stateData = data.context?.[originalKey];
 
     if (!Component) {
       return (
@@ -125,21 +162,72 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
       );
     }
 
-    return <Component data={stateData} id={stateId} />;
+    return <Component data={stateData} id={stateId} onAction={onAction} machineStatus={machineStatus} />;
   };
 
   const isCurrentState = (stateKey: string) => {
+    const { isPrevious } = parseStateKey(stateKey);
+    // Previous states are never current
+    if (isPrevious) return false;
+    
     return data.context?.currentState === stateKey || data.context?.stateId === stateKey;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
-    onSubmit(inputValue);
-    setInputValue('');
+    if (!input.value.trim()) return;
+    
+    if (!data?.currentState) {
+      console.error('Machine data is missing current state');
+      return;
+    }
+
+    if (data.currentState.startsWith('specReview')) {
+      const messages = data.context?.[data.currentState]?.messages;
+      const lastMessage =
+      messages
+        ?.slice()
+        .reverse()
+        .find((item) => item.user === undefined);
+      lastMessage.user = input.value;
+      fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: false, messages } } });
+      setSpecReviewRejected(false);
+
+      return;
+    }
+
+    fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { userResponse: input.value } } });
+
+    setInput(curr => ({...curr, value: '', placeholder: 'Tell me more...'}));
     scrollToBottom();
   }
 
+
+
+  const handleAction = (action: string) => {
+    if (action === 'approveSpec') {
+      setSpecReviewRejected(false);
+
+      if (!data?.currentState) {
+        console.error('Machine data is missing current state');
+        return;
+      }
+
+      const messages = data.context?.[data.currentState]?.messages;
+      const lastMessage =
+      messages
+        ?.slice()
+        .reverse()
+        .find((item) => item.user === undefined);
+      lastMessage.user = 'Looks good, approved.';
+
+      fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: true,  messages} } });
+    } else if (action === 'rejectSpec') {
+
+      setInput(curr => ({...curr, placeholder: 'Please provide feedback on what you would like changed'}));
+      setSpecReviewRejected(true);
+    }
+  }
 
 return (
 <div className="flex flex-col h-screen max-w-4xl mx-auto">
@@ -147,13 +235,15 @@ return (
       <div className="flex-1 overflow-y-auto" style={{paddingBottom: '50px'}}>
        <div className="space-y-4">
           {data.context?.solution && (
-            <div className="p-4 bg-gray-50 rounded border">
-              <ConfirmUserIntent data={{confirmationPrompt: data.context.solution}} id={'solution-123'} />
+            <div className="bg-gray-50 rounded border mb-2">
+              Hello! I'm Larry, your AI Coding assistant. I'm working in organized way you will see below.
+              <br />
+              Let's move some couches today!
             </div>
           )}
            {getDeduplicatedStack().map((stateKey, index) => {
-            const { stateName } = parseStateKey(stateKey);
-            const formattedName = stateName;
+            const { stateName, isPrevious, previousNumber } = parseStateKey(stateKey);
+            const formattedName = isPrevious ? `${stateName} (previous ${previousNumber})` : stateName;
             const isCurrent = isCurrentState(stateKey);
             const isCollapsed = collapsedStates.has(stateKey) && !isCurrent;
 
@@ -189,7 +279,7 @@ return (
                 {/* State content */}
                 {(isCurrent || !isCollapsed) && (
                   <div className="pb-3">
-                    {renderStateComponent(stateKey)}
+                    {renderStateComponent(stateKey, handleAction, data.status)}
                   </div>
                 )}
               </div>
@@ -202,13 +292,13 @@ return (
     </div>
   )}
   </div>
-  {data.status === 'awaiting_human' && (
+  {showInput && (
     <div style={{position: 'fixed', left: 0, padding: '5px', background: 'var(--vscode-editor-background)', bottom: 0, width: '100%'}} className="sticky bottom-0 border-t shadow-lg">
       <form onSubmit={handleSubmit} className="d-flex gap-2" style={{position: 'relative'}}>
         <TextareaAutosize
-          value={inputValue}
-          onInput={(e) => setInputValue((e.currentTarget as HTMLTextAreaElement).value)}
-          placeholder="Talk to Larry..."
+          value={input.value}
+          onInput={(e) => setInput(curr => ({...curr, value: (e.currentTarget as HTMLTextAreaElement).value}))}
+          placeholder={input.placeholder}
           minRows={2}
           maxRows={8}
           autoFocus

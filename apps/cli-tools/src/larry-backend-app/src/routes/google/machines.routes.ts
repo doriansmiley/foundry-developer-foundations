@@ -23,9 +23,13 @@ export function machinesRoutes(idem: IdempotencyStore, sse: SSEService) {
         const { machineId } = req.params;
 
         const machine = await machineDao.read(machineId);
+        console.log(machine);
         const context = JSON.parse(machine.state!).context;
         const currentStateContext = context[context.stateId];
-        const humanReview = !!currentStateContext?.confirmationPrompt;
+        const humanReview =
+          machine.currentState === 'pause' &&
+          (!!currentStateContext?.confirmationPrompt ||
+            !!currentStateContext?.reviewRequired);
 
         const status: MachineStatus = humanReview
           ? 'awaiting_human'
