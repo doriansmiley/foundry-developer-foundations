@@ -65,27 +65,6 @@ export function WorktreeScreen() {
   }
 
   const handleSubmit = async (input: string) => {
-    // update optimistacly machine status to running
-    queryClient.setQueryData(['machine', { baseUrl: baseUrl.value, machineId }], (prev) => {
-      return {
-        ...prev as MachineResponse,
-        status: 'running',
-      }
-    });
-
-    if (!machineData?.currentState) {
-      console.error('Machine data is missing current state');
-      return;
-    }
-
-    fetch(`${baseUrl.value}/machines/${machineId}/next`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Idempotency-Key': Math.random().toString(36).substring(2, 15),
-      },
-      body: JSON.stringify({ contextUpdate: { [machineData.currentState]: { userResponse: input } } }),
-    });
     
   }
 

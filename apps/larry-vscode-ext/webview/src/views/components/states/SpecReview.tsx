@@ -1,26 +1,9 @@
 /* JSX */
 /* @jsxImportSource preact */
-import { useEffect, useRef } from "preact/hooks";
-import { marked } from "marked";
-import { markedHighlight } from "marked-highlight";
-import hljs from "highlight.js";
-import DOMPurify from "dompurify";
+import { useEffect } from "preact/hooks";
+import { postMessage } from "../../../lib/vscode";
+import { MachineStatus } from "../../../lib/backend-types";
 
-/*
-data type
-approved
-: 
-false
-file
-: 
-"/Users/przemek/Projects/foundry-developer-foundations/apps/cli-tools/spec-775018ac-25fc-4fe9-b98a-137b20806962.md"
-messages
-: 
-[{system: "Please review the spec file."}]
-reviewRequired
-: 
-true
-*/
 type DataType = {
   approved: boolean;
   file: string;
@@ -28,25 +11,54 @@ type DataType = {
   reviewRequired: boolean;
 }
 
-export function ConfirmUserIntent({ data, id }: { data: {confirmationPrompt: string}, id: string }) {
-  const confirmationPrompt = data.confirmationPrompt;
-  const contentRef = useRef<HTMLDivElement>(null);
+export function SpecReview({ data, id, onAction, machineStatus }: { data: DataType, id: string, onAction: (action: string) => void, machineStatus: MachineStatus }) {
+  console.log('id', id);
+  const file = data.file;
+  const isPrev = id.includes('|prev-');
+  const openFile = () => {
+    // TODO send postMessage to extension to open file
+    postMessage({
+      type: 'openFile',
+      file,
+    });
+  }
+
+  const approveSpec = () => {
+    onAction('approveSpec');
+  }
+
+  const rejectSpec = () => {
+    onAction('rejectSpec');
+  }
 
   useEffect(() => {
-    if (contentRef.current && confirmationPrompt) {
-      // Parse markdown and sanitize HTML
-      const rawHtml = marked.parse(confirmationPrompt) as string;
-      const sanitizedHtml = DOMPurify.sanitize(rawHtml);
-      contentRef.current.innerHTML = sanitizedHtml;
+    if (machineStatus === 'running') {
+      return;
     }
-  }, [confirmationPrompt]);
+
+    openFile();
+  }, []);
 
   return (
     <div className="confirm-user-intent">
-      <div 
-        ref={contentRef}
-        className="markdown-content markdown-body"
-      />
+      <div><strong>Larry: </strong>I have saved the specification in the file: {file}</div>
+      <div className="mb-2 mt-1"><button className="btn" onClick={openFile}>Open file</button></div>
+      <div>You can and propose changes in the file itself, once you will finish save the file in same location and click "Approve" button.</div>
+      <div className="mt-2">
+        {data.messages.map((message, index) => (
+          <div key={index}>
+            {message.system && <div className="system-message">Larry: {message.system}</div>}
+            {message.user && <div className="user-message">You: {message.user}</div>}
+          </div>
+        ))}
+      </div>
+      <hr />
+      {machineStatus === 'awaiting_human' && !isPrev && (
+      <div className="d-flex mt-2">
+          <button className="btn btn-primary mr-1 ml-1" onClick={approveSpec}>Approve</button>
+          <button className="btn mr-1 ml-1" onClick={rejectSpec}>Reject</button>
+        </div>
+      )}
     </div>
   );
 }

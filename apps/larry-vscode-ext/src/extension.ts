@@ -892,6 +892,13 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  async openFile(filePath: string) {
+    await vscode.commands.executeCommand(
+      'vscode.open',
+      vscode.Uri.file(filePath)
+    );
+  }
+
   resolveWebviewView(view: vscode.WebviewView) {
     console.log('🎯 Larry webview opened by user - initializing...');
     this.view = view;
@@ -949,6 +956,11 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       // Keep only essential legacy handlers for basic functionality
       if (msg?.type === 'getCurrentWorktree') {
         await this.notifyWorktreeChange();
+        return;
+      }
+
+      if (msg?.type === 'openFile') {
+        await this.openFile(msg.file);
         return;
       }
     });

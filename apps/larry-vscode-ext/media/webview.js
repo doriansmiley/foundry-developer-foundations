@@ -59195,18 +59195,106 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
   };
   var index2 = /* @__PURE__ */ React8.forwardRef(TextareaAutosize);
 
+  // apps/larry-vscode-ext/webview/src/views/components/states/SpecReview.tsx
+  init_hooks_module();
+  function SpecReview({ data, id, onAction, machineStatus }) {
+    console.log("id", id);
+    const file = data.file;
+    const isPrev = id.includes("|prev-");
+    const openFile = () => {
+      postMessage({
+        type: "openFile",
+        file
+      });
+    };
+    const approveSpec = () => {
+      onAction("approveSpec");
+    };
+    const rejectSpec = () => {
+      onAction("rejectSpec");
+    };
+    y2(() => {
+      if (machineStatus === "running") {
+        return;
+      }
+      openFile();
+    }, []);
+    return /* @__PURE__ */ u6("div", { className: "confirm-user-intent", children: [
+      /* @__PURE__ */ u6("div", { children: [
+        /* @__PURE__ */ u6("strong", { children: "Larry: " }),
+        "I have saved the specification in the file: ",
+        file
+      ] }),
+      /* @__PURE__ */ u6("div", { className: "mb-2 mt-1", children: /* @__PURE__ */ u6("button", { className: "btn", onClick: openFile, children: "Open file" }) }),
+      /* @__PURE__ */ u6("div", { children: 'You can and propose changes in the file itself, once you will finish save the file in same location and click "Approve" button.' }),
+      /* @__PURE__ */ u6("div", { className: "mt-2", children: data.messages.map((message, index3) => /* @__PURE__ */ u6("div", { children: [
+        message.system && /* @__PURE__ */ u6("div", { className: "system-message", children: [
+          "Larry: ",
+          message.system
+        ] }),
+        message.user && /* @__PURE__ */ u6("div", { className: "user-message", children: [
+          "You: ",
+          message.user
+        ] })
+      ] }, index3)) }),
+      /* @__PURE__ */ u6("hr", {}),
+      machineStatus === "awaiting_human" && !isPrev && /* @__PURE__ */ u6("div", { className: "d-flex mt-2", children: [
+        /* @__PURE__ */ u6("button", { className: "btn btn-primary mr-1 ml-1", onClick: approveSpec, children: "Approve" }),
+        /* @__PURE__ */ u6("button", { className: "btn mr-1 ml-1", onClick: rejectSpec, children: "Reject" })
+      ] })
+    ] });
+  }
+
+  // apps/larry-vscode-ext/webview/src/hooks/useNextState.ts
+  function useNextMachineState(baseUrl2) {
+    return {
+      fetch: async ({ machineId, contextUpdate }) => {
+        queryClient.setQueryData(
+          ["machine", { baseUrl: baseUrl2, machineId }],
+          (prev) => {
+            return {
+              ...prev,
+              status: "running"
+            };
+          }
+        );
+        return fetch(`${baseUrl2}/machines/${machineId}/next`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": Math.random().toString(36).substring(2, 15)
+          },
+          body: JSON.stringify({
+            contextUpdate
+          })
+        });
+      }
+    };
+  }
+
   // apps/larry-vscode-ext/webview/src/views/components/StateVisualization.tsx
-  var ArchitecturePhase = () => /* @__PURE__ */ u6("div", { children: "Architecture Phase Component" });
+  var ArchitecturePhase = () => /* @__PURE__ */ u6("div", { children: "TODO" });
+  var SearchDocumentation = () => /* @__PURE__ */ u6("div", {});
   var stateComponentMap = {
-    specReview: ConfirmUserIntent,
+    specReview: SpecReview,
     confirmUserIntent: ConfirmUserIntent,
-    architecturePhase: ArchitecturePhase
-    // Add more mappings as needed
+    architectImplementation: ArchitecturePhase,
+    searchDocumentation: SearchDocumentation
   };
   function StateVisualization({ data, onSubmit }) {
+    const { fetch: fetchGetNextState } = useNextMachineState(baseUrl.value);
+    const [specReviewRejected, setSpecReviewRejected] = d2(false);
+    const [input, setInput] = d2({ placeholder: "Tell me more...", value: "" });
+    const showInput = T2(() => {
+      if (data?.currentState?.startsWith("confirmUserIntent") && data.status === "awaiting_human") {
+        return true;
+      }
+      if (data?.currentState?.startsWith("specReview") && specReviewRejected) {
+        return true;
+      }
+    }, [data, specReviewRejected]);
     const getDeduplicatedStack = () => {
       if (!data.context?.stack) return [];
-      const currentState = data.context?.currentState || data.context?.stateId;
       const processedStack = [];
       const stateOccurrences = /* @__PURE__ */ new Map();
       for (const stateKey of data.context.stack) {
@@ -59218,9 +59306,9 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
         const seenCount = seenStates.get(stateKey) || 0;
         const totalOccurrences = stateOccurrences.get(stateKey) || 0;
         seenStates.set(stateKey, seenCount + 1);
-        const isLastOccurrenceOfCurrentState = stateKey === currentState && seenCount + 1 === totalOccurrences;
-        if (seenCount > 0 && !isLastOccurrenceOfCurrentState) {
-          processedStack.push(`${stateKey}|prev-${seenCount}`);
+        const isLastOccurrence = seenCount + 1 === totalOccurrences;
+        if (!isLastOccurrence) {
+          processedStack.push(`${stateKey}|prev-${seenCount + 1}`);
         } else {
           processedStack.push(stateKey);
         }
@@ -59239,7 +59327,6 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
       return collapsed;
     };
     const [collapsedStates, setCollapsedStates] = d2(initializeCollapsedStates());
-    const [inputValue, setInputValue] = d2("");
     const currentStateRef = A2(null);
     const scrollToBottom = () => {
       window.scrollTo({
@@ -59289,7 +59376,7 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
       const previousNumber = isPrevious ? parts[2].replace("prev-", "") : null;
       return { stateName, stateId, isPrevious, previousNumber };
     };
-    const renderStateComponent = (stateKey) => {
+    const renderStateComponent = (stateKey, onAction, machineStatus) => {
       const { stateName, stateId, isPrevious } = parseStateKey(stateKey);
       const Component = stateComponentMap[stateName];
       const originalKey = isPrevious ? `${stateName}|${stateId}` : stateKey;
@@ -59300,7 +59387,7 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
           stateName
         ] }) });
       }
-      return /* @__PURE__ */ u6(Component, { data: stateData, id: stateId });
+      return /* @__PURE__ */ u6(Component, { data: stateData, id: stateId, onAction, machineStatus });
     };
     const isCurrentState = (stateKey) => {
       const { isPrevious } = parseStateKey(stateKey);
@@ -59309,15 +59396,47 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
     };
     const handleSubmit = (e6) => {
       e6.preventDefault();
-      if (!inputValue.trim()) return;
-      onSubmit(inputValue);
-      setInputValue("");
+      if (!input.value.trim()) return;
+      if (!data?.currentState) {
+        console.error("Machine data is missing current state");
+        return;
+      }
+      if (data.currentState.startsWith("specReview")) {
+        const messages = data.context?.[data.currentState]?.messages;
+        const lastMessage = messages?.slice().reverse().find((item) => item.user === void 0);
+        lastMessage.user = input.value;
+        fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: false, messages } } });
+        setSpecReviewRejected(false);
+        return;
+      }
+      fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { userResponse: input.value } } });
+      setInput((curr) => ({ ...curr, value: "", placeholder: "Tell me more..." }));
       scrollToBottom();
+    };
+    const handleAction = (action) => {
+      if (action === "approveSpec") {
+        setSpecReviewRejected(false);
+        if (!data?.currentState) {
+          console.error("Machine data is missing current state");
+          return;
+        }
+        const messages = data.context?.[data.currentState]?.messages;
+        const lastMessage = messages?.slice().reverse().find((item) => item.user === void 0);
+        lastMessage.user = "Looks good, approved.";
+        fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: true, messages } } });
+      } else if (action === "rejectSpec") {
+        setInput((curr) => ({ ...curr, placeholder: "Please provide feedback on what you would like changed" }));
+        setSpecReviewRejected(true);
+      }
     };
     return /* @__PURE__ */ u6("div", { className: "flex flex-col h-screen max-w-4xl mx-auto", children: [
       /* @__PURE__ */ u6("div", { className: "flex-1 overflow-y-auto", style: { paddingBottom: "50px" }, children: [
         /* @__PURE__ */ u6("div", { className: "space-y-4", children: [
-          data.context?.solution && /* @__PURE__ */ u6("div", { className: "p-4 bg-gray-50 rounded border", children: /* @__PURE__ */ u6(ConfirmUserIntent, { data: { confirmationPrompt: data.context.solution }, id: "solution-123" }) }),
+          data.context?.solution && /* @__PURE__ */ u6("div", { className: "bg-gray-50 rounded border mb-2", children: [
+            "Hello! I'm Larry, your AI Coding assistant. I'm working in organized way you will see below.",
+            /* @__PURE__ */ u6("br", {}),
+            "Let's move some couches today!"
+          ] }),
           getDeduplicatedStack().map((stateKey, index3) => {
             const { stateName, isPrevious, previousNumber } = parseStateKey(stateKey);
             const formattedName = isPrevious ? `${stateName} (previous ${previousNumber})` : stateName;
@@ -59350,7 +59469,7 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
                       ]
                     }
                   ),
-                  (isCurrent || !isCollapsed) && /* @__PURE__ */ u6("div", { className: "pb-3", children: renderStateComponent(stateKey) })
+                  (isCurrent || !isCollapsed) && /* @__PURE__ */ u6("div", { className: "pb-3", children: renderStateComponent(stateKey, handleAction, data.status) })
                 ]
               },
               stateKey
@@ -59362,13 +59481,13 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
           /* @__PURE__ */ u6(AnimatedEllipsis, {})
         ] })
       ] }),
-      data.status === "awaiting_human" && /* @__PURE__ */ u6("div", { style: { position: "fixed", left: 0, padding: "5px", background: "var(--vscode-editor-background)", bottom: 0, width: "100%" }, className: "sticky bottom-0 border-t shadow-lg", children: /* @__PURE__ */ u6("form", { onSubmit: handleSubmit, className: "d-flex gap-2", style: { position: "relative" }, children: [
+      showInput && /* @__PURE__ */ u6("div", { style: { position: "fixed", left: 0, padding: "5px", background: "var(--vscode-editor-background)", bottom: 0, width: "100%" }, className: "sticky bottom-0 border-t shadow-lg", children: /* @__PURE__ */ u6("form", { onSubmit: handleSubmit, className: "d-flex gap-2", style: { position: "relative" }, children: [
         /* @__PURE__ */ u6(
           index2,
           {
-            value: inputValue,
-            onInput: (e6) => setInputValue(e6.currentTarget.value),
-            placeholder: "Talk to Larry...",
+            value: input.value,
+            onInput: (e6) => setInput((curr) => ({ ...curr, value: e6.currentTarget.value })),
+            placeholder: input.placeholder,
             minRows: 2,
             maxRows: 8,
             autoFocus: true,
@@ -59407,10 +59526,12 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
     console.log(machineId);
     const { data: machineData, isLoading } = useMachineQuery(baseUrl.value, machineId);
     const { data: threadsData } = useThreadsQuery(baseUrl.value);
-    console.log("MACHINE DATA::");
-    console.log(machineData);
-    console.log("THREADS DATA::");
-    console.log(threadsData);
+    y2(() => {
+      console.log("MACHINE DATA::");
+      console.log(machineData);
+      console.log("THREADS DATA::");
+      console.log(threadsData);
+    }, [machineData, threadsData]);
     const currentThread = threadsData?.items?.find((t6) => t6.id === machineId);
     const sessionLabel = currentThread?.label || "Session";
     async function startNewThread() {
@@ -59429,27 +59550,6 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
       });
     }
     const handleSubmit = async (input) => {
-      console.log("HANDLE SUBMIT::");
-      console.log(input);
-      queryClient.setQueryData(["machine", { baseUrl: baseUrl.value, machineId }], (prev) => {
-        return {
-          ...prev,
-          status: "running"
-        };
-      });
-      if (!machineData?.currentState) {
-        console.error("Machine data is missing current state");
-        return;
-      }
-      fetch(`${baseUrl.value}/machines/${machineId}/next`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": Math.random().toString(36).substring(2, 15)
-        },
-        // fix this
-        body: JSON.stringify({ contextUpdate: { [machineData.currentState]: { userResponse: input } } })
-      });
     };
     if (machineId && machineData) {
       return /* @__PURE__ */ u6("div", { className: "min-h-screen", children: [
