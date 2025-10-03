@@ -12,6 +12,7 @@ import { container } from '@codestrap/developer-foundations-di';
 import { TYPES } from '@codestrap/developer-foundations-types';
 import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
 import { softwareArchitect } from './softwareArchitect';
+import { content } from 'googleapis/build/src/apis/content';
 
 async function getEffectedFileList(plan: string) {
   const gemini = container.get<GeminiService>(TYPES.GeminiService);
@@ -121,6 +122,16 @@ export async function architectImplementation(
             `${repoRoot}/foundry-developer-foundations`,
             f.file
           );
+
+          if (!fs.existsSync(filePath)) {
+            console.log(`file does not exist: ${filePath}`);
+            resolve({
+              file: filePath,
+              modified: false,
+              contents: undefined
+            });
+          }
+
           fs.promises.readFile(filePath, 'utf8')
             .then((value) => {
               f.contents = value;
@@ -132,11 +143,11 @@ export async function architectImplementation(
         })
     );
 
-  const fileContents = (await Promise.all(promises)) as {
+  const fileContents = ((await Promise.all(promises)) as {
     file: string;
     modified: boolean;
     contents?: string;
-  }[];
+  }[]).filter(item => item.contents !== undefined);
 
   const fileBlocks = fileContents.reduce((acc, cur) => {
     acc = `${acc}
