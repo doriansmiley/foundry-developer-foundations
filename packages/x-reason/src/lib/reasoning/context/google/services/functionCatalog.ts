@@ -147,7 +147,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log('dispatching pause from architectImplementation');
 
                     dispatch({
-                        type: 'pause',
+                        type: 'CONTINUE',
                         payload,
                     });
                 },
@@ -227,7 +227,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log('dispatching pause from generateEditMachine');
 
                     dispatch({
-                        type: 'pause',
+                        type: 'CONTINUE',
                         payload,
                     });
                 },
@@ -246,14 +246,48 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log('dispatching pause from codeReview');
 
                     if (result.approved) {
+                        console.log('dispatching CONTINUE from codeReview');
                         dispatch({
                             type: 'CONTINUE',
                             payload,
                         });
-                    } else {
-                        // refactor to target the most recent generateEditMachine passing the latest feedback from the end user
+                    } else if (result.reviewRequired) {
+                        console.log('dispatching pause from codeReview');
+                        // pause so the user can review the state machine
                         dispatch({
                             type: 'pause',
+                            payload,
+                        });
+                    } else {
+                        // the user has provided feedback we need to capture and rerun the confirm user intent state
+                        // target the most recent generateEditMachine passing the latest feedback from the end user
+                        const generateEditMachineId =
+                            context.stack
+                                ?.slice()
+                                .reverse()
+                                .find((item) => item.includes('generateEditMachine')) || '';
+
+                        // extract the user response if any. It will be the last message where user is defined
+                        const lastMessage =
+                            result.messages
+                                ?.slice()
+                                .reverse()
+                                .find((item) => item.user !== undefined);
+
+                        const payload = {
+                            generateEditMachineId,
+                            [generateEditMachineId]: {
+                                // we destructure to preserve other keys like result which holds values from user interaction
+                                ...context[generateEditMachineId],
+                                userResponse: lastMessage?.user,
+                                file: result.file,
+                            }
+                        };
+
+                        console.log(`dispatching ${generateEditMachineId} from specReview`);
+
+                        dispatch({
+                            type: generateEditMachineId,
                             payload,
                         });
                     }

@@ -1,3 +1,6 @@
+import * as path from 'path';
+import * as fs from 'fs';
+
 import { container } from '@codestrap/developer-foundations-di';
 import {
   Context,
@@ -225,13 +228,32 @@ export async function generateEditMachine(
     user?: string;
     system: string;
   }[];
+
   const architectImplementationId =
     context.stack
       ?.slice()
       .reverse()
       .find((item) => item.includes('architectImplementation')) || '';
-  const plan = (context[architectImplementationId] as UserIntent)
-    ?.confirmationPrompt;
+
+  const { file } = (context[architectImplementationId] as UserIntent);
+  // there must be a spec file generated in the previous architectureReview state
+  if (!file || !fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
+  // reload the file to get the latest contents so we can capture user edits
+  const plan = await fs.promises.readFile(file, 'utf8');
+
+  const generateEditMachineId =
+    context.stack
+      ?.slice()
+      .reverse()
+      .find((item) => item.includes('generateEditMachine')) || '';
+
+  const { userResponse, file: editsFile } = (context[generateEditMachineId] as UserIntent) || {};
+
+  let updatedContents;
+  if (editsFile) {
+    // read the file that may contain updates from the user
+    updatedContents = await fs.promises.readFile(editsFile, 'utf8');
+  }
 
   const system = `You are a senior TypeScript AST surgeon.
 Your ONLY job is to read a design spec and a repo snapshot and produce a precise, minimal JSON edit plan (“ops”) that a TS-Morph executor will run.
@@ -332,11 +354,29 @@ Output fields:
 Never include prose outside the JSON.
 `;
 
-  const user = `
-## THE DESIGN SPEC
+  // if there is a spec on file be sure to use that instead of the plan as it can be edited by the user
+  const user = userResponse ?
+    `
+# THE DESIGN SPEC
 ${plan}
 
-## TASK
+# Your previous response
+${updatedContents}
+
+# Feedback from the user
+${userResponse}
+
+# TASK
+Produce the v0 edit plan to implement the spec in this repo.
+
+Return ONLY JSON.
+`
+    :
+    `
+# THE DESIGN SPEC
+${plan}
+
+# TASK
 Produce the v0 edit plan to implement the spec in this repo.
 
 Return ONLY JSON.
@@ -383,6 +423,7 @@ Return ONLY JSON.
   if (!msg) {
     throw new Error('No message block found in output');
   }
+  // TODO wrap in try catch and implement retry on error
   const parsed = JSON.parse(msg) as EditOp[];
 
   parsedMessages.push({
@@ -395,5 +436,10 @@ Return ONLY JSON.
     context.machineExecutionId!
   );
 
-  return parsed;
+  const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `codeEdits-${context.machineExecutionId}.json`);
+  await fs.promises.writeFile(abs, JSON.stringify(parsed, null, 2), 'utf8');
+
+  return {
+    file: abs,
+  };
 }
