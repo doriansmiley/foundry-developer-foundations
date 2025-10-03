@@ -893,9 +893,24 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
   }
 
   async openFile(filePath: string) {
+    // Handle Docker container paths that start with /workspace
+    let resolvedPath = filePath;
+
+    if (filePath.startsWith('/workspace/')) {
+      // Get the current workspace root
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (workspaceFolder) {
+        // Replace /workspace with the actual workspace root path
+        resolvedPath = filePath.replace(
+          '/workspace/',
+          workspaceFolder.uri.fsPath + '/'
+        );
+      }
+    }
+
     await vscode.commands.executeCommand(
       'vscode.open',
-      vscode.Uri.file(filePath)
+      vscode.Uri.file(resolvedPath)
     );
   }
 

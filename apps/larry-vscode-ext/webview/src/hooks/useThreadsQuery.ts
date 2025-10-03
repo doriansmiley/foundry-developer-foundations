@@ -8,7 +8,7 @@ export function useThreadsQuery(baseUrl: string) {
     data: {
       items: [
         {
-          id: '8f783346-9350-4f3d-b60c-ce7863f6c7a2',
+          id: '4c84718c-d1d0-4149-840f-0bdc56112062',
           label: 'Create sending email func...',
           worktreeName: 'example-001-4ce',
           createdAt: '2025-09-29T10:00:00.000Z',
