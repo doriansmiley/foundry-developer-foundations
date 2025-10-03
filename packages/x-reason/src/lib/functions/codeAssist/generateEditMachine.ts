@@ -262,6 +262,7 @@ Rules:
 - Output MUST be valid JSON matching the provided JSON Schema (strict).
 - Only use the allowed op kinds. No free-form code, no extra fields.
 - Be surgical: smallest possible diff that satisfies the spec. If an edit is already present, omit it.
+- Do not insert comments into mutations that do not support them. For example propertySig can not contain comments!
 For example given these modification in the input spec:
 --- Modified file ---
 Path: packages/types/src/lib/types.ts
