@@ -64,52 +64,19 @@ For example:
     contents?: string;
   }[];
 
+  // TODO we need to check each file and confirm the path exists. If not retry. If still unresolved error out.
+
   return parsed;
 }
 
-export async function architectImplementation(
-  context: Context,
-  event?: MachineEvent,
-  task?: string
-): Promise<UserIntent> {
-  const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
-  // we use the thread because it should not aonly contain the design specification but user comments as well
-  const { messages } = await threadsDao.read(context.machineExecutionId!);
-  const parsedMessages = JSON.parse(messages || '[]') as {
-    user?: string;
-    system?: string;
-  }[];
-
-  const architectImplementationId =
-    context.stack
-      ?.slice()
-      .reverse()
-      .find((item) => item.includes('architectImplementation')) || '';
-
-  const { userResponse, file } = (context[architectImplementationId] as UserIntent) || {};
-
-  let updatedContents;
-  if (file) {
-    // read the file that may contain updates from the user
-    updatedContents = await fs.promises.readFile(file, 'utf8');
-  }
-
-  // if there is a user response regenerate pass it along with the updated contents
-  // else generate a new architecture plan
-  const confirmUserIntentId =
-    context.stack
-      ?.slice()
-      .reverse()
-      .find((item) => item.includes('confirmUserIntent')) || '';
-
-  const { file: designSpec } = (context[confirmUserIntentId] as UserIntent) || {};
-
-  if (!designSpec || !fs.existsSync(designSpec)) throw new Error(`File does not exist: ${designSpec}`);
-
-  const plan = await fs.promises.readFile(designSpec, 'utf8');
-
-  const files = await getEffectedFileList(plan);
-
+async function getEffectedFileBlocks(
+  files: {
+    file: string;
+    modified: boolean;
+    contents?: string;
+  }[],
+) {
+  // we overwrite every time to take into account that changes may have been introduced that effect the fil list
   // load the contents of the listed file where modified is true and await Promise.all
   const root = process.cwd();
   const repoRoot = root.split('foundry-developer-foundations')[0];
@@ -149,7 +116,7 @@ export async function architectImplementation(
     contents?: string;
   }[]).filter(item => item.contents !== undefined);
 
-  const fileBlocks = fileContents.reduce((acc, cur) => {
+  const blocks = fileContents.reduce((acc, cur) => {
     acc = `${acc}
 - File path: ${cur.file}
 - Contents:
@@ -159,6 +126,53 @@ ${cur.contents}
 `;
     return acc;
   }, `# Current contents of the Files to be Modified`);
+
+  return blocks;
+}
+
+export async function architectImplementation(
+  context: Context,
+  event?: MachineEvent,
+  task?: string
+): Promise<UserIntent> {
+  const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
+  // we use the thread because it should not only contain the design specification but user comments as well
+  const { messages } = await threadsDao.read(context.machineExecutionId!);
+  const parsedMessages = JSON.parse(messages || '[]') as {
+    user?: string;
+    system?: string;
+  }[];
+
+  const architectImplementationId =
+    context.stack
+      ?.slice()
+      .reverse()
+      .find((item) => item.includes('architectImplementation')) || '';
+
+  const { userResponse, file } = (context[architectImplementationId] as UserIntent) || {};
+
+  let updatedContents;
+  if (file) {
+    // read the file that may contain updates from the user
+    updatedContents = await fs.promises.readFile(file, 'utf8');
+  }
+
+  // if there is a user response regenerate pass it along with the updated contents
+  // else generate a new architecture plan
+  const confirmUserIntentId =
+    context.stack
+      ?.slice()
+      .reverse()
+      .find((item) => item.includes('confirmUserIntent')) || '';
+
+  const { file: designSpec } = (context[confirmUserIntentId] as UserIntent) || {};
+
+  if (!designSpec || !fs.existsSync(designSpec)) throw new Error(`File does not exist: ${designSpec}`);
+
+  const plan = await fs.promises.readFile(designSpec, 'utf8');
+
+  const files = await getEffectedFileList(plan);
+  const fileBlocks = await getEffectedFileBlocks(files);
 
   const user = userResponse
     ? `
@@ -185,12 +199,6 @@ ${userResponse}
 Carefully review for any change requests, answers to questions, etc., from the user.
 ${updatedContents}
 
-# The Design Specification
-${plan}
-
-# And the complete file contents of files to be modified.
-${fileBlocks}
-
 Generate the code blocks. Produce your answer using the **Code Edit Template** below. 
 - **Code Blocks**:
   - For each file added/modified output the code block as follows:
@@ -216,12 +224,6 @@ style, and rules.
 - Always clear references that might block garbage collection and cause memory leaks
 - Leave all test cases blank for the developer to fill in. In the comments for each test scenario include the gherkin specification as comments.
 
-# The Design Specification
-${plan}
-
-# And the complete file contents of files to be modified.
-${fileBlocks}
-
 Generate the code blocks. Produce your answer using the **Code Edit Template** below. 
 - **Code Blocks**:
   - For each file added/modified output the code block as follows:
@@ -231,7 +233,14 @@ Generate the code blocks. Produce your answer using the **Code Edit Template** b
     \`\`\`
 `;
 
-  const response = await softwareArchitect(user);
+  const prompt = `${user}
+# The Design Specification
+${plan}
+
+# And the complete file contents of files to be modified.
+${fileBlocks}`;
+
+  const response = await softwareArchitect(prompt);
 
   if (userResponse) {
     // reset the user response so they can respond again!
@@ -239,6 +248,9 @@ Generate the code blocks. Produce your answer using the **Code Edit Template** b
   }
 
   parsedMessages.push({
+    // we purposefully omit the file blocks and the plan from the messages to avoid massive bloat. 
+    // They can be reconstructed later by loading the plan file or extracting the fileBlocks from
+    // the proposedCodeEdits md file (split on # The complete current contents of all files being modified without any changes applied)
     user: user,
     system: response,
   });
