@@ -2,7 +2,6 @@ export * from './confirmUserIntent';
 export * from './searchDocumentation';
 export * from './architectImplementation';
 export * from './generateEditMachine';
-export * from './softwareArchitect';
 export * from './softwareDesignSpec';
 export * from './specReview';
 export * from './architectureReview';

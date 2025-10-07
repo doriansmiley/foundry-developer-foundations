@@ -1,0 +1,1 @@
+export { generateDesignSpec as googleSpecGenerator } from './generateDesignSpec';

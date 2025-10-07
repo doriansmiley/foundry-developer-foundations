@@ -11,8 +11,7 @@ import {
 import { container } from '@codestrap/developer-foundations-di';
 import { TYPES } from '@codestrap/developer-foundations-types';
 import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
-import { softwareArchitect } from './softwareArchitect';
-import { content } from 'googleapis/build/src/apis/content';
+import { openAiImplementationGenerator } from './delegates';
 
 async function getEffectedFileList(plan: string) {
   const gemini = container.get<GeminiService>(TYPES.GeminiService);
@@ -174,6 +173,23 @@ export async function architectImplementation(
   const files = await getEffectedFileList(plan);
   const fileBlocks = await getEffectedFileBlocks(files);
 
+  const system = `
+You are a helpful AI engineering architect that specializes in creating the final design specification based on the design specification created by the requirements team.
+Your job is to create a clean specification grounded in the provided specification with the code to be written. You must generate the proposed code!
+The specification includes citations to ground you in the sources of documentation to be used
+
+### User Inputs Include
+- A “Design Specification Conversation Thread” that may include:
+  - API surface (functions, types, file paths)
+  - Tech stack (languages, frameworks, SDKs, library names and versions)
+  - Test names and error phrases
+  - Environment/build tools (Nx, Jest, Next.js, ts-jest, Google APIs, etc.)
+  - Explicit constraints (e.g., “25 MB total attachment size”)
+- A user task/question.
+
+You always carefully evaluate user input before generating your response.
+  `;
+
   const user = userResponse
     ? `
 # Instructions
@@ -240,7 +256,8 @@ ${plan}
 # And the complete file contents of files to be modified.
 ${fileBlocks}`;
 
-  const response = await softwareArchitect(prompt);
+  // TODO inject this
+  const response = await openAiImplementationGenerator(prompt, system);
 
   if (userResponse) {
     // reset the user response so they can respond again!
