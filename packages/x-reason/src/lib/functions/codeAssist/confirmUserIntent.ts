@@ -1,20 +1,21 @@
 import {
+  Completion,
   Context,
   MachineEvent,
   ThreadsDao,
   UserIntent,
 } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
-import { GeminiService, TYPES } from '@codestrap/developer-foundations-types';
+import { TYPES } from '@codestrap/developer-foundations-types';
 import * as path from 'path';
 import * as fs from 'fs';
-import { openAiSpecGenerator } from './delegates';
+import { googleSpecGenerator, openAiSpecGenerator } from './delegates';
 
 export async function confirmUserIntent(
   context: Context,
   event?: MachineEvent,
   task?: string
-): Promise<UserIntent> {
+): Promise<Completion> {
   let messages;
 
   const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
@@ -404,7 +405,7 @@ A:
 `;
 
   // TODO inject this
-  const msg = await openAiSpecGenerator(user, system, readme);
+  const { answer, tokenomics } = await googleSpecGenerator(user, system, readme);
 
   if (userResponse) {
     // reset the user response so they can respond again!
@@ -413,7 +414,7 @@ A:
 
   parsedMessages.push({
     user: user,
-    system: msg,
+    system: answer,
   });
 
   await threadsDao.upsert(
@@ -423,10 +424,11 @@ A:
   );
 
   const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `spec-${context.machineExecutionId}.md`);
-  await fs.promises.writeFile(abs, msg, 'utf8');
+  await fs.promises.writeFile(abs, answer, 'utf8');
 
   return {
-    confirmationPrompt: msg,
+    confirmationPrompt: answer,
     file: abs,
+    tokenomics,
   };
 }

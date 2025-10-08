@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { addCitations, getTokenomics } from './utils';
 import { Tokenomics } from '@codestrap/developer-foundations-types';
 
-export async function generateDesignSpec(user: string, system: string, readme: string): Promise<{ answer: string, tokenomics: Tokenomics }> {
+export async function generateImplementation(user: string, system: string): Promise<{ answer: string, tokenomics: Tokenomics }> {
 
     // Configure the client
     const ai = new GoogleGenAI({});
@@ -21,11 +21,7 @@ export async function generateDesignSpec(user: string, system: string, readme: s
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: `${system}
-${user}
-# The README that explains the layout of the codebase you are working in. 
-You must carefully review this to understand effected files, methodologies, APIs etc. 
-It is your rosetta stone for understanding how to write code in our codebase:
-${readme}`,
+${user}`,
         config,
     });
 

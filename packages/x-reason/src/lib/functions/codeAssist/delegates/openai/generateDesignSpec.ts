@@ -1,6 +1,7 @@
+import { Tokenomics } from "@codestrap/developer-foundations-types";
 import { extractCitationsMarkdown, getTokenomics } from "./utils";
 
-export async function generateDesignSpec(user: string, system: string, readme: string): Promise<string> {
+export async function generateDesignSpec(user: string, system: string, readme: string): Promise<{ answer: string, tokenomics: Tokenomics }> {
     const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
@@ -39,13 +40,16 @@ export async function generateDesignSpec(user: string, system: string, readme: s
     }
 
     const citationsMd = extractCitationsMarkdown(resp);
+    const answer = `${msg}\n${citationsMd}`;
     // TODO post this to Foundry
-    const cost = getTokenomics(resp);
+    const tokenomics = getTokenomics(resp);
 
-    return `${msg}
+    if (!answer || tokenomics) {
+        throw new Error('Did not receive a valid answer and tokenomics');
+    }
 
-${citationsMd}
-
-# Tokenomics
-${JSON.stringify(cost)}`;
+    return {
+        answer,
+        tokenomics
+    };
 }

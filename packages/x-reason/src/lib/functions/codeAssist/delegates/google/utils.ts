@@ -32,8 +32,8 @@ export function getTokenomics(response: GenerateContentResponse, model: string) 
     const { promptTokenCount, candidatesTokenCount, totalTokenCount, thoughtsTokenCount, cachedContentTokenCount } = usage || {};
 
     const modelPricing = pricing["gemini-2.5-flash"];
-    const inputCost = (promptTokenCount ?? 0 / 1_000_000) * modelPricing.inputCostPerM;
-    const outputCost = (candidatesTokenCount ?? 0 / 1_000_000) * modelPricing.outputCostPerM;
+    const inputCost = ((promptTokenCount ?? 0) / 1000000) * modelPricing.inputCostPerM;
+    const outputCost = ((candidatesTokenCount ?? 0) / 1000000) * modelPricing.outputCostPerM;
     const totalCost = inputCost + outputCost;
 
     return {

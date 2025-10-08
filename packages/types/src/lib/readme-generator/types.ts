@@ -1,3 +1,5 @@
+import { Tokenomics } from "../x-reason/types";
+
 // src/types.ts
 export type FilePath = string;
 
@@ -210,6 +212,10 @@ export type UserIntent = {
     userResponse?: string;
     file?: string;
 }
+
+export type Completion = {
+    tokenomics: Tokenomics;
+} & UserIntent;
 
 /** Keep this union small, explicit, and auditable for v0 */
 export type EditOp =

@@ -160,3 +160,219 @@ export type SpecReviewState = {
 export type ArchitectureReviewState = {
 
 } & AbstractReviewState;
+
+export type Tokenomics = {
+  model: string;
+  inputTokens: number | undefined;
+  cachedTokens: number | undefined;
+  outputTokens: number | undefined;
+  reasoningTokens: number | undefined;
+  totalTokens: number | undefined;
+  inputCostUSD: number;
+  outputCostUSD: number;
+  totalCostUSD: number;
+}
+
+export const EditOpsJsonSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'EditPlanV0',
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    version: { type: 'string', enum: ['v0'] },
+    ops: {
+      type: 'array',
+      items: {
+        anyOf: [
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['ensureImport'] },
+              file: { type: 'string' },
+              from: { type: 'string' },
+              names: { type: ['array', 'null'], items: { type: 'string' } },
+              defaultName: { type: ['string', 'null'] },
+              isTypeOnly: { type: ['boolean', 'null'] },
+            },
+            required: [
+              'kind',
+              'file',
+              'from',
+              'names',
+              'defaultName',
+              'isTypeOnly',
+            ],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['removeImportNames'] },
+              file: { type: 'string' },
+              from: { type: 'string' },
+              names: { type: ['array', 'null'], items: { type: 'string' } },
+              defaultName: { type: ['boolean', 'null'] },
+            },
+            required: ['kind', 'file', 'from', 'names', 'defaultName'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['ensureExport'] },
+              file: { type: 'string' },
+              name: { type: 'string' },
+            },
+            required: ['kind', 'file', 'name'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['replaceFunctionBody'] },
+              file: { type: 'string' },
+              exportName: { type: 'string' },
+              body: { type: 'string' },
+            },
+            required: ['kind', 'file', 'exportName', 'body'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['updateFunctionReturnType'] },
+              file: { type: 'string' },
+              exportName: { type: 'string' },
+              returnType: { type: 'string' },
+            },
+            required: ['kind', 'file', 'exportName', 'returnType'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['replaceMethodBody'] },
+              file: { type: 'string' },
+              className: { type: 'string' },
+              methodName: { type: 'string' },
+              body: { type: 'string' },
+            },
+            required: ['kind', 'file', 'className', 'methodName', 'body'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['addUnionMember'] },
+              file: { type: 'string' },
+              typeName: { type: 'string' },
+              member: { type: 'string' },
+            },
+            required: ['kind', 'file', 'typeName', 'member'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['updateTypeProperty'] },
+              file: { type: 'string' },
+              typeName: { type: 'string' },
+              property: { type: 'string' },
+              newType: { type: 'string' },
+            },
+            required: ['kind', 'file', 'typeName', 'property', 'newType'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['insertInterfaceProperty'] },
+              file: { type: 'string' },
+              interfaceName: { type: 'string' },
+              propertySig: { type: 'string' },
+            },
+            required: ['kind', 'file', 'interfaceName', 'propertySig'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['replaceTypeAlias'] },
+              file: { type: 'string' },
+              typeName: { type: 'string' },
+              typeText: { type: 'string' },
+            },
+            required: ['kind', 'file', 'typeName', 'typeText'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['replaceInterface'] },
+              file: { type: 'string' },
+              interfaceName: { type: 'string' },
+              interfaceText: { type: 'string' },
+            },
+            required: ['kind', 'file', 'interfaceName', 'interfaceText'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['insertEnumMember'] },
+              file: { type: 'string' },
+              enumName: { type: 'string' },
+              memberName: { type: 'string' },
+              initializer: { type: ['string', 'null'] },
+            },
+            required: ['kind', 'file', 'enumName', 'memberName', 'initializer'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['upsertObjectProperty'] },
+              file: { type: 'string' },
+              exportName: { type: 'string' },
+              key: { type: 'string' },
+              valueExpr: { type: 'string' },
+            },
+            required: ['kind', 'file', 'exportName', 'key', 'valueExpr'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['renameSymbol'] },
+              file: { type: 'string' },
+              oldName: { type: 'string' },
+              newName: { type: 'string' },
+              scope: {
+                type: ['string', 'null'],
+                enum: ['exported', 'local', null],
+              },
+            },
+            required: ['kind', 'file', 'oldName', 'newName', 'scope'],
+          },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              kind: { type: 'string', enum: ['createOrReplaceFile'] },
+              file: { type: 'string' },
+              text: { type: 'string' },
+              overwrite: { type: 'boolean' },
+            },
+            required: ['kind', 'file', 'text', 'overwrite'],
+          },
+        ],
+      },
+    },
+    non_applicable: {
+      type: ['array', 'null'],
+      items: { type: 'string' },
+    },
+  },
+  required: ['version', 'ops', 'non_applicable'],
+};

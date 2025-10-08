@@ -1,9 +1,10 @@
+import { Tokenomics } from "@codestrap/developer-foundations-types";
 import { extractCitationsMarkdown, getTokenomics } from "./utils";
 
 export async function generateImplementation(
     user: string,
     system: string,
-): Promise<string> {
+): Promise<{ answer: string, tokenomics: Tokenomics }> {
 
     const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -40,14 +41,10 @@ export async function generateImplementation(
     }
 
     const citationsMd = extractCitationsMarkdown(resp);
+    const answer = `${msg}\n${citationsMd}`
     // TODO post this to Foundry
-    const cost = getTokenomics(resp);
+    const tokenomics = getTokenomics(resp);
 
-    return `${msg}
-
-${citationsMd}
-
-# Tokenomics
-${JSON.stringify(cost)}`;
+    return { answer, tokenomics };
 
 }

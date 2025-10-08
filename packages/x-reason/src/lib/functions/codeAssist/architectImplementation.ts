@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 import {
+  Completion,
   Context,
   GeminiService,
   MachineEvent,
@@ -11,9 +12,10 @@ import {
 import { container } from '@codestrap/developer-foundations-di';
 import { TYPES } from '@codestrap/developer-foundations-types';
 import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
-import { openAiImplementationGenerator } from './delegates';
+import { googleImplementationGenerator, openAiImplementationGenerator } from './delegates';
 
 async function getEffectedFileList(plan: string) {
+  // TODO replace with direct call to gemini api passing schema for structured outputs
   const gemini = container.get<GeminiService>(TYPES.GeminiService);
   const system = `You are a helpful AI coding assistant tasked with extracting the effected parts of the codebase from the design specification as JSON
   You always look for the file list in the spec. Below is an example:
@@ -133,7 +135,7 @@ export async function architectImplementation(
   context: Context,
   event?: MachineEvent,
   task?: string
-): Promise<UserIntent> {
+): Promise<Completion> {
   const threadsDao = container.get<ThreadsDao>(TYPES.ThreadsDao);
   // we use the thread because it should not only contain the design specification but user comments as well
   const { messages } = await threadsDao.read(context.machineExecutionId!);
@@ -257,7 +259,7 @@ ${plan}
 ${fileBlocks}`;
 
   // TODO inject this
-  const response = await openAiImplementationGenerator(prompt, system);
+  const { answer, tokenomics } = await googleImplementationGenerator(prompt, system);
 
   if (userResponse) {
     // reset the user response so they can respond again!
@@ -269,7 +271,7 @@ ${fileBlocks}`;
     // They can be reconstructed later by loading the plan file or extracting the fileBlocks from
     // the proposedCodeEdits md file (split on # The complete current contents of all files being modified without any changes applied)
     user: user,
-    system: response,
+    system: answer,
   });
 
   await threadsDao.upsert(
@@ -280,7 +282,7 @@ ${fileBlocks}`;
 
   const msg = `
 # Proposed Code Edits
-${response}
+${answer}
 
 # The complete current contents of all files being modified without any changes applied
 ${fileBlocks}
@@ -292,5 +294,6 @@ ${fileBlocks}
   return {
     confirmationPrompt: msg,
     file: abs,
+    tokenomics,
   };
 }
