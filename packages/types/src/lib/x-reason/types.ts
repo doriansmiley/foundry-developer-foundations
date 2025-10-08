@@ -173,6 +173,12 @@ export type Tokenomics = {
   totalCostUSD: number;
 }
 
+export type FileOp = {
+  file: string;
+  type: string;
+  contents?: string;
+}
+
 export const EditOpsJsonSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   title: 'EditPlanV0',
@@ -376,3 +382,30 @@ export const EditOpsJsonSchema = {
   },
   required: ['version', 'ops', 'non_applicable'],
 };
+
+export const AffectedFilesJsonSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: "AffectedFiles",
+  description: "Array of files affected by the spec with their change type.",
+  type: "array",
+  minItems: 1,
+  items: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      file: {
+        type: "string",
+        title: "Path to file from repo root",
+        description: "Example: packages/types/src/lib/types.ts"
+      },
+      type: {
+        type: "string",
+        enum: ["required", "added", "modified"],
+        description: "How the file is affected"
+      }
+    },
+    required: ["file", "type"],
+    propertyOrdering: ["file", "type"]
+  }
+};
+

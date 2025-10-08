@@ -4,52 +4,85 @@ import * as fs from 'fs';
 import {
   Completion,
   Context,
-  GeminiService,
+  FileOp,
   MachineEvent,
   ThreadsDao,
   UserIntent,
 } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import { TYPES } from '@codestrap/developer-foundations-types';
-import { extractJsonFromBackticks } from '@codestrap/developer-foundations-utils';
-import { googleImplementationGenerator, openAiImplementationGenerator } from './delegates';
+import { googleFileOpsGenerator, googleImplementationGenerator, openAiImplementationGenerator } from './delegates';
+
+async function verifyFilePaths(ops: FileOp[]) {
+  const root = process.cwd();
+  const repoRoot = root.split('foundry-developer-foundations')[0];
+
+  // TODO we need to check each file and confirm the path exists. If not retry. If still unresolved error out.
+  const promises = ops
+    .filter((f) => f.type === 'modified' || f.type === 'required')
+    .map(
+      (f) =>
+        new Promise((resolve, reject) => {
+          const filePath = path.join(
+            `${repoRoot}/foundry-developer-foundations`,
+            f.file
+          );
+
+          if (!fs.existsSync(filePath)) {
+            console.log(`file does not exist: ${filePath}`);
+            reject(f);
+          } else {
+            resolve(f);
+          }
+        })
+    );
+
+  const fileContents = await Promise.allSettled(promises);
+  const failed = fileContents.filter(result => result.status === 'rejected');
+
+  return failed;
+}
 
 async function getEffectedFileList(plan: string) {
   // TODO replace with direct call to gemini api passing schema for structured outputs
-  const gemini = container.get<GeminiService>(TYPES.GeminiService);
   const system = `You are a helpful AI coding assistant tasked with extracting the effected parts of the codebase from the design specification as JSON
   You always look for the file list in the spec. Below is an example:
-  Files added/modified
-Modified: packages/services/google/src/lib/delegates/sendEmail.ts
-Added: packages/services/google/src/lib/delegates/driveHelpers.ts
-Modified: packages/services/google/src/lib/types.ts (EmailContext, SendEmailOutput)
-Added: packages/services/google/src/lib/delegates/sendEmail.test.ts
+  Files added/modified/required
+  - Required: packages/services/palantir/src/lib/doa/communications/communications/upsert.ts
+  - Required: packages/services/palantir/src/lib/doa/communications/communications/upsert.test.ts
+  - Added: packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.ts
+  - Added: packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.test.ts
+  - Modified: packages/types/src/lib/types.ts (Machine)
 
 Once the file list is isolated you must extract and return as JSON in the following format:
 [
 {
 file: string;
-modified: boolean;
+type: string;
 }
 ]
 
 For example:
 [
     {
-        "file": "packages/services/google/src/lib/delegates/sendEmail.ts",
-        "modified": true
+        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.ts",
+        "type": "required"
     },
     {
-        "file": "packages/services/google/src/lib/delegates/driveHelpers.ts",
-        "modified": false
+        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.test.ts",
+        "type": "required"
     },
     {
-        "file": "packages/services/google/src/lib/types.ts",
-        "modified": true
+        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.ts",
+        "type": "added"
     },
     {
-        "file": "packages/services/google/src/lib/delegates/sendEmail.test.ts",
-        "modified": false
+        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.test.ts",
+        "type": "added"
+    },
+    {
+        "file": "packages/types/src/lib/types.ts",
+        "type": "modified"
     }
 ]
   `;
@@ -57,32 +90,34 @@ For example:
   ${plan}
   `;
 
-  const raw = await gemini(user, system);
-  const cleaned = extractJsonFromBackticks(raw);
-  const parsed = JSON.parse(cleaned) as {
-    file: string;
-    modified: boolean;
-    contents?: string;
-  }[];
+  const { ops } = await googleFileOpsGenerator(user, system);
 
-  // TODO we need to check each file and confirm the path exists. If not retry. If still unresolved error out.
+  const failed = await verifyFilePaths(ops);
 
-  return parsed;
+  if (failed.length > 0) {
+    //retry
+    const { ops } = await googleFileOpsGenerator(`${user}
+Your previous response failed to resolve the following files
+${JSON.stringify(failed)}
+Try again and make sure paths match exactly the paths in the supplied plan
+`, system);
+
+    const retriedFailures = await verifyFilePaths(ops);
+    if (retriedFailures.length > 0) {
+      throw new Error(`can not resolve paths for the following files: ${JSON.stringify(retriedFailures)}`);
+    }
+  }
+
+  return ops;
 }
 
-async function getEffectedFileBlocks(
-  files: {
-    file: string;
-    modified: boolean;
-    contents?: string;
-  }[],
-) {
+async function getEffectedFileBlocks(ops: FileOp[]) {
   // we overwrite every time to take into account that changes may have been introduced that effect the fil list
   // load the contents of the listed file where modified is true and await Promise.all
   const root = process.cwd();
   const repoRoot = root.split('foundry-developer-foundations')[0];
-  const promises = files
-    .filter((f) => f.modified)
+  const promises = ops
+    .filter((f) => f.type === 'modified' || f.type === 'required')
     .map(
       (f) =>
         new Promise((resolve, reject) => {
