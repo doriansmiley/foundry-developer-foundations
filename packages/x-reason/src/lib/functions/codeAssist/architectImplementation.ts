@@ -259,7 +259,7 @@ ${plan}
 ${fileBlocks}`;
 
   // TODO inject this
-  const { answer, tokenomics } = await googleImplementationGenerator(prompt, system);
+  const { answer, tokenomics } = await openAiImplementationGenerator(prompt, system);
 
   if (userResponse) {
     // reset the user response so they can respond again!

@@ -44,8 +44,8 @@ export async function generateDesignSpec(user: string, system: string, readme: s
     // TODO post this to Foundry
     const tokenomics = getTokenomics(resp);
 
-    if (!answer || tokenomics) {
-        throw new Error('Did not receive a valid answer and tokenomics');
+    if (!answer) {
+        throw new Error('Did not receive a valid answer');
     }
 
     return {

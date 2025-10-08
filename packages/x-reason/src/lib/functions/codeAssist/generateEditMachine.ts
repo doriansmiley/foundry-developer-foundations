@@ -9,7 +9,7 @@ import {
   TYPES,
   UserIntent,
 } from '@codestrap/developer-foundations-types';
-import { googleEditOpsGenerator, openAiEditOpsGenerator } from './delegates';
+import { openAiEditOpsGenerator } from './delegates';
 
 export async function generateEditMachine(
   context: Context,
@@ -181,7 +181,7 @@ Produce the v0 edit plan to implement the spec in this repo.
 Return ONLY JSON.
 `;
 
-  const { ops, tokenomics } = await googleEditOpsGenerator(user, system);
+  const { ops, tokenomics } = await openAiEditOpsGenerator(user, system);
 
   parsedMessages.push({
     system: JSON.stringify(ops),

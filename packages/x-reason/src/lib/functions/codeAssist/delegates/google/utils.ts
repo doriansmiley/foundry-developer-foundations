@@ -5,6 +5,7 @@ export function getTokenomics(response: GenerateContentResponse, model: string) 
     const usage = response.usageMetadata;
 
     const pricing = {
+        // price in millions of tokens
         "gemini-2.5-pro": {
             // Price depends on the prompt length
             inputCostPerM: (promptTokens: number) => promptTokens <= 200_000 ? 1.25 : 2.50,

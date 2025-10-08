@@ -405,7 +405,7 @@ A:
 `;
 
   // TODO inject this
-  const { answer, tokenomics } = await googleSpecGenerator(user, system, readme);
+  const { answer, tokenomics } = await openAiSpecGenerator(user, system, readme);
 
   if (userResponse) {
     // reset the user response so they can respond again!

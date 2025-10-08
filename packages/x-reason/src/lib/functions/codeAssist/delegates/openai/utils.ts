@@ -32,15 +32,16 @@ export function getTokenomics(resp: OpenAIResponse) {
 
     // --- Pricing table (USD per 1K tokens) ---
     const pricing: Record<string, { input: number; output: number }> = {
-        "gpt-5-mini": { input: 0.0003, output: 0.0015 },
-        "gpt-5": { input: 0.001, output: 0.005 },
+        // price in millions of tokens
+        "gpt-5-mini": { input: 0.250, output: 2 },
+        "gpt-5": { input: 1.250, output: 10 },
     };
 
     const model = resp.model ?? "gpt-5-mini";
     const rate = pricing[model] ?? pricing["gpt-5-mini"];
 
-    const inputCost = (input / 1000) * rate.input;
-    const outputCost = (output / 1000) * rate.output;
+    const inputCost = (input / 1000000) * rate.input;
+    const outputCost = (output / 1000000) * rate.output;
     const totalCost = inputCost + outputCost;
 
     return {
