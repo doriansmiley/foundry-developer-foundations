@@ -914,6 +914,28 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     );
   }
 
+  async readFileContent(filePath: string) {
+    // Handle Docker container paths that start with /workspace
+    let resolvedPath = filePath;
+
+    if (filePath.startsWith('/workspace/')) {
+      // Get the current workspace root
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (workspaceFolder) {
+        // Replace /workspace with the actual workspace root path
+        resolvedPath = filePath.replace(
+          '/workspace/',
+          workspaceFolder.uri.fsPath + '/'
+        );
+      }
+    }
+
+    const fileContent = await vscode.workspace.fs.readFile(
+      vscode.Uri.file(resolvedPath)
+    );
+    return Buffer.from(fileContent).toString('utf8');
+  }
+
   resolveWebviewView(view: vscode.WebviewView) {
     console.log('🎯 Larry webview opened by user - initializing...');
     this.view = view;
@@ -976,6 +998,16 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
       if (msg?.type === 'openFile') {
         await this.openFile(msg.file);
+        return;
+      }
+
+      if (msg?.type === 'readFile') {
+        const content = await this.readFileContent(msg.filePath);
+        view.webview.postMessage({
+          type: 'fileContent',
+          filePath: msg.filePath,
+          content: content,
+        });
         return;
       }
     });

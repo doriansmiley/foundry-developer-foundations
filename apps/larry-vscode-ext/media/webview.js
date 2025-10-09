@@ -854,7 +854,7 @@
       function Q3(t7) {
         return !!t7.__k && (n4.render(null, t7), true);
       }
-      function X2(n5) {
+      function X3(n5) {
         return n5 && (n5.base || 1 === n5.nodeType && n5) || null;
       }
       var nn = function(n5, t7) {
@@ -865,7 +865,7 @@
       };
       var en = n4.Fragment;
       var rn = $4;
-      var un = { useState: t6.useState, useId: t6.useId, useReducer: t6.useReducer, useEffect: t6.useEffect, useLayoutEffect: t6.useLayoutEffect, useInsertionEffect: f7, useTransition: l8, useDeferredValue: c6, useSyncExternalStore: u7, startTransition: i7, useRef: t6.useRef, useImperativeHandle: t6.useImperativeHandle, useMemo: t6.useMemo, useCallback: t6.useCallback, useContext: t6.useContext, useDebugValue: t6.useDebugValue, version: "18.3.1", Children: m7, render: D6, hydrate: L4, unmountComponentAtNode: Q3, createPortal: j6, createElement: n4.createElement, createContext: n4.createContext, createFactory: Y, cloneElement: K3, createRef: n4.createRef, Fragment: n4.Fragment, isValidElement: $4, isElement: rn, isFragment: G2, isMemo: J3, findDOMNode: X2, Component: n4.Component, PureComponent: a6, memo: s6, forwardRef: v7, flushSync: tn, unstable_batchedUpdates: nn, StrictMode: en, Suspense: g6, SuspenseList: C6, lazy: E5, __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED: Z };
+      var un = { useState: t6.useState, useId: t6.useId, useReducer: t6.useReducer, useEffect: t6.useEffect, useLayoutEffect: t6.useLayoutEffect, useInsertionEffect: f7, useTransition: l8, useDeferredValue: c6, useSyncExternalStore: u7, startTransition: i7, useRef: t6.useRef, useImperativeHandle: t6.useImperativeHandle, useMemo: t6.useMemo, useCallback: t6.useCallback, useContext: t6.useContext, useDebugValue: t6.useDebugValue, version: "18.3.1", Children: m7, render: D6, hydrate: L4, unmountComponentAtNode: Q3, createPortal: j6, createElement: n4.createElement, createContext: n4.createContext, createFactory: Y, cloneElement: K3, createRef: n4.createRef, Fragment: n4.Fragment, isValidElement: $4, isElement: rn, isFragment: G2, isMemo: J3, findDOMNode: X3, Component: n4.Component, PureComponent: a6, memo: s6, forwardRef: v7, flushSync: tn, unstable_batchedUpdates: nn, StrictMode: en, Suspense: g6, SuspenseList: C6, lazy: E5, __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED: Z };
       Object.defineProperty(exports, "Component", { enumerable: true, get: function() {
         return n4.Component;
       } }), Object.defineProperty(exports, "Fragment", { enumerable: true, get: function() {
@@ -876,7 +876,7 @@
         return n4.createElement;
       } }), Object.defineProperty(exports, "createRef", { enumerable: true, get: function() {
         return n4.createRef;
-      } }), exports.Children = m7, exports.PureComponent = a6, exports.StrictMode = en, exports.Suspense = g6, exports.SuspenseList = C6, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = Z, exports.cloneElement = K3, exports.createFactory = Y, exports.createPortal = j6, exports.default = un, exports.findDOMNode = X2, exports.flushSync = tn, exports.forwardRef = v7, exports.hydrate = L4, exports.isElement = rn, exports.isFragment = G2, exports.isMemo = J3, exports.isValidElement = $4, exports.lazy = E5, exports.memo = s6, exports.render = D6, exports.startTransition = i7, exports.unmountComponentAtNode = Q3, exports.unstable_batchedUpdates = nn, exports.useDeferredValue = c6, exports.useInsertionEffect = f7, exports.useSyncExternalStore = u7, exports.useTransition = l8, exports.version = "18.3.1", Object.keys(t6).forEach(function(n5) {
+      } }), exports.Children = m7, exports.PureComponent = a6, exports.StrictMode = en, exports.Suspense = g6, exports.SuspenseList = C6, exports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = Z, exports.cloneElement = K3, exports.createFactory = Y, exports.createPortal = j6, exports.default = un, exports.findDOMNode = X3, exports.flushSync = tn, exports.forwardRef = v7, exports.hydrate = L4, exports.isElement = rn, exports.isFragment = G2, exports.isMemo = J3, exports.isValidElement = $4, exports.lazy = E5, exports.memo = s6, exports.render = D6, exports.startTransition = i7, exports.unmountComponentAtNode = Q3, exports.unstable_batchedUpdates = nn, exports.useDeferredValue = c6, exports.useInsertionEffect = f7, exports.useSyncExternalStore = u7, exports.useTransition = l8, exports.version = "18.3.1", Object.keys(t6).forEach(function(n5) {
         "default" === n5 || exports.hasOwnProperty(n5) || Object.defineProperty(exports, n5, { enumerable: true, get: function() {
           return t6[n5];
         } });
@@ -56398,7 +56398,7 @@
       data: {
         items: [
           {
-            id: "8f783346-9350-4f3d-b60c-ce7863f6c7a2",
+            id: "4c84718c-d1d0-4149-840f-0bdc56112062",
             label: "Create sending email func...",
             worktreeName: "example-001-4ce",
             createdAt: "2025-09-29T10:00:00.000Z",
@@ -58901,6 +58901,9 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
     return Component;
   };
 
+  // node_modules/lucide-preact/dist/esm/icons/check.js
+  var Check = createLucideIcon("check", [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]]);
+
   // node_modules/lucide-preact/dist/esm/icons/chevron-down.js
   var ChevronDown = createLucideIcon("chevron-down", [
     ["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]
@@ -58909,6 +58912,35 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
   // node_modules/lucide-preact/dist/esm/icons/chevron-right.js
   var ChevronRight = createLucideIcon("chevron-right", [
     ["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]
+  ]);
+
+  // node_modules/lucide-preact/dist/esm/icons/copy.js
+  var Copy = createLucideIcon("copy", [
+    ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
+    ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
+  ]);
+
+  // node_modules/lucide-preact/dist/esm/icons/file-diff.js
+  var FileDiff = createLucideIcon("file-diff", [
+    ["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", key: "1rqfz7" }],
+    ["path", { d: "M9 10h6", key: "9gxzsh" }],
+    ["path", { d: "M12 13V7", key: "h0r20n" }],
+    ["path", { d: "M9 17h6", key: "r8uit2" }]
+  ]);
+
+  // node_modules/lucide-preact/dist/esm/icons/file-minus-2.js
+  var FileMinus2 = createLucideIcon("file-minus-2", [
+    ["path", { d: "M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4", key: "1pf5j1" }],
+    ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4", key: "tnqrlb" }],
+    ["path", { d: "M3 15h6", key: "4e2qda" }]
+  ]);
+
+  // node_modules/lucide-preact/dist/esm/icons/file-plus-2.js
+  var FilePlus2 = createLucideIcon("file-plus-2", [
+    ["path", { d: "M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4", key: "1pf5j1" }],
+    ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4", key: "tnqrlb" }],
+    ["path", { d: "M3 15h6", key: "4e2qda" }],
+    ["path", { d: "M6 12v6", key: "1u72j0" }]
   ]);
 
   // node_modules/lucide-preact/dist/esm/icons/send.js
@@ -58921,6 +58953,12 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
       }
     ],
     ["path", { d: "m21.854 2.147-10.94 10.939", key: "12cjpa" }]
+  ]);
+
+  // node_modules/lucide-preact/dist/esm/icons/x.js
+  var X2 = createLucideIcon("x", [
+    ["path", { d: "M18 6 6 18", key: "1bl5f8" }],
+    ["path", { d: "m6 6 12 12", key: "d8bk6v" }]
   ]);
 
   // node_modules/@babel/runtime/helpers/esm/extends.js
@@ -59272,6 +59310,207 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
     };
   }
 
+  // apps/larry-vscode-ext/webview/src/views/components/states/ArchitectureReview/ArchitectureReview.tsx
+  init_hooks_module();
+
+  // apps/larry-vscode-ext/webview/src/hooks/useContentFromLocalFile.ts
+  init_hooks_module();
+  function useContentFromLocalFile(filePath) {
+    const [content, setContent] = d2(null);
+    y2(() => {
+      const cleanup = onMessage((msg) => {
+        if (msg.type === "fileContent" && msg.filePath === filePath) {
+          setContent(msg.content);
+        }
+      });
+      postMessage({
+        type: "readFile",
+        filePath
+      });
+      return cleanup;
+    }, [filePath]);
+    return { content };
+  }
+
+  // apps/larry-vscode-ext/webview/src/views/components/states/ArchitectureReview/useParseCodeEdits.ts
+  init_hooks_module();
+  function parseCodeEdits(input) {
+    const fileRegex = /^File:\s+(.+?)\s+\((ADDED|MODIFIED|DELETED)\)$/gm;
+    const blocks = [];
+    let match;
+    while ((match = fileRegex.exec(input)) !== null) {
+      const filePath = match[1].trim();
+      const typeWord = match[2];
+      const type = typeWord === "ADDED" ? "CREATE" : typeWord === "MODIFIED" ? "MODIFY" : "DELETE";
+      const startIdx = match.index + match[0].length;
+      const nextMatch = fileRegex.exec(input);
+      const endIdx = nextMatch ? nextMatch.index : input.length;
+      fileRegex.lastIndex = nextMatch ? nextMatch.index : input.length;
+      const blockContent = input.slice(startIdx, endIdx).trim();
+      const codeBlockMatch = blockContent.match(/```[\s\S]*?```/);
+      const proposedChange = codeBlockMatch ? codeBlockMatch[0] : "";
+      blocks.push({ filePath, type, proposedChange });
+    }
+    return blocks;
+  }
+  function useParseCodeEdits(content) {
+    if (!content) {
+      return [];
+    }
+    return T2(() => parseCodeEdits(content), [content]);
+  }
+
+  // apps/larry-vscode-ext/webview/src/hooks/useMarkdown.ts
+  d6.setOptions({
+    breaks: true,
+    gfm: true
+  });
+  function useMarkdown() {
+    return (content) => {
+      const html2 = d6.parse(content);
+      const decodedHtml = html2.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+      return purify.sanitize(decodedHtml);
+    };
+  }
+
+  // apps/larry-vscode-ext/webview/src/views/components/states/ArchitectureReview/ArchitectureReview.tsx
+  function CodeBlock({ code, codeBlockRef }) {
+    const mark = useMarkdown();
+    const codeContent = mark(code);
+    return /* @__PURE__ */ u6("div", { className: "markdown-content markdown-body", ref: codeBlockRef, children: /* @__PURE__ */ u6("span", { dangerouslySetInnerHTML: { __html: codeContent } }) });
+  }
+  function ArchitectureReview({ data, id, onAction, machineStatus }) {
+    const file = data.file;
+    const { content } = useContentFromLocalFile(file);
+    const codeEdits = useParseCodeEdits(content);
+    const [copiedStates, setCopiedStates] = d2({});
+    const [fileApprovals, setFileApprovals] = d2({});
+    const codeBlockRefs = A2({});
+    const handleIndividualApprove = (filePath) => {
+      setFileApprovals((prev) => ({
+        ...prev,
+        [filePath]: { filePath, approved: true }
+      }));
+    };
+    const handleIndividualReject = (filePath) => {
+      setFileApprovals((prev) => ({
+        ...prev,
+        [filePath]: { filePath, approved: false }
+      }));
+      onAction("rejectArchitecture", `Rejected files: ${Object.values(fileApprovals).map((approval) => approval?.filePath).join(", ")}`);
+    };
+    const approveArchitecture = () => {
+      const allApprovals = {};
+      codeEdits.forEach((codeEdit) => {
+        allApprovals[codeEdit.filePath] = { filePath: codeEdit.filePath, approved: true };
+      });
+      setFileApprovals(allApprovals);
+      onAction("approveArchitecture");
+    };
+    const rejectArchitecture = () => {
+      const allRejections = {};
+      codeEdits.forEach((codeEdit) => {
+        allRejections[codeEdit.filePath] = { filePath: codeEdit.filePath, approved: false };
+      });
+      setFileApprovals(allRejections);
+      onAction("rejectArchitecture");
+    };
+    const handleCopyClick = async (filePath, code) => {
+      try {
+        const codeBlockElement = codeBlockRefs.current[filePath];
+        if (codeBlockElement) {
+          const range = document.createRange();
+          range.selectNodeContents(codeBlockElement);
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        }
+        await navigator.clipboard.writeText(code);
+        setCopiedStates((prev) => ({ ...prev, [filePath]: true }));
+        setTimeout(() => {
+          setCopiedStates((prev) => ({ ...prev, [filePath]: false }));
+        }, 5e3);
+      } catch (err) {
+        console.error("Failed to copy text: ", err);
+      }
+    };
+    const lucideIconsMap = {
+      CREATE: /* @__PURE__ */ u6(FilePlus2, { className: "create-icon" }),
+      MODIFY: /* @__PURE__ */ u6(FileDiff, { className: "modify-icon" }),
+      DELETE: /* @__PURE__ */ u6(FileMinus2, { className: "delete-icon" })
+    };
+    return /* @__PURE__ */ u6("div", { className: "ArchitectureReview", children: [
+      /* @__PURE__ */ u6("div", { children: "Please review the architecture:" }),
+      /* @__PURE__ */ u6("br", {}),
+      codeEdits.map((codeEdit) => {
+        const approval = fileApprovals[codeEdit.filePath];
+        const isApproved = approval?.approved === true;
+        const isRejected = approval?.approved === false;
+        return /* @__PURE__ */ u6("div", { children: [
+          /* @__PURE__ */ u6("div", { className: "codeBlockHeader", children: [
+            lucideIconsMap[codeEdit.type],
+            /* @__PURE__ */ u6("div", { children: codeEdit.filePath })
+          ] }),
+          /* @__PURE__ */ u6(
+            CodeBlock,
+            {
+              code: codeEdit.proposedChange,
+              codeBlockRef: (el) => {
+                codeBlockRefs.current[codeEdit.filePath] = el;
+              }
+            }
+          ),
+          /* @__PURE__ */ u6("div", { className: "codeBlockFooter", children: [
+            /* @__PURE__ */ u6("div", { className: "actionButtons", children: [
+              /* @__PURE__ */ u6(
+                "div",
+                {
+                  className: `d-flex text-button ${isApproved ? "selected" : ""}`,
+                  onClick: () => handleIndividualApprove(codeEdit.filePath),
+                  style: { cursor: "pointer" },
+                  children: [
+                    /* @__PURE__ */ u6(Check, { className: "check-icon" }),
+                    "Approve"
+                  ]
+                }
+              ),
+              /* @__PURE__ */ u6(
+                "div",
+                {
+                  className: `d-flex text-button ${isRejected ? "selected" : ""}`,
+                  onClick: () => handleIndividualReject(codeEdit.filePath),
+                  style: { cursor: "pointer" },
+                  children: [
+                    /* @__PURE__ */ u6(X2, { className: "reject-icon" }),
+                    "Reject"
+                  ]
+                }
+              )
+            ] }),
+            /* @__PURE__ */ u6("div", { className: "text-button", children: [
+              copiedStates[codeEdit.filePath] && /* @__PURE__ */ u6("span", { className: "copied-indicator", style: { marginLeft: "8px", fontSize: "12px", color: "#28a745" }, children: "Copied" }),
+              /* @__PURE__ */ u6(
+                Copy,
+                {
+                  className: "copy-icon",
+                  onClick: () => handleCopyClick(codeEdit.filePath, codeEdit.proposedChange),
+                  style: { cursor: "pointer" }
+                }
+              )
+            ] })
+          ] })
+        ] }, codeEdit.filePath);
+      }),
+      /* @__PURE__ */ u6("hr", {}),
+      machineStatus === "awaiting_human" && /* @__PURE__ */ u6("div", { className: "d-flex mt-2", children: [
+        /* @__PURE__ */ u6("button", { className: "btn btn-primary mr-1 ml-1", onClick: approveArchitecture, children: "Approve All" }),
+        /* @__PURE__ */ u6("button", { className: "btn mr-1 ml-1", onClick: rejectArchitecture, children: "Reject All" })
+      ] })
+    ] });
+  }
+
   // apps/larry-vscode-ext/webview/src/views/components/StateVisualization.tsx
   var ArchitecturePhase = () => /* @__PURE__ */ u6("div", { children: "TODO" });
   var SearchDocumentation = () => /* @__PURE__ */ u6("div", {});
@@ -59279,17 +59518,23 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
     specReview: SpecReview,
     confirmUserIntent: ConfirmUserIntent,
     architectImplementation: ArchitecturePhase,
+    architectureReview: ArchitectureReview,
     searchDocumentation: SearchDocumentation
   };
   function StateVisualization({ data, onSubmit }) {
     const { fetch: fetchGetNextState } = useNextMachineState(baseUrl.value);
     const [specReviewRejected, setSpecReviewRejected] = d2(false);
+    const [architectureReviewRejected, setArchitectureReviewRejected] = d2(false);
+    const [architectureReviewPayload, setArchitectureReviewPayload] = d2(null);
     const [input, setInput] = d2({ placeholder: "Tell me more...", value: "" });
     const showInput = T2(() => {
       if (data?.currentState?.startsWith("confirmUserIntent") && data.status === "awaiting_human") {
         return true;
       }
       if (data?.currentState?.startsWith("specReview") && specReviewRejected) {
+        return true;
+      }
+      if (data?.currentState?.startsWith("architectureReview") && architectureReviewRejected) {
         return true;
       }
     }, [data, specReviewRejected]);
@@ -59409,12 +59654,23 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
         setSpecReviewRejected(false);
         return;
       }
+      if (data.currentState.startsWith("architectureReview")) {
+        const messages = data.context?.[data.currentState]?.messages;
+        const lastMessage = messages?.slice().reverse().find((item) => item.user === void 0);
+        lastMessage.user = `${architectureReviewPayload}
+
+${input.value}`;
+        fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: false, messages } } });
+        setArchitectureReviewRejected(false);
+        setArchitectureReviewPayload(null);
+        return;
+      }
       fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { userResponse: input.value } } });
       setInput((curr) => ({ ...curr, value: "", placeholder: "Tell me more..." }));
       scrollToBottom();
     };
-    const handleAction = (action) => {
-      if (action === "approveSpec") {
+    const handleAction = (action, payload) => {
+      if (action === "approveSpec" || action === "approveArchitecture") {
         setSpecReviewRejected(false);
         if (!data?.currentState) {
           console.error("Machine data is missing current state");
@@ -59427,6 +59683,10 @@ Please report this to https://github.com/markedjs/marked.`, e6) {
       } else if (action === "rejectSpec") {
         setInput((curr) => ({ ...curr, placeholder: "Please provide feedback on what you would like changed" }));
         setSpecReviewRejected(true);
+      } else if (action === "rejectArchitecture") {
+        setInput((curr) => ({ ...curr, placeholder: "Please provide feedback on what you would like changed" }));
+        setArchitectureReviewRejected(true);
+        setArchitectureReviewPayload(payload);
       }
     };
     return /* @__PURE__ */ u6("div", { className: "flex flex-col h-screen max-w-4xl mx-auto", children: [
@@ -59734,6 +59994,14 @@ lucide-preact/dist/esm/createLucideIcon.js:
    * See the LICENSE file in the root directory of this source tree.
    *)
 
+lucide-preact/dist/esm/icons/check.js:
+  (**
+   * @license lucide-preact v0.544.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
 lucide-preact/dist/esm/icons/chevron-down.js:
   (**
    * @license lucide-preact v0.544.0 - ISC
@@ -59750,7 +60018,47 @@ lucide-preact/dist/esm/icons/chevron-right.js:
    * See the LICENSE file in the root directory of this source tree.
    *)
 
+lucide-preact/dist/esm/icons/copy.js:
+  (**
+   * @license lucide-preact v0.544.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-preact/dist/esm/icons/file-diff.js:
+  (**
+   * @license lucide-preact v0.544.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-preact/dist/esm/icons/file-minus-2.js:
+  (**
+   * @license lucide-preact v0.544.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-preact/dist/esm/icons/file-plus-2.js:
+  (**
+   * @license lucide-preact v0.544.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
 lucide-preact/dist/esm/icons/send.js:
+  (**
+   * @license lucide-preact v0.544.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-preact/dist/esm/icons/x.js:
   (**
    * @license lucide-preact v0.544.0 - ISC
    *
