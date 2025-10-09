@@ -1,42 +1,49 @@
 import { useEffect } from 'preact/hooks';
 import { onMessage, postMessage } from '../lib/vscode';
-import { isInWorktree, currentThreadId, setupPhase, worktreeName, isLoadingWorktreeInfo } from '../signals/store';
+import { useExtensionDispatch, useExtensionStore } from '../store/store';
 import { handleForwardedSSE } from '../lib/extension-sse-bridge';
 
 export function BootChannel() {
+  const dispatch = useExtensionDispatch();
+  const { clientRequestId } = useExtensionStore();
+
   useEffect(() => {
     const handleMessage = (msg: any) => {
       if (!msg || typeof msg !== 'object') return;
       
       if (msg.type === 'worktree_detection') {
-        isInWorktree.value = !!msg.isInWorktree;
-        currentThreadId.value = msg.currentThreadId || undefined;
-        // If extension can pass worktreeName, capture it
-        if (msg.worktreeName) worktreeName.value = msg.worktreeName;
-        // Update signals for other components
-        isLoadingWorktreeInfo.value = false;
-        
-        // Update loading state for AppRoot
-        if (typeof window !== 'undefined' && (window as any).setAppLoading) {
-          (window as any).setAppLoading(false);
-        }
+        dispatch({
+          type: 'SET_WORKTREE_DETECTION',
+          payload: {
+            isInWorktree: !!msg.isInWorktree,
+            currentThreadId: msg.currentThreadId || undefined,
+            worktreeName: msg.worktreeName,
+          },
+        });
       }
       
       if (msg.type === 'worktree_ready') {
-        setupPhase.value = 'ready';
-        if (msg.threadId) currentThreadId.value = msg.threadId;
-        if (msg.worktreeName) worktreeName.value = msg.worktreeName;
+        dispatch({
+          type: 'SET_WORKTREE_READY',
+          payload: {
+            threadId: msg.threadId,
+            worktreeName: msg.worktreeName,
+          },
+        });
       }
       
       if (msg.type === 'worktree_setup_error') {
-        setupPhase.value = 'error';
+        dispatch({ type: 'SET_WORKTREE_SETUP_ERROR' });
       }
 
       console.log('📨 Webview received message:', msg);
       // NEW: forwarded SSE
       if (msg.type === 'sse_event' && msg.baseUrl && msg.event && typeof msg.data === 'string') {
         console.log('📨 Webview received SSE event:', msg);
-        handleForwardedSSE({ baseUrl: msg.baseUrl, event: msg.event, data: msg.data });
+        handleForwardedSSE(
+          { baseUrl: msg.baseUrl, event: msg.event, data: msg.data },
+          { clientRequestId, dispatch }
+        );
       }
 
     };

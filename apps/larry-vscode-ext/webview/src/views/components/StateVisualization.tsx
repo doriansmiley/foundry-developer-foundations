@@ -7,7 +7,7 @@ import { ChevronRight, SendIcon } from "lucide-preact";
 import { ChevronDown } from "lucide-preact";
 import TextareaAutosize from "react-textarea-autosize";
 import { AnimatedEllipsis } from "./AnimatedEllipsis.tsx";
-import { baseUrl } from "../../signals/store";
+import { useExtensionStore } from "../../store/store";
 import { SpecReview } from "./states/SpecReview.tsx";
 import { useNextMachineState } from "../../hooks/useNextState.ts";
 import { ArchitectureReview } from "./states/ArchitectureReview/ArchitectureReview.tsx";
@@ -24,7 +24,8 @@ const stateComponentMap: Record<string, any> = {
 };
 
 export function StateVisualization({data, onSubmit}: {data: MachineResponse, onSubmit: (input: string) => void}) {
-  const { fetch: fetchGetNextState } = useNextMachineState(baseUrl.value);
+  const { apiUrl } = useExtensionStore();
+  const { fetch: fetchGetNextState } = useNextMachineState(apiUrl);
   const [specReviewRejected, setSpecReviewRejected] = useState(false);
   const [architectureReviewRejected, setArchitectureReviewRejected] = useState(false);
   const [architectureReviewPayload, setArchitectureReviewPayload] = useState<any>(null);

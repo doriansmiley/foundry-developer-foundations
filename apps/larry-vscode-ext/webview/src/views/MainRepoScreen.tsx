@@ -1,39 +1,36 @@
 import React from 'react';
 import { useMemo, useState, useEffect } from 'preact/hooks';
 import { useThreadsQuery } from '../hooks/useThreadsQuery';
-import { baseUrl, setupPhase as setupPhaseSignal } from '../signals/store';
+import { useExtensionStore } from '../store/store';
 import { postMessage } from '../lib/vscode';
 import type { ThreadListItem } from '../lib/backend-types';
 import { ThreadsList } from './components/ThreadsList';
 import { AnimatedEllipsis } from './components/AnimatedEllipsis';
 
 export function MainRepoScreen() {
-  const { data, isLoading } = useThreadsQuery(baseUrl.value);
+  const { apiUrl, currentThreadState } = useExtensionStore();
+  const { data, isLoading } = useThreadsQuery(apiUrl);
   const [newLabel, setNewLabel] = useState('');
   const [selectedThreadId, setSelectedThreadId] = useState<string | undefined>(undefined);
   const [searchText, setSearchText] = useState('');
   const [setupPhase, setSetupPhase] = useState<'idle' | 'setting_up' | 'ready' | 'error'>('idle');
 
   useEffect(() => {
-    const unsubscribe = setupPhaseSignal.subscribe((phase) => {
-      if (phase === 'ready') {
-        // Reset all relevant states when setup is ready
-        setSetupPhase('idle');
-        setNewLabel('');
-        setSelectedThreadId(undefined);
-        setSearchText('');
-      }
+    if (currentThreadState === 'ready') {
+      // Reset all relevant states when setup is ready
+      setSetupPhase('idle');
+      setNewLabel('');
+      setSelectedThreadId(undefined);
+      setSearchText('');
+    }
 
-      if (phase === 'error') {
-        setSetupPhase('error');
-        setNewLabel('');
-        setSelectedThreadId(undefined);
-        setSearchText('');
-      }
-    });
-
-    return unsubscribe;
-  }, []);
+    if (currentThreadState === 'error') {
+      setSetupPhase('error');
+      setNewLabel('');
+      setSelectedThreadId(undefined);
+      setSearchText('');
+    }
+  }, [currentThreadState]);
 
   const items = data?.items ?? [];
   const filtered = useMemo(() => {

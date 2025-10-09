@@ -4,14 +4,20 @@ import type {
   ThreadCreatedEvent,
   ThreadsListResponse,
 } from './backend-types';
-import { currentThreadId, clientRequestId } from '../signals/store';
+import type { ExtensionAction } from '../store/store';
 
 // Handle a single forwarded SSE event from the extension
-export function handleForwardedSSE(msg: {
-  baseUrl: string;
-  event: string;
-  data: string;
-}) {
+export function handleForwardedSSE(
+  msg: {
+    baseUrl: string;
+    event: string;
+    data: string;
+  },
+  storeValues: {
+    clientRequestId: string;
+    dispatch: (action: ExtensionAction) => void;
+  }
+) {
   const { baseUrl, event, data } = msg;
 
   try {
@@ -44,10 +50,13 @@ export function handleForwardedSSE(msg: {
       // If this event belongs to our submission, adopt the new machine/thread id
       if (
         evt.clientRequestId &&
-        evt.clientRequestId === clientRequestId.value
+        evt.clientRequestId === storeValues.clientRequestId
       ) {
         console.log('Setting currentThreadId to:', evt.machineId);
-        currentThreadId.value = evt.machineId; // machineId == threadId for now
+        storeValues.dispatch({
+          type: 'SET_CURRENT_THREAD_ID',
+          payload: evt.machineId, // machineId == threadId for now
+        });
       }
       return;
     }

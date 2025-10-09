@@ -5,14 +5,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppRoot } from './views/AppRoot';
 import { BootChannel } from './views/BootChannel';
 import { queryClient } from './lib/query';
+import {ExtensionStoreProvider} from './store/store';
 
 function Root() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <div>
+  const content = (
+    <ExtensionStoreProvider>
         <BootChannel />
         <AppRoot />
-      </div>
+      </ExtensionStoreProvider>
+  ) as any;
+  return (
+    <QueryClientProvider client={queryClient}>
+      {content}
     </QueryClientProvider>
   );
 }

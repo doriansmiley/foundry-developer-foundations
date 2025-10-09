@@ -1,19 +1,14 @@
-import { useState } from 'preact/hooks';
-import { isInWorktree } from '../signals/store';
+/* JSX */
+/* @jsxImportSource preact */
+import { useExtensionStore } from '../store/store';
 import { MainRepoScreen } from './MainRepoScreen';
 import { WorktreeScreen } from './WorktreeScreen';
 import { Loader } from './components/Loader';
 
 export function AppRoot() {
-  // Simple useState for loading - starts as true
-  const [isLoading, setIsLoading] = useState(true);
+  const { isInWorktree, isLoadingApp } = useExtensionStore();
   
-  // Expose a simple function for BootChannel to call
-  if (typeof window !== 'undefined') {
-    (window as any).setAppLoading = setIsLoading;
-  }
-  
-  if (isLoading) {
+  if (isLoadingApp) {
     return (
       <div className="p-3">
         <Loader message="Initializing Larry" />
@@ -23,7 +18,7 @@ export function AppRoot() {
 
   return (
     <div className="p-3">
-      {isInWorktree.value ? <WorktreeScreen /> : <MainRepoScreen />}
+      {isInWorktree ? <WorktreeScreen /> : <MainRepoScreen />}
     </div>
   );
 }

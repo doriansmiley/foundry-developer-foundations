@@ -1,38 +1,30 @@
 import React from 'react';
 import { useState, useEffect } from 'preact/hooks';
-import { baseUrl, clientRequestId, currentThreadId, worktreeName, } from '../signals/store';
+import { useExtensionStore } from '../store/store';
 import { createThread } from '../lib/http';
 import { AnimatedEllipsis } from './components/AnimatedEllipsis';
 import { useThreadsQuery } from '../hooks/useThreadsQuery';
 import { useMachineQuery } from '../hooks/useMachineQuery';
 import { StateVisualization } from './components/StateVisualization';
-import { queryClient } from '../lib/query';
-import { MachineResponse } from '../lib/backend-types';
 
 export function WorktreeScreen() {
   const [firstMessage, setFirstMessage] = useState('');
   const [provisioning, setProvisioning] = useState(false);
-  console.log('CURRENT THREAD ID::')
-  console.log(currentThreadId.value)
-  const [machineId, setMachineId] = useState<string | undefined>(currentThreadId.value);
-
-  // Subscribe to currentThreadId signal changes
-  useEffect(() => {
-    const unsubscribe = currentThreadId.subscribe((newValue) => {
-      console.log('🔄 currentThreadId changed to:', newValue);
-      setMachineId(newValue);
-      setProvisioning(false); // Stop provisioning when thread is created
-    });
-    return unsubscribe;
-  }, []);
+  const { apiUrl, clientRequestId, currentThreadId, currentWorktreeName } = useExtensionStore();
+  console.log('CURRENT THREAD ID::', currentThreadId);
   
-  console.log('MACHINE ID::')
-  console.log(machineId)
+  // Stop provisioning when thread is created
+  useEffect(() => {
+    if (currentThreadId) {
+      setProvisioning(false);
+    }
+  }, [currentThreadId]);
+  
   // Read machine data from React Query cache (set by SSE bridge)
-  const { data: machineData, isLoading } = useMachineQuery(baseUrl.value, machineId);
+  const { data: machineData, isLoading } = useMachineQuery(apiUrl, currentThreadId);
 
   // Read threads data to get the session label
-  const { data: threadsData } = useThreadsQuery(baseUrl.value);
+  const { data: threadsData } = useThreadsQuery(apiUrl);
   
   useEffect(() => {
     // This effect is only for debug purposes, not doing anything more
@@ -41,13 +33,14 @@ export function WorktreeScreen() {
     console.log('THREADS DATA::')
     console.log(threadsData)
   }, [machineData, threadsData]);
+  
   // Find current thread label from threads list
-  const currentThread = threadsData?.items?.find(t => t.id === machineId);
+  const currentThread = threadsData?.items?.find(t => t.id === currentThreadId);
   const sessionLabel = currentThread?.label || 'Session';
 
   async function startNewThread() {
     if (!firstMessage.trim()) return;
-    if (!worktreeName.value) {
+    if (!currentWorktreeName) {
       // NOTE: Ideally extension should pass worktreeName in worktree_detection; otherwise we can prompt the user
       // For now we block and ask the user to reopen via main screen if undefined
       console.error('Worktree name is unknown. Please open from main screen or update the extension to pass worktreeName.');
@@ -55,11 +48,11 @@ export function WorktreeScreen() {
     }
     setProvisioning(true);
     await createThread({
-      baseUrl: baseUrl.value,
-      worktreeName: worktreeName.value || 'test-001',
+      baseUrl: apiUrl,
+      worktreeName: currentWorktreeName || 'test-001',
       userTask: firstMessage.trim(),
       label: firstMessage.trim(),
-      clientRequestId: clientRequestId.value,
+      clientRequestId: clientRequestId,
     });
     // Now we wait for thread.created via SSE -> handled in onThreadCreated
   }
@@ -68,7 +61,7 @@ export function WorktreeScreen() {
     
   }
 
-  if (machineId && machineData) {
+  if (currentThreadId && machineData) {
     return (
       <div className="min-h-screen">
         <div className="d-flex flex-justify-between flex-items-center mb-2">

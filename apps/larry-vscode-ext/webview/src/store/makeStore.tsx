@@ -12,7 +12,7 @@ type PropsType<S> = {
 
 export function makeStore<S, A>(initialState: S, reducer: ReducerType<S, A>) {
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  const dispatchContext = createContext((action: A) => {});
+  const dispatchContext = createContext<DispatchType<A>>((action: A) => {});
   const storeContext = createContext<S>(initialState);
 
   const StoreProvider = ({
@@ -31,14 +31,14 @@ export function makeStore<S, A>(initialState: S, reducer: ReducerType<S, A>) {
     );
 
   }
-  function useDispatch() {
+  function useDispatch(): DispatchType<A> {
     return useContext(dispatchContext);
   }
 
-  function useStore() {
+  function useStore(): S {
     return useContext(storeContext);
   }
   
 
-  return [StoreProvider, useDispatch, useStore];
+  return [StoreProvider, useDispatch, useStore] as const;
 }
