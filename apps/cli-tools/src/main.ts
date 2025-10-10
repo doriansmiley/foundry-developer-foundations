@@ -18,6 +18,7 @@ import {
 import { SupportedEngines } from '@codestrap/developer-foundations-x-reason';
 import 'dotenv/config';
 import { uuidv4 } from '@codestrap/developer-foundations-utils';
+import { applyEdits } from './assets/applyEdits';
 
 export async function googleCodingAgent(executionId?: string, contextUpdateInput?: string, task?: string) {
   const larry = new Larry();
@@ -123,12 +124,16 @@ async function main() {
     await googleCodingAgent(executionIdArg);
   }
 
-  const whichAgent = await select({ message: 'select the agent', choices: ['googleCodingAgent'] })
-  const task = await input({ message: 'What would you like to do today:' });
+  const whichAgent = await select({ message: 'select the agent', choices: ['googleCodingAgent', 'applyEdits'] })
 
-  switch (whichAgent) {
-    case 'googleCodingAgent':
-      await googleCodingAgent(undefined, undefined, task);
+  if (whichAgent === 'googleCodingAgent') {
+    const task = await input({ message: 'What would you like to do today:' });
+    await googleCodingAgent(undefined, undefined, task);
+  }
+
+  if (whichAgent === 'applyEdits') {
+    const file = await input({ message: 'Enter the full file path to the edits file:' });
+    await applyEdits(file);
   }
 }
 
