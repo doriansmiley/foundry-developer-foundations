@@ -36,14 +36,12 @@ export async function specReview(
     const { approved, messages } = context[specReviewId] as AbstractReviewState || { approved: false }
 
     if (approved) {
-        // reload the file to get the latest contents so we can capture user edits
-        const contents = await fs.promises.readFile(file, 'utf8');
 
         return {
             approved,
             messages,
             reviewRequired: false,
-            file: contents,
+            file,
         }
     }
 

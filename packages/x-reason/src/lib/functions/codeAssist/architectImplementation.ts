@@ -20,6 +20,7 @@ import {
 async function verifyFilePaths(ops: FileOp[]) {
   const root = process.cwd();
   const inInLocalDev = root.includes('foundry-developer-foundations');
+  // TODO support an ENV var and fallback to hard coded values
   const repoRoot = inInLocalDev
     ? root.split('foundry-developer-foundations')[0]
     : root.split('workspace')[0];
