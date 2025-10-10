@@ -10,6 +10,7 @@ import { AnimatedEllipsis } from "./AnimatedEllipsis.tsx";
 import { baseUrl } from "../../signals/store";
 import { SpecReview } from "./states/SpecReview.tsx";
 import { useNextMachineState } from "../../hooks/useNextState.ts";
+import { ArchitectureReview } from "./states/ArchitectureReview/ArchitectureReview.tsx";
 // TODO: Import ArchitecturePhase component when it's created
 const ArchitecturePhase = () => <div>TODO</div>;
 const SearchDocumentation = () => <div></div>;
@@ -18,12 +19,15 @@ const stateComponentMap: Record<string, any> = {
   specReview: SpecReview,
   confirmUserIntent: ConfirmUserIntent,
   architectImplementation: ArchitecturePhase,
+  architectureReview: ArchitectureReview,
   searchDocumentation: SearchDocumentation,
 };
 
 export function StateVisualization({data, onSubmit}: {data: MachineResponse, onSubmit: (input: string) => void}) {
   const { fetch: fetchGetNextState } = useNextMachineState(baseUrl.value);
   const [specReviewRejected, setSpecReviewRejected] = useState(false);
+  const [architectureReviewRejected, setArchitectureReviewRejected] = useState(false);
+  const [architectureReviewPayload, setArchitectureReviewPayload] = useState<any>(null);
   const [input, setInput] = useState<{placeholder: string, value}>({placeholder: 'Tell me more...', value: ''});
   const showInput = useMemo(() => {
     // state computation for confirmUserIntent state
@@ -31,9 +35,12 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
       return true;
     }
 
-    if (data?.currentState?.startsWith('specReview') && specReviewRejected) {
-      return true;
-    }
+      if (data?.currentState?.startsWith('specReview') && specReviewRejected) {
+        return true;
+      }
+      if (data?.currentState?.startsWith('architectureReview') && architectureReviewRejected) {
+        return true;
+      }
   }, [data, specReviewRejected]);
   const getDeduplicatedStack = () => {
     if (!data.context?.stack) return [];
@@ -196,6 +203,20 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
       return;
     }
 
+    if (data.currentState.startsWith('architectureReview')) {
+      const messages = data.context?.[data.currentState]?.messages;
+      const lastMessage =
+      messages
+        ?.slice()
+        .reverse()
+        .find((item) => item.user === undefined);
+      lastMessage.user = `${architectureReviewPayload}\n\n${input.value}`;
+      fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: false, messages } } });
+      setArchitectureReviewRejected(false);
+      setArchitectureReviewPayload(null);
+      return;
+    }
+
     fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { userResponse: input.value } } });
 
     setInput(curr => ({...curr, value: '', placeholder: 'Tell me more...'}));
@@ -204,8 +225,8 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
 
 
 
-  const handleAction = (action: string) => {
-    if (action === 'approveSpec') {
+  const handleAction = (action: string, payload?: any) => {
+    if (action === 'approveSpec' || action === 'approveArchitecture') {
       setSpecReviewRejected(false);
 
       if (!data?.currentState) {
@@ -226,6 +247,10 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
 
       setInput(curr => ({...curr, placeholder: 'Please provide feedback on what you would like changed'}));
       setSpecReviewRejected(true);
+    } else if (action === 'rejectArchitecture') {
+      setInput(curr => ({...curr, placeholder: 'Please provide feedback on what you would like changed'}));
+      setArchitectureReviewRejected(true);
+      setArchitectureReviewPayload(payload);
     }
   }
 

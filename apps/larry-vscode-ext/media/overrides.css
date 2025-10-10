@@ -86,7 +86,7 @@ label {
 }
 
 /* Markdown rendering */
-.markdown-body { font-size: 12px; line-height: 1.5; }
+.markdown-body { font-size: 12px; line-height: 1.5; border: 1px solid rgba(255,255,255,.2); background-color: var(--vscode-editor-background); }
 .markdown-body p { margin: 6px 0; }
 .markdown-body ul, .markdown-body ol { margin: 6px 0 6px 0; padding-left: 1.2rem; }
 .markdown-body li { margin: 2px 0; }
@@ -152,3 +152,100 @@ label {
 }
 
 
+
+.ArchitectureReview .codeBlockHeader {
+	display: flex;
+	align-items: center;
+  gap: 4px;
+	background: var(--vscode-editor-background);
+	padding: 4px 8px;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	font-size: 12px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-bottom: none;
+	overflow-y: scroll;
+}
+
+.ArchitectureReview .text-button {
+	gap: 2px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+
+.ArchitectureReview .actionButtons {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	font-weight: 500;
+}
+.ArchitectureReview .actionButtons .text-button {
+	opacity: 0.4;
+}
+
+.ArchitectureReview .actionButtons .text-button:hover {
+	opacity: 0.6;
+}
+
+.ArchitectureReview .actionButtons .text-button.selected {
+	opacity: 1;
+}
+
+
+.ArchitectureReview .codeBlockFooter {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 4px;
+	background: var(--vscode-editor-background);
+	padding: 4px 8px;
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-top: none;
+	margin-bottom: 12px;
+	min-height: 24px;
+}
+
+.ArchitectureReview .copy-icon {
+	color: var(--vscode-button-secondaryBackground);
+	width: 12px;
+	height: 12px;
+	cursor: pointer;
+}
+
+.ArchitectureReview .check-icon {
+	color: #009744;
+	width: 12px;
+	height: 12px;
+	cursor: pointer;
+}
+
+.ArchitectureReview .reject-icon {
+	color: #970028;
+	width: 12px;
+	height: 12px;
+	cursor: pointer;
+}
+
+.ArchitectureReview .create-icon {
+	color: #007c38;
+	width: 16px;
+	height: 16px;
+}
+
+.ArchitectureReview .modify-icon {
+	color: #a08800;
+	width: 16px;
+	height: 16px;
+}
+
+.ArchitectureReview .delete-icon {
+	color: #7c0017;
+	width: 16px;
+	height: 16px;
+}
