@@ -236,19 +236,8 @@ rather than modifying existing functions/file. Prefer extension over modificatio
       - Provide happy path, key edge cases, and failure cases that map to “Functional Behavior” and “Error Handling.”
     - **Usage (via client)**: a description of the proposed API and of how clients will call the proposed API. Can include pseudo code.
       - Show request/response shapes (names only, not full code), example call(s), and minimal integration steps. Indicate auth usage and expected status codes.
-    `
-    : `
-Below is the engineer's initial request and relevant context (stack, APIs, tests, file paths, prior threads). 
-Your job: ask only clarifications questions (≤5, one-liners) to build intended design spec with confidence and then produce a crisp spec. 
-
-Initial user request:
-${task}
-
-Generate the system design specification.
-If you do not have enough information to create a draft of the design spec, ask clarifying questions to the user.
-
+    
 # Sample Training Data
-
 Q: "create sending email function to send an custom templated email"
 A:
 - **Design spec**: Send Email (Templated) v0.1
@@ -331,10 +320,43 @@ A:
     * \`const client = await makeGSuiteClient('user@company.com');\`
     * \`await client.sendEmail({ from, recipients, subject, messageHtml, messageText?, headers?, labelIds? });\`
     * Returns \`{ id, threadId, labelIds? }\`.
+      `
+    : `
+Below is the engineer's initial request and relevant context (stack, APIs, tests, file paths, prior threads). 
+
+Initial user request:
+${task}
+
+Generate a list of questions for the developer so we can gain clarity about the work to be done so that in the next iteration we can generate a design specification.
+The goal is to gather all the explicit and implied functional requirements
+You also need to gather enough information to fill out the design specification.
+Don't be overly chatty or ask annoying or redundant question. If you can infer the answer from the information provided then do it!
+Do not ask stupid or annoying things like what language are we using or what version of dependencies.
+Focus on ensuring things like the feature behavior, user experience, error handling, retries, etc.
+If persistence operations are involved make sure the developer considers things like dirty reads, stale updates, and eventual consistency
+Ensure the developer has context to understand complex aspects of the system by providing links to the appropriate documentation
+Prefer extension over modification when breaking changes are likely, or change sets are large (we want to reduce the blast radius of potential bugs)
+Do not ask if we prefer extension over modification. Make a decision and let the developer correct you later.
+Never ask stupid questions like "we will send mail via Gmail API using googleapis?". Assume the existing APIs and dependencies will be used.
+Never assume we will use new external dependencies. We prefer as little dependencies as possible and often opt to build solutions ourselves.
+You can ask to introduce a dependency only if it could be a heavy lift to rebuild it ourselves.
+Do not ask the developer to confirm tasks that will have to be done such as adding required scopes etc. 
+You don't need to clarify something that is clearly a requirement such as auth scopes.
+Don't delegate the decision to the developer if you can infer a good solution on your own. 
+You likely know more than the developer about the underlying APIs. 
+So don't ask for clarity just because there are multiple approaches. 
+Ask when there clearly isn't a best practice or standard approach that will just work.
+For example if you can infer how dependencies are injected or passed to our code, then don't ask the developer how to provide those dependencies. Figure it out
+Never ask what should the name of this new function be. Just name the function.
+Strive to reuse existing type definitions if they can fullfil the use case. Types are generally safe to modify only when introducing a new optional parameter. New required parameters should always be introduced in new type that extends the old type.
+Do not ask questions that are out of scope or drift out of scope.
+Produce the minimum number of questions possible to get to a well defined, focused, in scope design specification
+If you are presenting the user with options of which there are only a limited number of choices present them as a list of checkboxes
+ie - [ ] Option.
 `;
 
   // TODO inject this
-  const { answer, tokenomics } = await openAiSpecGenerator(user, system, readme);
+  const { answer, tokenomics } = await googleSpecGenerator(user, system, readme);
 
   if (userResponse) {
     // reset the user response so they can respond again!
