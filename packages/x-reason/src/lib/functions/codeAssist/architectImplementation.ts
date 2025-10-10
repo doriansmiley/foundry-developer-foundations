@@ -11,7 +11,11 @@ import {
 } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import { TYPES } from '@codestrap/developer-foundations-types';
-import { googleFileOpsGenerator, googleImplementationGenerator, openAiImplementationGenerator } from './delegates';
+import {
+  googleFileOpsGenerator,
+  googleImplementationGenerator,
+  openAiImplementationGenerator,
+} from './delegates';
 
 async function verifyFilePaths(ops: FileOp[]) {
   const root = process.cwd();
@@ -38,7 +42,7 @@ async function verifyFilePaths(ops: FileOp[]) {
     );
 
   const fileContents = await Promise.allSettled(promises);
-  const failed = fileContents.filter(result => result.status === 'rejected');
+  const failed = fileContents.filter((result) => result.status === 'rejected');
 
   return failed;
 }
@@ -96,15 +100,22 @@ For example:
 
   if (failed.length > 0) {
     //retry
-    const { ops } = await googleFileOpsGenerator(`${user}
+    const { ops } = await googleFileOpsGenerator(
+      `${user}
 Your previous response failed to resolve the following files
 ${JSON.stringify(failed)}
 Try again and make sure paths match exactly the paths in the supplied plan
-`, system);
+`,
+      system
+    );
 
     const retriedFailures = await verifyFilePaths(ops);
     if (retriedFailures.length > 0) {
-      throw new Error(`can not resolve paths for the following files: ${JSON.stringify(retriedFailures)}`);
+      throw new Error(
+        `can not resolve paths for the following files: ${JSON.stringify(
+          retriedFailures
+        )}`
+      );
     }
   }
 
@@ -115,14 +126,19 @@ async function getEffectedFileBlocks(ops: FileOp[]) {
   // we overwrite every time to take into account that changes may have been introduced that effect the fil list
   // load the contents of the listed file where modified is true and await Promise.all
   const root = process.cwd();
-  const repoRoot = root.split('foundry-developer-foundations')[0];
+  const inInLocalDev = root.includes('foundry-developer-foundations');
+  const repoRoot = inInLocalDev
+    ? root.split('foundry-developer-foundations')[0]
+    : root.split('workspace')[0];
   const promises = ops
     .filter((f) => f.type === 'modified' || f.type === 'required')
     .map(
       (f) =>
         new Promise((resolve, reject) => {
           const filePath = path.join(
-            `${repoRoot}/foundry-developer-foundations`,
+            inInLocalDev
+              ? `${repoRoot}/foundry-developer-foundations`
+              : `${repoRoot}/workspace`,
             f.file
           );
 
@@ -131,11 +147,12 @@ async function getEffectedFileBlocks(ops: FileOp[]) {
             resolve({
               file: filePath,
               modified: false,
-              contents: undefined
+              contents: undefined,
             });
           }
 
-          fs.promises.readFile(filePath, 'utf8')
+          fs.promises
+            .readFile(filePath, 'utf8')
             .then((value) => {
               f.contents = value;
               resolve(f);
@@ -146,11 +163,13 @@ async function getEffectedFileBlocks(ops: FileOp[]) {
         })
     );
 
-  const fileContents = ((await Promise.all(promises)) as {
-    file: string;
-    modified: boolean;
-    contents?: string;
-  }[]).filter(item => item.contents !== undefined);
+  const fileContents = (
+    (await Promise.all(promises)) as {
+      file: string;
+      modified: boolean;
+      contents?: string;
+    }[]
+  ).filter((item) => item.contents !== undefined);
 
   const blocks = fileContents.reduce((acc, cur) => {
     acc = `${acc}
@@ -185,7 +204,8 @@ export async function architectImplementation(
       .reverse()
       .find((item) => item.includes('architectImplementation')) || '';
 
-  const { userResponse, file } = (context[architectImplementationId] as UserIntent) || {};
+  const { userResponse, file } =
+    (context[architectImplementationId] as UserIntent) || {};
 
   let updatedContents;
   if (file) {
@@ -201,9 +221,11 @@ export async function architectImplementation(
       .reverse()
       .find((item) => item.includes('confirmUserIntent')) || '';
 
-  const { file: designSpec } = (context[confirmUserIntentId] as UserIntent) || {};
+  const { file: designSpec } =
+    (context[confirmUserIntentId] as UserIntent) || {};
 
-  if (!designSpec || !fs.existsSync(designSpec)) throw new Error(`File does not exist: ${designSpec}`);
+  if (!designSpec || !fs.existsSync(designSpec))
+    throw new Error(`File does not exist: ${designSpec}`);
 
   const plan = await fs.promises.readFile(designSpec, 'utf8');
 
@@ -294,7 +316,10 @@ ${plan}
 ${fileBlocks}`;
 
   // TODO inject this
-  const { answer, tokenomics } = await openAiImplementationGenerator(prompt, system);
+  const { answer, tokenomics } = await openAiImplementationGenerator(
+    prompt,
+    system
+  );
 
   if (userResponse) {
     // reset the user response so they can respond again!
@@ -302,7 +327,7 @@ ${fileBlocks}`;
   }
 
   parsedMessages.push({
-    // we purposefully omit the file blocks and the plan from the messages to avoid massive bloat. 
+    // we purposefully omit the file blocks and the plan from the messages to avoid massive bloat.
     // They can be reconstructed later by loading the plan file or extracting the fileBlocks from
     // the proposedCodeEdits md file (split on # The complete current contents of all files being modified without any changes applied)
     user: user,
@@ -323,7 +348,10 @@ ${answer}
 ${fileBlocks}
   `;
 
-  const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `proposedCodeEdits-${context.machineExecutionId}.md`);
+  const abs = path.resolve(
+    process.env.BASE_FILE_STORAGE || process.cwd(),
+    `proposedCodeEdits-${context.machineExecutionId}.md`
+  );
   await fs.promises.writeFile(abs, msg, 'utf8');
 
   return {
