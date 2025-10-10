@@ -352,7 +352,12 @@ function replaceTypeAlias(
     sf: SourceFile,
     op: Extract<EditOp, { kind: 'replaceTypeAlias' }>
 ) {
-    const ta = sf.getTypeAliasOrThrow(op.typeName);
+    let ta;
+    try {
+        ta = sf.getTypeAliasOrThrow(op.typeName);
+    } catch {
+        ta = sf.addTypeAlias({ name: op.typeName, type: op.typeText });
+    }
     const newText = op.typeText.trim();
     if (ta.getTypeNode()?.getText().trim() === newText) return;
     ta.setType(newText);
