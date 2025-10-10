@@ -58901,6 +58901,7 @@ Please report this to https://github.com/markedjs/marked.`, e4) {
   };
   function StateVisualization({ data, onSubmit }) {
     const { apiUrl } = useExtensionStore();
+    const [optimisticState, setOptimisticState] = d2();
     const { fetch: fetchGetNextState } = useNextMachineState(apiUrl);
     const [specReviewRejected, setSpecReviewRejected] = d2(false);
     const [architectureReviewRejected, setArchitectureReviewRejected] = d2(false);
@@ -58983,6 +58984,11 @@ Please report this to https://github.com/markedjs/marked.`, e4) {
         });
       }
     }, [data.context?.currentState, data.context?.stateId]);
+    y2(() => {
+      if (data.status !== "running") {
+        setOptimisticState(void 0);
+      }
+    }, [data.status]);
     const toggleCollapse = (stateKey) => {
       const newCollapsed = new Set(collapsedStates);
       if (newCollapsed.has(stateKey)) {
@@ -59017,6 +59023,10 @@ Please report this to https://github.com/markedjs/marked.`, e4) {
       const { isPrevious } = parseStateKey(stateKey);
       if (isPrevious) return false;
       return data.context?.currentState === stateKey || data.context?.stateId === stateKey;
+    };
+    const continueToNextState = () => {
+      fetchGetNextState({ machineId: data.id, contextUpdate: {} });
+      setOptimisticState("running");
     };
     const handleSubmit = (e4) => {
       e4.preventDefault();
@@ -59115,9 +59125,21 @@ ${input.value}`;
             );
           })
         ] }),
-        data.status === "running" && /* @__PURE__ */ u3("div", { children: [
+        (data.status === "running" || optimisticState === "running") && /* @__PURE__ */ u3("div", { children: [
           /* @__PURE__ */ u3("span", { className: "shimmer-loading", children: "Working" }),
           /* @__PURE__ */ u3(AnimatedEllipsis, {})
+        ] }),
+        data.status === "pending" && !optimisticState && /* @__PURE__ */ u3("div", { children: [
+          /* @__PURE__ */ u3("div", { className: "mb-2", children: 'Cannot automatically proceed to next state. Click "Continue" button to proceed.' }),
+          /* @__PURE__ */ u3(
+            "button",
+            {
+              onClick: continueToNextState,
+              type: "submit",
+              className: "btn btn-primary",
+              children: "Continue"
+            }
+          )
         ] })
       ] }),
       showInput && /* @__PURE__ */ u3("div", { style: { position: "fixed", left: 0, padding: "5px", background: "var(--vscode-editor-background)", bottom: 0, width: "100%" }, className: "sticky bottom-0 border-t shadow-lg", children: /* @__PURE__ */ u3("form", { onSubmit: handleSubmit, className: "d-flex gap-2", style: { position: "relative" }, children: [

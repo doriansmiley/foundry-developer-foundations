@@ -23,7 +23,7 @@ export function machinesRoutes(idem: IdempotencyStore, sse: SSEService) {
         const { machineId } = req.params;
 
         const machine = await machineDao.read(machineId);
-        console.log(machine);
+
         const context = JSON.parse(machine.state!).context;
         const currentStateContext = context[context.stateId];
         const humanReview =
@@ -31,9 +31,12 @@ export function machinesRoutes(idem: IdempotencyStore, sse: SSEService) {
           (!!currentStateContext?.confirmationPrompt ||
             !!currentStateContext?.reviewRequired);
 
+        const running = !humanReview && !currentStateContext?.approved;
         const status: MachineStatus = humanReview
           ? 'awaiting_human'
-          : 'running';
+          : running
+          ? 'running'
+          : 'pending';
         const body: MachineResponse = {
           id: machineId,
           status,
@@ -58,13 +61,6 @@ export function machinesRoutes(idem: IdempotencyStore, sse: SSEService) {
         const { machineId } = req.params;
         const { contextUpdate } = req.body || {};
 
-        if (typeof contextUpdate !== 'object' || contextUpdate === null) {
-          const err = new Error('contextUpdate must be an object');
-          (err as any).status = 400;
-          (err as any).code = 'BAD_REQUEST';
-          throw err;
-        }
-
         const accepted = { status: 'accepted', requestId };
         if (idemKey) {
           // store the accepted envelope for replay
@@ -88,12 +84,21 @@ export function machinesRoutes(idem: IdempotencyStore, sse: SSEService) {
 
             const context = JSON.parse(machine.state!).context;
             const currentStateContext = context[context.stateId];
-            const humanReview = !!currentStateContext?.confirmationPrompt;
+            const humanReview =
+              machine.currentState === 'pause' &&
+              (!!currentStateContext?.confirmationPrompt ||
+                !!currentStateContext?.reviewRequired);
+
+            const running = !humanReview && !currentStateContext?.approved;
 
             const updated: MachineResponse = {
               id: machineId,
               currentState: context.stateId,
-              status: humanReview ? 'awaiting_human' : 'running',
+              status: humanReview
+                ? 'awaiting_human'
+                : running
+                ? 'running'
+                : 'pending',
               currentStateContext,
               context,
             };

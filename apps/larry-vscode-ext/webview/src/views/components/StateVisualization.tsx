@@ -7,7 +7,7 @@ import { ChevronRight, SendIcon } from "lucide-preact";
 import { ChevronDown } from "lucide-preact";
 import TextareaAutosize from "react-textarea-autosize";
 import { AnimatedEllipsis } from "./AnimatedEllipsis.tsx";
-import { useExtensionStore } from "../../store/store";
+import { useExtensionStore, useExtensionDispatch } from "../../store/store";
 import { SpecReview } from "./states/SpecReview.tsx";
 import { useNextMachineState } from "../../hooks/useNextState.ts";
 import { ArchitectureReview } from "./states/ArchitectureReview/ArchitectureReview.tsx";
@@ -25,6 +25,7 @@ const stateComponentMap: Record<string, any> = {
 
 export function StateVisualization({data, onSubmit}: {data: MachineResponse, onSubmit: (input: string) => void}) {
   const { apiUrl } = useExtensionStore();
+  const [optimisticState, setOptimisticState] = useState<'running' | undefined>();
   const { fetch: fetchGetNextState } = useNextMachineState(apiUrl);
   const [specReviewRejected, setSpecReviewRejected] = useState(false);
   const [architectureReviewRejected, setArchitectureReviewRejected] = useState(false);
@@ -134,6 +135,12 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
     }
   }, [data.context?.currentState, data.context?.stateId]);
 
+  useEffect(() => {
+    if (data.status !== 'running') {
+      setOptimisticState(undefined);
+    }
+  }, [data.status]);
+
   const toggleCollapse = (stateKey: string) => {
     const newCollapsed = new Set(collapsedStates);
     if (newCollapsed.has(stateKey)) {
@@ -180,6 +187,11 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
     
     return data.context?.currentState === stateKey || data.context?.stateId === stateKey;
   };
+
+  const continueToNextState = () => {
+    fetchGetNextState({ machineId: data.id, contextUpdate: {} });
+    setOptimisticState('running');
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -312,10 +324,24 @@ return (
             );
           })}
         </div>
-        {data.status === 'running' && (
+        {(data.status === 'running' || optimisticState === 'running') && (
     <div>
       <span className="shimmer-loading">Working</span><AnimatedEllipsis />
     </div>
+  )}
+  {(data.status === 'pending' && !optimisticState) && (
+    <div>
+      <div className="mb-2">
+      Cannot automatically proceed to next state. Click "Continue" button to proceed.
+      </div>
+      <button
+          onClick={continueToNextState}
+          type="submit"
+          className="btn btn-primary"
+        >
+        Continue
+      </button>
+      </div>
   )}
   </div>
   {showInput && (
