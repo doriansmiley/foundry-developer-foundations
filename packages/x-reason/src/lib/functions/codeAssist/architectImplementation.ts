@@ -19,7 +19,10 @@ import {
 
 async function verifyFilePaths(ops: FileOp[]) {
   const root = process.cwd();
-  const repoRoot = root.split('foundry-developer-foundations')[0];
+  const inInLocalDev = root.includes('foundry-developer-foundations');
+  const repoRoot = inInLocalDev
+    ? root.split('foundry-developer-foundations')[0]
+    : root.split('workspace')[0];
 
   // TODO we need to check each file and confirm the path exists. If not retry. If still unresolved error out.
   const promises = ops
@@ -28,7 +31,9 @@ async function verifyFilePaths(ops: FileOp[]) {
       (f) =>
         new Promise((resolve, reject) => {
           const filePath = path.join(
-            `${repoRoot}/foundry-developer-foundations`,
+            inInLocalDev
+              ? `${repoRoot}/foundry-developer-foundations`
+              : `${repoRoot}/workspace`,
             f.file
           );
 
