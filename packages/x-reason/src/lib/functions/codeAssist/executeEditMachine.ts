@@ -356,7 +356,7 @@ function replaceTypeAlias(
     const ta = sf.getTypeAlias(op.typeName);
 
     if (!ta) {
-        sf.addTypeAlias({ name: op.typeName, type: newText });
+        sf.addTypeAlias({ name: op.typeName, type: newText, isExported: true });
         return;
     }
 
