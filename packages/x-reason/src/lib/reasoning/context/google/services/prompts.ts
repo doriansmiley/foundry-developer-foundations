@@ -364,6 +364,8 @@ export async function aiTransition(
   Correct example of a complete stateID: architectImplementation|bf83af61-3ecb-48dd-ba3e-ec3466fac872
   An incorrect stateID: architectImplementation. It's mission the pipe and UUID!
 
+  If a state has \`approved\` is false and \`reviewRequired\` is true you should always target the associated review state!
+
   The success state can be target simply with success, no UID is required.
   `;
 
@@ -473,6 +475,15 @@ export async function aiTransition(
 
   Return the target for the next state.
   A: generateEditMachine|ec49b261-9e38-47fa-aa93-7f6ab94eba85
+
+ Q:
+1.  The current state is \`codeReview|ec49b261-9e38-47fa-aa93-7f6ab94eba85\`.
+2.  The output of the state indicates \`"approved": false\` and \`"reviewRequired": true\`.
+3.  The task list specifies: "If approved, continue, else if review is required, renter the generate edit state."
+4.  Since \`approved\` is false and \`reviewRequired\` is true, I should renter the codeReview|ec49b261-9e38-47fa-aa93-7f6ab94eba85 state
+
+Return the target for the next state.
+A: codeReview|ec49b261-9e38-47fa-aa93-7f6ab94eba85
 
   ### End training data ###
 

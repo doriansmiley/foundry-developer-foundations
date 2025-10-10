@@ -144,7 +144,7 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const result = await architectImplementation(context, event, task);
                     const payload = getPayload(context, result);
                     console.log(`architectImplementation returned: ${JSON.stringify(result)}`);
-                    console.log('dispatching pause from architectImplementation');
+                    console.log('dispatching CONTINUE from architectImplementation');
 
                     dispatch({
                         type: 'CONTINUE',
@@ -163,7 +163,6 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const result = await architectureReview(context, event, task);
                     const payload = getPayload(context, result);
                     console.log(`architectureReview returned: ${JSON.stringify(result)}`);
-                    console.log('dispatching pause from architectureReview');
 
                     if (result.approved) {
                         console.log('dispatching CONTINUE from architectureReview');

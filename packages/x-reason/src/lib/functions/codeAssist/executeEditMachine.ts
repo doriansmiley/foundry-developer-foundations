@@ -352,10 +352,26 @@ function replaceTypeAlias(
     sf: SourceFile,
     op: Extract<EditOp, { kind: 'replaceTypeAlias' }>
 ) {
-    const ta = sf.getTypeAliasOrThrow(op.typeName);
     const newText = op.typeText.trim();
-    if (ta.getTypeNode()?.getText().trim() === newText) return;
-    ta.setType(newText);
+    const ta = sf.getTypeAlias(op.typeName);
+
+    if (!ta) {
+        sf.addTypeAlias({ name: op.typeName, type: newText, isExported: true });
+        return;
+    }
+
+    const current = ta.getTypeNode()?.getText().trim();
+    if (current === newText) return;
+
+    try {
+        ta.setType(newText);
+    } catch {
+        // preserve export/declare & generic params
+        const mods = (ta.hasDeclareKeyword?.() ? 'declare ' : '') + (ta.isExported() ? 'export ' : '');
+        const tparams = ta.getTypeParameters();
+        const tparamsText = tparams.length ? `<${tparams.map(tp => tp.getText()).join(', ')}>` : '';
+        ta.replaceWithText(`${mods}type ${op.typeName}${tparamsText} = ${newText}`);
+    }
 }
 
 function replaceInterface(
