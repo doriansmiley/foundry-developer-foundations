@@ -34,7 +34,13 @@ function getPayload(context: Context, result: Record<string, any>) {
 
     return payload;
 }
-export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
+
+async function possiblePromise(result: void | Promise<void>) {
+    if (result && result instanceof Promise) {
+        await result;
+    }
+}
+export function getFunctionCatalog(dispatch: (action: ActionType) => void | Promise<void>) {
     return new Map<string, Task>([
         [
             "confirmUserIntent",
@@ -47,11 +53,11 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     const payload = getPayload(context, result);
                     console.log(`confirmUserIntent returned: ${JSON.stringify(result)}`);
                     console.log('dispatching pause from confirmUserIntent');
-                    // example of how to pause
-                    dispatch({
+
+                    await possiblePromise(dispatch({
                         type: 'CONTINUE',
                         payload,
-                    });
+                    }));
                 },
             },
         ],
@@ -68,17 +74,17 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
 
                     if (result.approved) {
                         console.log('dispatching CONTINUE from specReview');
-                        dispatch({
+                        await possiblePromise(dispatch({
                             type: 'CONTINUE',
                             payload,
-                        });
+                        }));
                     } else if (result.reviewRequired) {
                         console.log('dispatching pause from specReview');
                         // pause so the user can review the state machine
-                        dispatch({
+                        await possiblePromise(dispatch({
                             type: 'pause',
                             payload,
-                        });
+                        }));
                     } else {
                         // the user has provided feedback we need to capture and rerun the confirm user intent state
                         // target the most recent confirmUserIntentId passing the latest feedback from the end user
@@ -107,10 +113,10 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
 
                         console.log(`dispatching ${confirmUserIntentId} from specReview`);
 
-                        dispatch({
+                        await possiblePromise(dispatch({
                             type: confirmUserIntentId,
                             payload,
-                        });
+                        }));
                     }
                 },
             },
@@ -127,10 +133,10 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log(`searchDocumentation returned: ${JSON.stringify(result)}`);
                     console.log('dispatching CONTINUE from searchDocumentation');
 
-                    dispatch({
+                    await possiblePromise(dispatch({
                         type: 'CONTINUE',
                         payload,
-                    });
+                    }));
                 },
             },
         ],
@@ -146,10 +152,10 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log(`architectImplementation returned: ${JSON.stringify(result)}`);
                     console.log('dispatching CONTINUE from architectImplementation');
 
-                    dispatch({
+                    await possiblePromise(dispatch({
                         type: 'CONTINUE',
                         payload,
-                    });
+                    }));
                 },
             },
         ],
@@ -166,17 +172,17 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
 
                     if (result.approved) {
                         console.log('dispatching CONTINUE from architectureReview');
-                        dispatch({
+                        await possiblePromise(dispatch({
                             type: 'CONTINUE',
                             payload,
-                        });
+                        }));
                     } else if (result.reviewRequired) {
                         console.log('dispatching pause from architectureReview');
                         // pause so the user can review the state machine
-                        dispatch({
+                        await possiblePromise(dispatch({
                             type: 'pause',
                             payload,
-                        });
+                        }));
                     } else {
                         // the user has provided feedback we need to capture and rerun the confirm user intent state
                         // target the most recent confirmUserIntentId passing the latest feedback from the end user
@@ -205,10 +211,10 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
 
                         console.log(`dispatching ${architectImplementationId} from specReview`);
 
-                        dispatch({
+                        await possiblePromise(dispatch({
                             type: architectImplementationId,
                             payload,
-                        });
+                        }));
                     }
                 },
             },
@@ -225,10 +231,10 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log(`generateEditMachine returned: ${JSON.stringify(result)}`);
                     console.log('dispatching pause from generateEditMachine');
 
-                    dispatch({
+                    await possiblePromise(dispatch({
                         type: 'CONTINUE',
                         payload,
-                    });
+                    }));
                 },
             },
         ],
@@ -246,17 +252,17 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
 
                     if (result.approved) {
                         console.log('dispatching CONTINUE from codeReview');
-                        dispatch({
+                        await possiblePromise(dispatch({
                             type: 'CONTINUE',
                             payload,
-                        });
+                        }));
                     } else if (result.reviewRequired) {
                         console.log('dispatching pause from codeReview');
                         // pause so the user can review the state machine
-                        dispatch({
+                        await possiblePromise(dispatch({
                             type: 'pause',
                             payload,
-                        });
+                        }));
                     } else {
                         // the user has provided feedback we need to capture and rerun the confirm user intent state
                         // target the most recent generateEditMachine passing the latest feedback from the end user
@@ -285,10 +291,10 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
 
                         console.log(`dispatching ${generateEditMachineId} from specReview`);
 
-                        dispatch({
+                        await possiblePromise(dispatch({
                             type: generateEditMachineId,
                             payload,
-                        });
+                        }));
                     }
                 },
             },
@@ -305,10 +311,10 @@ export function getFunctionCatalog(dispatch: (action: ActionType) => void) {
                     console.log(`applyEdits returned: ${JSON.stringify(result)}`);
                     console.log('dispatching CONTINUE from applyEdits');
 
-                    dispatch({
+                    await possiblePromise(dispatch({
                         type: 'CONTINUE',
                         payload,
-                    });
+                    }));
                 },
             },
         ],
