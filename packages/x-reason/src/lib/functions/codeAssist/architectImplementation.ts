@@ -228,6 +228,23 @@ style, and rules. Incorporate the feedback in the user response by carefully rev
 - Prefer stateless functions when possible.
 - Always clear references that might block garbage collection and cause memory leaks
 - Leave all test cases blank for the developer to fill in. In the comments for each test scenario include the gherkin specification as comments.
+- prefer destructuring with defaults over handling properties. For example prefer this type of style:
+  \`\`\`typescript
+  const {
+  userId,
+  labels = [],
+  senders = [],
+  subject,
+  maxResults,
+  pageToken,
+  } = input;
+  \`\`\`
+  over
+  \`\`\`typescript
+  if (!input.labels) input.labels = [];
+  \`\`\`
+  Destructing is more modern and efficient
+- Do not engage in useless defensive programming. Let errors be thrown if types passed at runtime are incorrect. Never check things like \` typeof someString === 'string'\`. Let the freaking type system and linters do their job! The only time defensive programming is required is when handling user inputs in ui components or our api handlers for user input submission. You do not need defensive programming for operations downstream.
 
 # User Response
 ${userResponse}
