@@ -1,6 +1,7 @@
 /* Larry webview overrides to match VS Code scale */
 :root {
 	--fdry-gap: 8px;
+	--borderColor-default: rgba(255,255,255,.2);
 }
 
 body {
@@ -22,7 +23,7 @@ html, body, #root { font-family: var(--vscode-font-family); color: var(--vscode-
 
 /* Buttons */
 .btn {
-	padding: 4px 8px !important;
+	padding: 3px 6px !important;
 	min-height: 0 !important;
 	line-height: 1.4 !important;
 	border-radius: 6px !important;
@@ -32,6 +33,7 @@ html, body, #root { font-family: var(--vscode-font-family); color: var(--vscode-
 	white-space: normal !important;
 	word-break: break-word !important;
 	overflow-wrap: anywhere !important;
+	font-size: 12px !important;
 }
 .btn-primary {
 	background: var(--vscode-button-background) !important;
@@ -248,4 +250,12 @@ label {
 	color: #7c0017;
 	width: 16px;
 	height: 16px;
+}
+
+
+.custom-select-list {
+	background: var(--vscode-editor-background);
+	padding: 4px;
+	border-radius: 6px;
+	box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
 }

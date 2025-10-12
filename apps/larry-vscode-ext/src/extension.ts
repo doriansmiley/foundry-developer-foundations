@@ -540,11 +540,15 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       await this.setupWorktreeEnvironment(finalWorktreeName, threadId);
 
       // Start worktree docker container
-
+      this.view?.webview.postMessage({
+        type: 'update_thread_state',
+        state: 'creating_container',
+      });
       const { stdout } = await execAsync(
         `docker ps -q --filter "publish=4220"`
       );
       const containerId = stdout.trim();
+      console.log('Container ID:', containerId);
       if (containerId) {
         await execAsync(`docker kill ${containerId}`);
         await execAsync(`docker rm ${containerId}`);
@@ -566,6 +570,10 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       setTimeout(() => {
         this.startWorktreeSSE(); // <— start SSE for worktree events
         this.openWorktree(finalWorktreeName);
+        this.view?.webview.postMessage({
+          type: 'update_thread_state',
+          state: 'ready',
+        });
       }, 3000);
     } catch (error) {
       console.error('Error handling open worktree:', error);
@@ -630,6 +638,10 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       );
 
       if (!worktreeExists) {
+        this.view?.webview.postMessage({
+          type: 'update_thread_state',
+          state: 'creating_worktree',
+        });
         // Create worktree
         await this.createWorktreeInternal(
           workspaceFolder,
@@ -737,6 +749,11 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
   async setupWorktreeEnvironment(worktreeName: string, threadId?: string) {
     try {
+      this.view?.webview.postMessage({
+        type: 'update_thread_state',
+        state: 'setting_up_environment',
+      });
+
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (!workspaceFolder) {
         throw new Error('No workspace folder found');

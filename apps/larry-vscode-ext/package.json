@@ -63,11 +63,12 @@
     "esbuild": "^0.21.0",
     "preact": "^10.22.0",
     "typescript": "^5.4.0",
-    "vsce": "^2.15.0" 
+    "vsce": "^2.15.0"
   },
   "dependencies": {
     "@primer/css": "^22.0.2",
     "@primer/primitives": "^11.0.0",
+    "@primer/react": "^37.31.0",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "dompurify": "^3.2.7",
     "highlight.js": "^11.11.1",

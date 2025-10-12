@@ -18,6 +18,7 @@ export function AppRoot() {
 
   return (
     <div className="p-3">
+      
       {isInWorktree ? <WorktreeScreen /> : <MainRepoScreen />}
     </div>
   );
