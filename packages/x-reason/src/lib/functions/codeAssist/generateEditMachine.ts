@@ -75,109 +75,23 @@ Your ONLY job is to read a design spec and a repo snapshot and produce a precise
 ---
 
 ## Minimal-Change Playbook (must apply in this order!)
-*always* sequences dependent edits correctly. I've split it into (A) global, (B) per-file, and (C) cross-file rules, with a few tiny examples that bias it toward smallest, dependency-safe changes.
+*always* sequences dependent edits correctly. 
+Think carefully about the required order!
+Always emit ops in a topologically sorted order where every imported or referenced symbol is declared and exported before any file (new or existing) that imports/uses it.
 
-### A) Global ordering (cross-file safe)
+Concretely:
+Emit ops that introduce or change provider symbols (types/interfaces/enums) in their source file.
+Immediately ensureExport for those providers (if needed).
+Then emit ops that introduce consumers, including createOrReplaceFile text that imports those providers, and any ensureImport ops in existing files.
+Then emit implementation edits (function/method bodies) that rely on those imports.
 
-1. **Create files**
+This lets the executor avoid diagnostics like “cannot find name/type” during the run.
 
-   * \`createOrReplaceFile\` only when the spec provides full contents.
-   * Rationale: dependents may import from these files; they must exist first.
-
-2. **Declare/replace types** (providers first)
-
-   * \`replaceTypeAlias\`, \`replaceInterface\`.
-   * Use these to **introduce new types** (or when shape changes can’t be expressed granularly).
-
-3. **Edit type members**
-
-   * \`insertInterfaceProperty\`, \`updateTypeProperty\`.
-
-4. **Extend discriminants/sets**
-
-   * \`addUnionMember\`, \`insertEnumMember\`.
-
-5. **Ensure exports for newly added types**
-
-   * \`ensureExport\` for any **new** types you just added/modified that must be public.
-
-6. **Imports in dependents**
-
-   * \`ensureImport\`, \`removeImportNames\`.
-   * Rationale: only import after the providing symbol exists & is exported.
-
-7. **Config & maps**
-
-   * \`upsertObjectProperty\`.
-
-8. **Implementations**
-
-   * \`replaceFunctionBody\`, \`updateFunctionReturnType\`, \`replaceMethodBody\`.
-
-9. **Exports for existing values**
-
-   * \`ensureExport\` for existing local symbols (values/functions/consts) that must be exported.
-
-10. **Renames (one-shot, last)**
-
-* \`renameSymbol\`.
-* Note: do **not** include this in a second/idempotent pass.
-
-> **Never** replace whole files unless the spec explicitly requires a brand-new file (use \`createOrReplaceFile\`). Prefer granular ops everywhere else.
-
----
-
-### B) Per-file ordering (when multiple ops hit the same file)
-
-Apply ops to a given file in this order:
-
-1. \`replaceTypeAlias\` / \`replaceInterface\`
-2. \`insertInterfaceProperty\` / \`updateTypeProperty\`
-3. \`addUnionMember\` / \`insertEnumMember\`
-4. \`ensureExport\` (for newly added/changed types)
-5. \`ensureImport\` / \`removeImportNames\`
-6. \`upsertObjectProperty\`
-7. \`replaceFunctionBody\` / \`updateFunctionReturnType\` / \`replaceMethodBody\`
-8. \`ensureExport\` (for existing non-type symbols)
-9. \`renameSymbol\`
-
-This mirrors the global plan but ensures intra-file dependencies (e.g., import ordering vs. declarations) are safe.
-
----
-
-### C) Cross-file dependency rules (what to emit in \`ops\` and how to order them)
-
-* **Provider before consumer**:
-  If \`B.ts\` imports \`Foo\` from \`A.ts\`, then:
-
-  1. Declare/modify \`Foo\` in \`A.ts\` (+ \`ensureExport\`),
-  2. Then \`ensureImport\` in \`B.ts\`.
-
-* **Create before import**:
-  If a new file \`A.ts\` is introduced and \`B.ts\` imports from it, emit:
-
-  1. \`createOrReplaceFile\` for \`A.ts\`,
-  2. Then any type/interface ops inside \`A.ts\`,
-  3. \`ensureExport\` for required symbols,
-  4. Finally \`ensureImport\` in \`B.ts\`.
-
-* **Don't import what you didn't export**:
-  Always emit \`ensureExport\` for new types before emitting any \`ensureImport\` in other files.
-
-* **Rename last**:
-  A rename can invalidate earlier lookups; place \`renameSymbol\` **after** all other ops that refer to the old name.
-
----
-
-## Ordering examples (few-shot)
-
-### Example 1 — New exported type used elsewhere
-
-**Spec:** Add \`SearchEmailsInput\` in \`packages/types/src/lib/types.ts\` and import it in \`packages/services/email/src/lib/search.ts\`.
-
-**Output (ordered):**
-
-\`\`\`json
+For example, a notional spec that introduces a feature to search email might require the following ordered changes:
+Add a new type SearchEmailsInput in packages/types/src/lib/types.ts.
+Create a new file packages/services/email/src/lib/searchEmails.ts that imports SearchEmailsInput and exports searchEmails.
+Update the app entry packages/app/src/index.ts to import searchEmails.
+Resulting in the following edits json
 {
   "version": "v0",
   "ops": [
@@ -192,73 +106,28 @@ This mirrors the global plan but ensures intra-file dependencies (e.g., import o
       "file": "packages/types/src/lib/types.ts",
       "name": "SearchEmailsInput"
     },
-    {
-      "kind": "ensureImport",
-      "file": "packages/services/email/src/lib/search.ts",
-      "from": "@types/lib/types",
-      "names": ["SearchEmailsInput"]
-    }
-  ]
-}
-\`\`\`
 
-### Example 2 — Create new file that will be imported
-
-**Spec:** Add \`src/lib/newFeature.ts\` (full contents provided) and import \`makeFeature\` in \`src/app.ts\`.
-
-**Output (ordered):**
-
-\`\`\`json
-{
-  "version": "v0",
-  "ops": [
     {
       "kind": "createOrReplaceFile",
-      "file": "src/lib/newFeature.ts",
-      "text": "export type FeatureId = string;\nexport function makeFeature(id: FeatureId){ return { id }; }\n",
+      "file": "packages/services/email/src/lib/searchEmails.ts",
+      "text": "import { SearchEmailsInput } from "@types/lib/types";\n\nexport async function searchEmails(input: SearchEmailsInput) {\n  // minimal stub for now\n  return [] as const;\n}\n",
       "overwrite": false
     },
+
     {
       "kind": "ensureImport",
-      "file": "src/app.ts",
-      "from": "./lib/newFeature",
-      "names": ["makeFeature"]
+      "file": "packages/app/src/index.ts",
+      "from": "@services/email/src/lib/searchEmails",
+      "names": ["searchEmails"]
     }
   ]
 }
-\`\`\`
-
-### Example 3 — Add union member and then use it in a function
-
-**Spec:** Add \`'Deleted'\` to \`Status\` in \`src/types.ts\`; adjust \`serializeStatus\` in \`src/status.ts\` to handle it.
-
-**Output (ordered):**
-
-\`\`\`json
-{
-  "version": "v0",
-  "ops": [
-    {
-      "kind": "addUnionMember",
-      "file": "src/types.ts",
-      "typeName": "Status",
-      "member": "'Deleted'"
-    },
-    {
-      "kind": "replaceFunctionBody",
-      "file": "src/status.ts",
-      "exportName": "serializeStatus",
-      "body": "{ switch(status){ case 'Deleted': return 'X'; default: return String(status); } }"
-    }
-  ]
-}
-\`\`\`
 
 ---
 
 ### Final reminders (you must obey)
 
-* **Always** order ops so that **providers (declarations/exports)** come **before consumers (imports/usages)** across files.
+* **Always** order ops so that dependencies are considered
 * Avoid broad replacements. **Granular edits first**; replace whole type/interface only when necessary.
 * Omit no-ops (already in desired state).
 * If required work exceeds v0 op capabilities, list it under \`non_applicable\`.
