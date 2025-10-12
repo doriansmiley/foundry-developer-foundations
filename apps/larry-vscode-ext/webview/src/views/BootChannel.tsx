@@ -36,6 +36,10 @@ export function BootChannel() {
         dispatch({ type: 'SET_WORKTREE_SETUP_ERROR' });
       }
 
+      if (msg.type === 'update_thread_state') {
+        dispatch({ type: 'SET_THREAD_STATE', payload: msg.state });
+      }
+
       console.log('📨 Webview received message:', msg);
       // NEW: forwarded SSE
       if (msg.type === 'sse_event' && msg.baseUrl && msg.event && typeof msg.data === 'string') {
