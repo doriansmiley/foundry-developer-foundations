@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import {
     AbstractReviewState,
     Context,
+    FileOp,
     MachineEvent,
     SpecReviewState,
     ThreadsDao,
@@ -11,6 +12,118 @@ import {
     UserIntent,
 } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
+import { googleFileOpsGenerator } from './delegates';
+
+async function verifyFilePaths(ops: FileOp[]) {
+    const root = process.cwd();
+    const inInLocalDev = root.includes('foundry-developer-foundations');
+    // TODO support an ENV var and fallback to hard coded values
+    const repoRoot = inInLocalDev
+        ? root.split('foundry-developer-foundations')[0]
+        : root.split('workspace')[0];
+
+    // TODO we need to check each file and confirm the path exists. If not retry. If still unresolved error out.
+    const promises = ops
+        .filter((f) => f.type === 'modified' || f.type === 'required')
+        .map(
+            (f) =>
+                new Promise((resolve, reject) => {
+                    const filePath = path.join(
+                        inInLocalDev
+                            ? `${repoRoot}/foundry-developer-foundations`
+                            : `${repoRoot}/workspace`,
+                        f.file
+                    );
+
+                    if (!fs.existsSync(filePath)) {
+                        console.log(`file does not exist: ${filePath}`);
+                        reject(f);
+                    } else {
+                        resolve(f);
+                    }
+                })
+        );
+
+    const fileContents = await Promise.allSettled(promises);
+    const failed = fileContents.filter((result) => result.status === 'rejected');
+
+    return failed;
+}
+
+async function getEffectedFileList(plan: string) {
+    // TODO replace with direct call to gemini api passing schema for structured outputs
+    const system = `You are a helpful AI coding assistant tasked with extracting the effected parts of the codebase from the design specification as JSON
+  You always look for the file list in the spec. Below is an example:
+  Files added/modified/required
+  - Required: packages/services/palantir/src/lib/doa/communications/communications/upsert.ts
+  - Required: packages/services/palantir/src/lib/doa/communications/communications/upsert.test.ts
+  - Added: packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.ts
+  - Added: packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.test.ts
+  - Modified: packages/types/src/lib/types.ts (Machine)
+
+Once the file list is isolated you must extract and return as JSON in the following format:
+[
+{
+file: string;
+type: string;
+}
+]
+
+For example:
+[
+    {
+        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.ts",
+        "type": "required"
+    },
+    {
+        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.test.ts",
+        "type": "required"
+    },
+    {
+        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.ts",
+        "type": "added"
+    },
+    {
+        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.test.ts",
+        "type": "added"
+    },
+    {
+        "file": "packages/types/src/lib/types.ts",
+        "type": "modified"
+    }
+]
+  `;
+    const user = `extract the changes to the codebase from the plan below and return the JSON per your system instructions
+  ${plan}
+  `;
+
+    const { ops } = await googleFileOpsGenerator(user, system);
+
+    const failed = await verifyFilePaths(ops);
+
+    if (failed.length > 0) {
+        //retry
+        const { ops } = await googleFileOpsGenerator(
+            `${user}
+Your previous response failed to resolve the following files
+${JSON.stringify(failed)}
+Try again and make sure paths match exactly the paths in the supplied plan
+`,
+            system
+        );
+
+        const retriedFailures = await verifyFilePaths(ops);
+        if (retriedFailures.length > 0) {
+            throw new Error(
+                `can not resolve paths for the following files: ${JSON.stringify(
+                    retriedFailures
+                )}`
+            );
+        }
+    }
+
+    return ops;
+}
 
 export async function specReview(
     context: Context,
@@ -36,6 +149,19 @@ export async function specReview(
     const { approved, messages } = context[specReviewId] as AbstractReviewState || { approved: false }
 
     if (approved) {
+        const updatedContents = await fs.promises.readFile(file, 'utf8');
+        // get the file json to be used by the architect
+        const files = await getEffectedFileList(updatedContents);
+        const plan = `# Affected Files
+\`\`\`json
+${JSON.stringify(files, null, 2)}
+\`\`\`
+
+# Software Design Specification
+${updatedContents}
+`;
+        // add the file block JSON for extraction downstream
+        await fs.promises.writeFile(file, plan, 'utf8');
 
         return {
             approved,

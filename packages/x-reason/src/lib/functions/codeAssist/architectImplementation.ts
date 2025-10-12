@@ -12,8 +12,6 @@ import {
 import { container } from '@codestrap/developer-foundations-di';
 import { TYPES } from '@codestrap/developer-foundations-types';
 import {
-  googleFileOpsGenerator,
-  googleImplementationGenerator,
   openAiImplementationGenerator,
 } from './delegates';
 
@@ -53,69 +51,27 @@ async function verifyFilePaths(ops: FileOp[]) {
   return failed;
 }
 
-async function getEffectedFileList(plan: string) {
-  // TODO replace with direct call to gemini api passing schema for structured outputs
-  const system = `You are a helpful AI coding assistant tasked with extracting the effected parts of the codebase from the design specification as JSON
-  You always look for the file list in the spec. Below is an example:
-  Files added/modified/required
-  - Required: packages/services/palantir/src/lib/doa/communications/communications/upsert.ts
-  - Required: packages/services/palantir/src/lib/doa/communications/communications/upsert.test.ts
-  - Added: packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.ts
-  - Added: packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.test.ts
-  - Modified: packages/types/src/lib/types.ts (Machine)
+export function parseAffectedFilesBlock(fileText: string) {
+  const blockRegex = /^# Affected Files\s+```json\s*([\s\S]*?)\s*```/m;
+  const match = fileText.match(blockRegex);
+  if (!match) return undefined;
 
-Once the file list is isolated you must extract and return as JSON in the following format:
-[
-{
-file: string;
-type: string;
+  try {
+    const jsonText = match[1].trim();
+    const data = JSON.parse(jsonText);
+    return data as FileOp[];
+  } catch (err) {
+    console.error("Failed to parse affected files block:", err);
+    return undefined;
+  }
 }
-]
 
-For example:
-[
-    {
-        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.ts",
-        "type": "required"
-    },
-    {
-        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.test.ts",
-        "type": "required"
-    },
-    {
-        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.ts",
-        "type": "added"
-    },
-    {
-        "file": "packages/services/palantir/src/lib/doa/communications/communications/upsert.v2.test.ts",
-        "type": "added"
-    },
-    {
-        "file": "packages/types/src/lib/types.ts",
-        "type": "modified"
-    }
-]
-  `;
-  const user = `extract the changes to the codebase from the plan below and return the JSON per your system instructions
-  ${plan}
-  `;
-
-  const { ops } = await googleFileOpsGenerator(user, system);
-
-  const failed = await verifyFilePaths(ops);
+async function getEffectedFileList(plan: string) {
+  const ops = parseAffectedFilesBlock(plan);
+  const failed = await verifyFilePaths(ops || []);
+  const retriedFailures = await verifyFilePaths(ops || []);
 
   if (failed.length > 0) {
-    //retry
-    const { ops } = await googleFileOpsGenerator(
-      `${user}
-Your previous response failed to resolve the following files
-${JSON.stringify(failed)}
-Try again and make sure paths match exactly the paths in the supplied plan
-`,
-      system
-    );
-
-    const retriedFailures = await verifyFilePaths(ops);
     if (retriedFailures.length > 0) {
       throw new Error(
         `can not resolve paths for the following files: ${JSON.stringify(
@@ -236,7 +192,7 @@ export async function architectImplementation(
   const plan = await fs.promises.readFile(designSpec, 'utf8');
 
   const files = await getEffectedFileList(plan);
-  const fileBlocks = await getEffectedFileBlocks(files);
+  const fileBlocks = await getEffectedFileBlocks(files || []);
 
   const system = `
 You are a helpful AI engineering architect that specializes in creating the final design specification based on the design specification created by the requirements team.
