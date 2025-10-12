@@ -32,6 +32,7 @@ export async function getState(
 ) {
   const { programmer, aiTransition, evaluate, functionCatalog } = xReasonFactory(xreason)({});
   let currentState: State<Context, MachineEvent> | undefined;
+  let pendingAsyncOperationsCount = 0;
 
   const dispatch = (action: ActionType) => {
     console.log(`route dispatch callback called`);
@@ -46,8 +47,10 @@ export async function getState(
   };
 
   const sendProxy = async (action: ActionType) => {
-    // this will trigger the call to the dispatch function defined above which should update the state values
+    // move to the next state, this will set currentState = action.value?.currentState
+    // in the dispatch function above
     send(action, action.payload?.stateId as string);
+
     if (persistMachineOnTransition) {
       // save the machine with the current state
       const { getLog } = container.get<LoggingService>(TYPES.LoggingService);
@@ -55,15 +58,22 @@ export async function getState(
       const machineDao = container.get<MachineDao>(TYPES.MachineDao);
       // This should capture the result of the last state
       const jsonState = serialize(currentState);
-      await machineDao.upsert(
-        solution.id,
-        // the StateConfig[] returned by the programmer
-        JSON.stringify(result),
-        jsonState,
-        getLog(solution.id) ?? '',
-        '', // we have to send default values for lockOwner and lockUntil or the OSDK will shit a brick. It still can't handle optional params
-        1
-      );
+      try {
+        pendingAsyncOperationsCount++;
+        await machineDao.upsert(
+          solution.id,
+          // the StateConfig[] returned by the programmer
+          JSON.stringify(result),
+          jsonState,
+          getLog(solution.id) ?? '',
+          '', // we have to send default values for lockOwner and lockUntil or the OSDK will shit a brick. It still can't handle optional params
+          1
+        );
+      } catch (e) {
+        console.log(e);
+      } finally {
+        pendingAsyncOperationsCount--
+      }
     }
   };
 
@@ -263,7 +273,7 @@ export async function getState(
   let iterations = 0;
   // this effectively acts as a timeout. Be sure to adjust if you have long running functions in your states!
   const MAX_ITERATIONS = 300;
-  while (!done() && iterations < MAX_ITERATIONS) {
+  while (!done() && iterations < MAX_ITERATIONS || pendingAsyncOperationsCount > 0) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     log(solution.id, `awaiting results`);
