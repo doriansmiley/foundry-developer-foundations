@@ -11,6 +11,7 @@ testGitWorklows.sh
 .nx/cache
 .nx/workspace-data
 /packages/**/.env
+.idea/
 
 project-graph.json
 
