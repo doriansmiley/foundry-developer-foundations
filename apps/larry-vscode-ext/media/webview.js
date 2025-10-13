@@ -3782,7 +3782,85 @@
   }
 
   // apps/larry-vscode-ext/webview/src/views/components/CustomSelect.tsx
+  var import_react3 = __toESM(require_compat());
+
+  // node_modules/lucide-react/dist/esm/createLucideIcon.js
+  var import_react2 = __toESM(require_compat());
+
+  // node_modules/lucide-react/dist/esm/shared/src/utils.js
+  var toKebabCase = (string) => string.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+  var mergeClasses = (...classes) => classes.filter((className, index, array) => {
+    return Boolean(className) && className.trim() !== "" && array.indexOf(className) === index;
+  }).join(" ").trim();
+
+  // node_modules/lucide-react/dist/esm/Icon.js
   var import_react = __toESM(require_compat());
+
+  // node_modules/lucide-react/dist/esm/defaultAttributes.js
+  var defaultAttributes = {
+    xmlns: "http://www.w3.org/2000/svg",
+    width: 24,
+    height: 24,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  };
+
+  // node_modules/lucide-react/dist/esm/Icon.js
+  var Icon = (0, import_react.forwardRef)(
+    ({
+      color = "currentColor",
+      size = 24,
+      strokeWidth = 2,
+      absoluteStrokeWidth,
+      className = "",
+      children,
+      iconNode,
+      ...rest
+    }, ref) => {
+      return (0, import_react.createElement)(
+        "svg",
+        {
+          ref,
+          ...defaultAttributes,
+          width: size,
+          height: size,
+          stroke: color,
+          strokeWidth: absoluteStrokeWidth ? Number(strokeWidth) * 24 / Number(size) : strokeWidth,
+          className: mergeClasses("lucide", className),
+          ...rest
+        },
+        [
+          ...iconNode.map(([tag, attrs]) => (0, import_react.createElement)(tag, attrs)),
+          ...Array.isArray(children) ? children : [children]
+        ]
+      );
+    }
+  );
+
+  // node_modules/lucide-react/dist/esm/createLucideIcon.js
+  var createLucideIcon = (iconName, iconNode) => {
+    const Component = (0, import_react2.forwardRef)(
+      ({ className, ...props }, ref) => (0, import_react2.createElement)(Icon, {
+        ref,
+        iconNode,
+        className: mergeClasses(`lucide-${toKebabCase(iconName)}`, className),
+        ...props
+      })
+    );
+    Component.displayName = `${iconName}`;
+    return Component;
+  };
+
+  // node_modules/lucide-react/dist/esm/icons/chevron-down.js
+  var ChevronDown = createLucideIcon("ChevronDown", [
+    ["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]
+  ]);
+
+  // apps/larry-vscode-ext/webview/src/views/components/CustomSelect.tsx
   function CustomSelect({
     items,
     selectedId,
@@ -3790,14 +3868,15 @@
     placeholder = "Select an item...",
     searchPlaceholder = "Search...",
     emptyMessage = "No items found",
-    maxHeight = "50vh"
+    maxHeight = "50vh",
+    size = "default"
   }) {
-    const [isOpen, setIsOpen] = (0, import_react.useState)(false);
-    const [searchText, setSearchText] = (0, import_react.useState)("");
-    const [filteredItems, setFilteredItems] = (0, import_react.useState)(items);
-    const inputRef = (0, import_react.useRef)(null);
-    const containerRef = (0, import_react.useRef)(null);
-    (0, import_react.useEffect)(() => {
+    const [isOpen, setIsOpen] = (0, import_react3.useState)(false);
+    const [searchText, setSearchText] = (0, import_react3.useState)("");
+    const [filteredItems, setFilteredItems] = (0, import_react3.useState)(items);
+    const inputRef = (0, import_react3.useRef)(null);
+    const containerRef = (0, import_react3.useRef)(null);
+    (0, import_react3.useEffect)(() => {
       if (!searchText.trim()) {
         setFilteredItems(items);
       } else {
@@ -3808,7 +3887,7 @@
         setFilteredItems(filtered);
       }
     }, [items, searchText]);
-    (0, import_react.useEffect)(() => {
+    (0, import_react3.useEffect)(() => {
       setFilteredItems(items);
     }, [items]);
     const selectedItem = items.find((item) => item.id === selectedId);
@@ -3837,7 +3916,7 @@
         handleItemSelect(filteredItems[0]);
       }
     };
-    (0, import_react.useEffect)(() => {
+    (0, import_react3.useEffect)(() => {
       const handleClickOutside = (event) => {
         if (containerRef.current && !containerRef.current.contains(event.target)) {
           setIsOpen(false);
@@ -3849,31 +3928,50 @@
         document.removeEventListener("mousedown", handleClickOutside);
       };
     }, []);
-    return /* @__PURE__ */ u3("div", { ref: containerRef, className: "position-relative width-full", children: [
-      /* @__PURE__ */ u3("div", { className: "width-full mb-1 mt-1", children: /* @__PURE__ */ u3(
-        "input",
-        {
-          ref: inputRef,
-          className: "form-control input-sm width-full",
-          placeholder: isOpen ? searchPlaceholder : placeholder,
-          value: isOpen ? searchText : selectedItem ? `${selectedItem.label} - ${selectedItem.worktreeName}` : "",
-          onClick: handleInputClick,
-          onChange: handleInputChange,
-          onKeyDown: handleKeyDown,
-          readOnly: !isOpen
-        }
-      ) }),
+    const containerWidth = size === "small" ? "45%" : "100%";
+    const dropdownWidth = size === "small" ? "150%" : "100%";
+    const dropdownMaxHeight = size === "small" ? "35vh" : maxHeight;
+    return /* @__PURE__ */ u3("div", { ref: containerRef, className: "position-relative", style: { width: containerWidth }, children: [
+      /* @__PURE__ */ u3("div", { className: "mb-1 mt-1 position-relative", style: { width: "100%" }, children: [
+        /* @__PURE__ */ u3(
+          "input",
+          {
+            ref: inputRef,
+            className: `form-control ${size === "small" ? "input-sm" : "width-full"}`,
+            placeholder: isOpen ? searchPlaceholder : placeholder,
+            value: isOpen ? searchText : selectedItem ? `${selectedItem.label}` : "",
+            onClick: handleInputClick,
+            onChange: handleInputChange,
+            onKeyDown: handleKeyDown,
+            readOnly: !isOpen
+          }
+        ),
+        /* @__PURE__ */ u3(
+          ChevronDown,
+          {
+            size: size === "small" ? 14 : 16,
+            style: {
+              position: "absolute",
+              right: "8px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              pointerEvents: "none",
+              color: "var(--vscode-input-foreground)"
+            }
+          }
+        )
+      ] }),
       isOpen && /* @__PURE__ */ u3(
         "div",
         {
-          className: "Box position-absolute width-full custom-select-list",
+          className: "Box position-absolute custom-select-list",
           style: {
             zIndex: 1e3,
-            maxHeight,
+            maxHeight: dropdownMaxHeight,
             overflow: "auto",
             top: "100%",
             left: 0,
-            right: 0
+            width: dropdownWidth
           },
           children: filteredItems.length === 0 ? /* @__PURE__ */ u3("div", { className: "p-3 color-fg-muted text-center", children: emptyMessage }) : /* @__PURE__ */ u3("ul", { className: "list-style-none", children: filteredItems.map((item, index) => /* @__PURE__ */ u3(
             "li",
@@ -3892,8 +3990,8 @@
                   className: "btn-invisible text-left width-full",
                   onClick: () => handleItemSelect(item),
                   children: [
-                    /* @__PURE__ */ u3("div", { className: "text-bold", style: { fontSize: "12px" }, children: item.label }),
-                    /* @__PURE__ */ u3("div", { style: { fontSize: "9px" }, children: item.worktreeName })
+                    /* @__PURE__ */ u3("div", { className: "text-bold", style: { fontSize: size === "small" ? "11px" : "12px" }, children: item.label }),
+                    size !== "small" && /* @__PURE__ */ u3("div", { style: { fontSize: "9px" }, children: item.worktreeName })
                   ]
                 }
               )
@@ -3987,10 +4085,40 @@
         /* @__PURE__ */ u3("div", { className: "width-full mb-2", children: /* @__PURE__ */ u3(
           "input",
           {
-            className: "form-control input-sm flex-1 width-full",
+            className: "form-control flex-1 width-full",
             placeholder: "Create new working item...",
             value: newLabel,
             onInput: (e3) => setNewLabel(e3.currentTarget.value)
+          }
+        ) }),
+        /* @__PURE__ */ u3("div", { className: "width-full mb-2", children: /* @__PURE__ */ u3(
+          CustomSelect,
+          {
+            items: [{
+              id: "1",
+              label: "Google",
+              worktreeName: "",
+              createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+              updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+            }, {
+              id: "4",
+              label: "MS 365",
+              worktreeName: "",
+              createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+              updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+            }, {
+              id: "3",
+              label: "React Components",
+              worktreeName: "",
+              createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+              updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+            }],
+            selectedId: "1",
+            size: "small",
+            onSelect: () => void 0,
+            placeholder: "Select agent...",
+            searchPlaceholder: "Select agent...",
+            emptyMessage: "No agents found"
           }
         ) }),
         /* @__PURE__ */ u3("div", { children: [
@@ -4146,4 +4274,54 @@
   }
   G(/* @__PURE__ */ u3(Root, {}), document.getElementById("root"));
 })();
+/*! Bundled license information:
+
+lucide-react/dist/esm/shared/src/utils.js:
+  (**
+   * @license lucide-react v0.454.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-react/dist/esm/defaultAttributes.js:
+  (**
+   * @license lucide-react v0.454.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-react/dist/esm/Icon.js:
+  (**
+   * @license lucide-react v0.454.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-react/dist/esm/createLucideIcon.js:
+  (**
+   * @license lucide-react v0.454.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-react/dist/esm/icons/chevron-down.js:
+  (**
+   * @license lucide-react v0.454.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-react/dist/esm/lucide-react.js:
+  (**
+   * @license lucide-react v0.454.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+*/
 //# sourceMappingURL=webview.js.map
