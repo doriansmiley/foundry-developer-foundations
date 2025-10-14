@@ -104,11 +104,40 @@ export function MainRepoScreen() {
         <h6 style={{position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'var(--vscode-tab-activeBackground)', color: 'var(--vscode-foreground)', padding: '0 10px', fontSize: '12px'}}>OR</h6>
         <div className="width-full mb-2">
           <input
-            className="form-control input-sm flex-1 width-full"
+            className="form-control flex-1 width-full"
             placeholder="Create new working item..."
             value={newLabel}
             onInput={(e) => setNewLabel((e.currentTarget as HTMLInputElement).value)}
           />
+          </div>
+          <div className="width-full mb-2">
+          <CustomSelect
+          items={[{
+            id: '1',
+            label: 'Google',
+            worktreeName: '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },{
+            id: '4',
+            label: 'MS 365',
+            worktreeName: '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },{
+            id: '3',
+            label: 'React Components',
+            worktreeName: '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }]}
+          selectedId={'1'}
+          size="small"
+          onSelect={() => undefined}
+          placeholder="Select agent..."
+          searchPlaceholder="Select agent..."
+          emptyMessage="No agents found"
+        />
           </div>
           <div>
           {setupPhase === 'creating_worktree' && !selectedThreadId && (

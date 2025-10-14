@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
 import type { ThreadListItem } from '../../lib/backend-types';
 
 interface CustomSelectProps {
@@ -9,6 +10,7 @@ interface CustomSelectProps {
   searchPlaceholder?: string;
   emptyMessage?: string;
   maxHeight?: string;
+  size?: 'default' | 'small';
 }
 
 export function CustomSelect({
@@ -18,7 +20,8 @@ export function CustomSelect({
   placeholder = "Select an item...",
   searchPlaceholder = "Search...",
   emptyMessage = "No items found",
-  maxHeight = "50vh"
+  maxHeight = "50vh",
+  size = 'default'
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -91,33 +94,49 @@ export function CustomSelect({
     };
   }, []);
 
+  // Size-specific styles
+  const containerWidth = size === 'small' ? '45%' : '100%';
+  const dropdownWidth = size === 'small' ? '150%' : '100%'; 
+  const dropdownMaxHeight = size === 'small' ? '35vh' : maxHeight;
+
   return (
-    <div ref={containerRef} className="position-relative width-full">
+    <div ref={containerRef} className="position-relative" style={{ width: containerWidth }}>
       {/* Input field */}
-      <div className="width-full mb-1 mt-1">
+      <div className="mb-1 mt-1 position-relative" style={{ width: '100%' }}>
         <input
           ref={inputRef}
-          className="form-control input-sm width-full"
+          className={`form-control ${size === 'small' ? 'input-sm' : 'width-full'}`}
           placeholder={isOpen ? searchPlaceholder : placeholder}
-          value={isOpen ? searchText : (selectedItem ? `${selectedItem.label} - ${selectedItem.worktreeName}` : '')}
+          value={isOpen ? searchText : (selectedItem ? `${selectedItem.label}` : '')}
           onClick={handleInputClick}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           readOnly={!isOpen}
+        />
+        <ChevronDown 
+          size={size === 'small' ? 14 : 16} 
+          style={{ 
+            position: 'absolute', 
+            right: '8px', 
+            top: '50%', 
+            transform: 'translateY(-50%)',
+            pointerEvents: 'none',
+            color: 'var(--vscode-input-foreground)'
+          }} 
         />
       </div>
 
       {/* Dropdown list */}
       {isOpen && (
         <div 
-          className="Box position-absolute width-full custom-select-list" 
+          className="Box position-absolute custom-select-list" 
           style={{ 
             zIndex: 1000, 
-            maxHeight,
+            maxHeight: dropdownMaxHeight,
             overflow: 'auto',
             top: '100%',
             left: 0,
-            right: 0
+            width: dropdownWidth
           }}
         >
           {filteredItems.length === 0 ? (
@@ -142,8 +161,8 @@ export function CustomSelect({
                     className="btn-invisible text-left width-full"
                     onClick={() => handleItemSelect(item)}
                   >
-                    <div className="text-bold" style={{fontSize: '12px'}}>{item.label}</div>
-                    <div style={{fontSize: '9px'}}>{item.worktreeName}</div>
+                    <div className="text-bold" style={{fontSize: size === 'small' ? '11px' : '12px'}}>{item.label}</div>
+                    {size !== 'small' && <div style={{fontSize: '9px'}}>{item.worktreeName}</div>}
                   </button>
                 </li>
               ))}
