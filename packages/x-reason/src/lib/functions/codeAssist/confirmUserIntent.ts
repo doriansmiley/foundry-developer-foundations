@@ -40,8 +40,6 @@ export async function confirmUserIntent(
     system: string;
   }[];
 
-  const initialUserPrompt = parsedMessages[0]?.user;
-
   let updatedContents;
   if (file && !fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
   if (file) {
@@ -174,7 +172,7 @@ or they don't have the required permissions.
     
     # Initial user request
     Below is the engineer's initial request and relevant context (stack, APIs, tests, file paths, prior threads).
-    ${initialUserPrompt}
+    ${context.initialUserPrompt}
 
     # User Response
     ${userResponse}
@@ -325,7 +323,7 @@ A:
     : `
 # Initial user request:
 Below is the engineer's initial request and relevant context (stack, APIs, tests, file paths, prior threads).
-${initialUserPrompt}
+${context.initialUserPrompt}
 
 Generate a list of questions for the developer so we can gain clarity about the work to be done so that in the next iteration we can generate a design specification.
 The goal is to gather all the explicit and implied functional requirements
