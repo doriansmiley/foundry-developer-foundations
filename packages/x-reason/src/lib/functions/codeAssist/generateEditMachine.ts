@@ -136,21 +136,20 @@ Resulting in the following edits json
   // if there is a spec on file be sure to use that instead of the plan as it can be edited by the user
   const user = userResponse ?
     `
-# THE DESIGN SPEC
-${plan}
+# Feedback from the user
+${userResponse}
 
 # Your previous response
 \`\`\`json
 ${updatedContents}
 \`\`\`
 
-# Feedback from the user
-${userResponse}
+# THE DESIGN SPEC
+${plan}
 
 # TASK
-Produce the v0 edit plan to implement the spec in this repo.
-
-Return ONLY JSON.
+Produce the v0 edit plan to implement THE DESIGN SPEC taking into account the user feedback and your previous response.
+Correct any errors the user has asked for. Return ONLY valid JSON.
 `
     :
     `

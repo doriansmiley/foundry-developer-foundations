@@ -40,6 +40,8 @@ export async function confirmUserIntent(
     system: string;
   }[];
 
+  const initialUserPrompt = parsedMessages[0]?.user;
+
   let updatedContents;
   if (file && !fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
   if (file) {
@@ -63,17 +65,12 @@ Your ultimate output is a **draft of the design specification** for the user's t
 # Hard Rules for Generating a Design Spec
 
 - You may ask clarifying questions **only if you lack essential information**, but never repeat the same question twice.
+- Don't ask questions just to ask a question. Carefully review the users request and find answers there first. If an only if an answer can't be found in the users request ask a clarifying quesiton.
 - You must always follow the user's instructions exactly.
-- Ensure you clarify requirements that may be implied but not specified by the user directly.
-- For example the user may want to add the ability to send slack messages to groups but not have states how to handle when those messages are rejected
+- Ensure you clarify requirements that may be implied but not specified by the user directly. For example the user may want to add the ability to send slack messages to groups but not have states how to handle when those messages are rejected
 or they don't have the required permissions.
-- Think carefully about all the explicit and implied features
-- When modifying an existing feature always ask the user if they want to create a new version and extend an exiting function/file
-rather than modifying existing functions/file. Prefer extension over modification when breaking changes are likely, or change sets are large (we want to reduce the blast radius of potential bugs)
+- Prefer extension over modification when breaking changes are likely, or change sets are large (we want to reduce the blast radius of potential bugs). If the user has provided guidance here you must follow it exactly.
 - A valid design spec MUST include all of the following sections:
-**Original User Prompt**
-
-   * Capture the request exactly as given.
 
  **Design spec name**
 
@@ -174,6 +171,10 @@ rather than modifying existing functions/file. Prefer extension over modificatio
     - Reuse prior facts: If Language/Libraries/Auth scopes/etc. were provided earlier, reuse them verbatim unless the user overrode them. Missing items must be inferred only if strongly implied; otherwise call them out as TBD.
     - ALWAYS REUSE PATHS IN THE DESIGN SPECIFICATION! If a user asks for a new file to be created in their response infer based on existing paths in the spec where to place that fil. This ensure paths are resolvable!
     - Prefer extension over modification when breaking changes are likely, or change sets are large (we want to reduce the blast radius of potential bugs)
+    
+    # Initial user request
+    Below is the engineer's initial request and relevant context (stack, APIs, tests, file paths, prior threads).
+    ${initialUserPrompt}
 
     # User Response
     ${userResponse}
@@ -322,10 +323,9 @@ A:
     * Returns \`{ id, threadId, labelIds? }\`.
       `
     : `
-Below is the engineer's initial request and relevant context (stack, APIs, tests, file paths, prior threads). 
-
-Initial user request:
-${task}
+# Initial user request:
+Below is the engineer's initial request and relevant context (stack, APIs, tests, file paths, prior threads).
+${initialUserPrompt}
 
 Generate a list of questions for the developer so we can gain clarity about the work to be done so that in the next iteration we can generate a design specification.
 The goal is to gather all the explicit and implied functional requirements
@@ -336,17 +336,12 @@ Focus on ensuring things like the feature behavior, user experience, error handl
 If persistence operations are involved make sure the developer considers things like dirty reads, stale updates, and eventual consistency
 Ensure the developer has context to understand complex aspects of the system by providing links to the appropriate documentation
 Prefer extension over modification when breaking changes are likely, or change sets are large (we want to reduce the blast radius of potential bugs)
-Do not ask if we prefer extension over modification. Make a decision and let the developer correct you later.
 Never ask stupid questions like "we will send mail via Gmail API using googleapis?". Assume the existing APIs and dependencies will be used.
 Never assume we will use new external dependencies. We prefer as little dependencies as possible and often opt to build solutions ourselves.
 You can ask to introduce a dependency only if it could be a heavy lift to rebuild it ourselves.
-Do not ask the developer to confirm tasks that will have to be done such as adding required scopes etc. 
-You don't need to clarify something that is clearly a requirement such as auth scopes.
-Don't delegate the decision to the developer if you can infer a good solution on your own. 
-You likely know more than the developer about the underlying APIs. 
-So don't ask for clarity just because there are multiple approaches. 
-Ask when there clearly isn't a best practice or standard approach that will just work.
-For example if you can infer how dependencies are injected or passed to our code, then don't ask the developer how to provide those dependencies. Figure it out
+Do not ask the developer to confirm tasks that will have to be done such as adding required scopes etc. You don't need to clarify something that is clearly a requirement such as auth scopes.
+Don't delegate the decision to the developer if you know the answer, especially when it comes to external dependencies/APIs. You likely know more than the developer about the external APIs. 
+Don't ask for clarity just because there are multiple approaches. Only Ask when there clearly isn't a best practice or standard approach that will just work. For example if you can infer how dependencies are injected or passed to our code, then don't ask the developer how to provide those dependencies. Figure it out
 Never ask what should the name of this new function be. Just name the function.
 Strive to reuse existing type definitions if they can fullfil the use case. Types are generally safe to modify only when introducing a new optional parameter. New required parameters should always be introduced in new type that extends the old type.
 Do not ask questions that are out of scope or drift out of scope.
