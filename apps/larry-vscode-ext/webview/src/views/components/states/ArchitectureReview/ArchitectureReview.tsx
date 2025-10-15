@@ -4,7 +4,7 @@ import { useState, useRef } from "preact/hooks";
 import { MachineStatus } from "../../../../lib/backend-types"
 import { useContentFromLocalFile } from "../../../../hooks/useContentFromLocalFile";
 import { useParseCodeEdits } from "./useParseCodeEdits";
-import { LucideFilePlus2, LucideFileDiff, LucideFileMinus2, LucideCopy, LucideCheck, LucideX } from "lucide-preact";
+import { LucideFilePlus2, LucideFileDiff, LucideFileMinus2, LucideCopy, LucideCheck, LucideX, FileSymlink } from "lucide-preact";
 import { GeneralMessageBubble } from "../../GeneralMessageBubble.tsx";
 
 type DataType = {
@@ -87,8 +87,6 @@ export function ArchitectureReview({ data, id, onAction, machineStatus }: { data
         return `${acc}\nRejected ${rejectionKey} with feedback: ${rejection.feedback}`;
       }, '');
 
-      console.log(rejectionPayload);
-      return;
       onAction('rejectArchitecture', rejectionPayload);
     }
 
@@ -125,9 +123,18 @@ export function ArchitectureReview({ data, id, onAction, machineStatus }: { data
     DELETE: <LucideFileMinus2 className="delete-icon" />,
   }
 
+  const openFile = () => {
+    postMessage({
+      type: 'openFile',
+      file,
+    });
+  }
+
   return (
     <div className="ArchitectureReview">
-      <GeneralMessageBubble content="Please **review the changes** file by file and approve ✅ or reject ❌. Then press the **Continue** button to proceed." />
+      <GeneralMessageBubble
+       topActions={<div className="text-button" onClick={openFile}>Open file <FileSymlink className="file-icon" /></div>}
+       content={`Please **review the changes** file by file and approve ✅ or reject ❌. Or review and edit directly in the generated markdown file.\n Then press the **Continue** button to proceed.`} />
       
       {codeEdits.map((codeEdit) => {
         const approval = fileApprovals[codeEdit.filePath];
@@ -203,14 +210,12 @@ export function ArchitectureReview({ data, id, onAction, machineStatus }: { data
       {machineStatus === 'awaiting_human' && (
           <hr />
       )}
-      {machineStatus !== 'awaiting_human' && (
+      {machineStatus === 'awaiting_human' && (
       <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
           <button className="btn btn-primary" onClick={handleContinueClick}>
             Continue
           </button>
-          {Object.keys(rejectionStates).length === 0 && (
-            <small style={{ marginTop: '8px', fontSize: '10px' }}>Approve all and continue.</small>
-          )}
+          <small style={{ marginTop: '8px', fontSize: '10px' }}>By clicking continue you eaither did review the changes displayed above or you reviewed and edit generated markdown file.</small>
         </div>
       )}
     </div>

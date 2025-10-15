@@ -3801,7 +3801,7 @@
   var vscode = typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : {
     postMessage: (_5) => void 0
   };
-  function postMessage(msg) {
+  function postMessage2(msg) {
     vscode.postMessage(msg);
   }
   function onMessage(cb) {
@@ -4072,7 +4072,7 @@
     }, [items, selectedThreadId]);
     function openWorktreeExisting() {
       if (!selected) return;
-      postMessage({
+      postMessage2({
         type: "open_worktree",
         worktreeName: selected.worktreeName,
         threadId: selected.id,
@@ -4083,7 +4083,7 @@
     function openWorktreeNew() {
       setSelectedThreadId(void 0);
       if (!newLabel.trim()) return;
-      postMessage({ type: "open_worktree", worktreeName: "", threadId: "", label: newLabel.trim() });
+      postMessage2({ type: "open_worktree", worktreeName: "", threadId: "", label: newLabel.trim() });
       setSetupPhase("creating_worktree");
     }
     return /* @__PURE__ */ u3("div", { className: "Box d-flex flex-column gap-3 p-3", children: [
@@ -7032,7 +7032,7 @@ Please report this to https://github.com/markedjs/marked.`, e4) {
           setContent(msg.content);
         }
       });
-      postMessage({
+      postMessage2({
         type: "readFile",
         filePath
       });
@@ -7047,7 +7047,7 @@ Please report this to https://github.com/markedjs/marked.`, e4) {
     const isPrev = id.includes("|prev-");
     const { content } = useContentFromLocalFile(file);
     const openFile = () => {
-      postMessage({
+      postMessage2({
         type: "openFile",
         file
       });
@@ -7198,8 +7198,6 @@ ${content}
           return `${acc}
 Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
         }, "");
-        console.log(rejectionPayload);
-        return;
         onAction("rejectArchitecture", rejectionPayload);
       }
       onAction("approveArchitecture");
@@ -7230,8 +7228,24 @@ Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
       MODIFY: /* @__PURE__ */ u3(FileDiff, { className: "modify-icon" }),
       DELETE: /* @__PURE__ */ u3(FileMinus2, { className: "delete-icon" })
     };
+    const openFile = () => {
+      postMessage({
+        type: "openFile",
+        file
+      });
+    };
     return /* @__PURE__ */ u3("div", { className: "ArchitectureReview", children: [
-      /* @__PURE__ */ u3(GeneralMessageBubble, { content: "Please **review the changes** file by file and approve \u2705 or reject \u274C. Then press the **Continue** button to proceed." }),
+      /* @__PURE__ */ u3(
+        GeneralMessageBubble,
+        {
+          topActions: /* @__PURE__ */ u3("div", { className: "text-button", onClick: openFile, children: [
+            "Open file ",
+            /* @__PURE__ */ u3(FileSymlink, { className: "file-icon" })
+          ] }),
+          content: `Please **review the changes** file by file and approve \u2705 or reject \u274C. Or review and edit directly in the generated markdown file.
+ Then press the **Continue** button to proceed.`
+        }
+      ),
       codeEdits.map((codeEdit) => {
         const approval = fileApprovals[codeEdit.filePath];
         const isApproved = approval?.approved === true;
@@ -7314,9 +7328,9 @@ Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
         ] }, codeEdit.filePath);
       }),
       machineStatus === "awaiting_human" && /* @__PURE__ */ u3("hr", {}),
-      machineStatus !== "awaiting_human" && /* @__PURE__ */ u3("div", { style: { marginTop: "16px", display: "flex", flexDirection: "column", alignItems: "flex-start" }, children: [
+      machineStatus === "awaiting_human" && /* @__PURE__ */ u3("div", { style: { marginTop: "16px", display: "flex", flexDirection: "column", alignItems: "flex-start" }, children: [
         /* @__PURE__ */ u3("button", { className: "btn btn-primary", onClick: handleContinueClick, children: "Continue" }),
-        Object.keys(rejectionStates).length === 0 && /* @__PURE__ */ u3("small", { style: { marginTop: "8px", fontSize: "10px" }, children: "Approve all and continue." })
+        /* @__PURE__ */ u3("small", { style: { marginTop: "8px", fontSize: "10px" }, children: "By clicking continue you eaither did review the changes displayed above or you reviewed and edit generated markdown file." })
       ] })
     ] });
   }
@@ -7325,7 +7339,7 @@ Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
   function CodeReview({ data, onAction, machineStatus }) {
     const file = data.file;
     const openFile = () => {
-      postMessage({
+      postMessage2({
         type: "openFile",
         file
       });
@@ -7356,7 +7370,7 @@ Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
   function GenerateEditMachine({ data, onAction, machineStatus }) {
     const file = data.file;
     const openFile = () => {
-      postMessage({
+      postMessage2({
         type: "openFile",
         file
       });
@@ -7841,7 +7855,7 @@ ${input.value}`;
         }
       };
       const cleanupListener = onMessage(handleMessage);
-      postMessage({ type: "getCurrentWorktree" });
+      postMessage2({ type: "getCurrentWorktree" });
       return () => {
         if (typeof cleanupListener === "function") {
           cleanupListener();
