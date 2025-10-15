@@ -12,6 +12,7 @@ export async function generateFileList(user: string, system: string): Promise<{ 
         // tool use with json output is unsupported
         responseMimeType: "application/json",
         responseJsonSchema: AffectedFilesJsonSchema,
+        temperature: 0,
     };
 
     // Make the request

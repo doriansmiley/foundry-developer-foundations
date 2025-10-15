@@ -15,6 +15,7 @@ export async function generateDesignSpec(user: string, system: string, readme: s
     // Configure generation settings
     const config = {
         tools: [groundingTool],
+        temperature: 0,
     };
 
     // Make the request

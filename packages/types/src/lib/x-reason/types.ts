@@ -409,3 +409,8 @@ export const AffectedFilesJsonSchema = {
   }
 };
 
+export type CodeEdits = {
+  filePath: string;
+  type: 'CREATE' | 'MODIFY' | 'DELETE';
+  proposedChange: string;
+};

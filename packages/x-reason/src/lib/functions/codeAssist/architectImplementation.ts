@@ -85,6 +85,19 @@ async function getEffectedFileList(plan: string) {
 }
 
 async function getEffectedFileBlocks(ops: FileOp[]) {
+  // TODO: for each file block classify the edits to be performed based on file type. 
+  // Note you need a factory to get the delegate to handle the edits based on the path.
+  // the factory can parse known paths like packages/google
+  // If no delegate is found for a path just use a generic default delegate
+  // using a specialized delegate allows us to use generators to generate stub code and specialized prompts for producing edits
+  // for example the packages/google delegate can further check the path for an associated generator.
+  // For example packages/services/google/src/lib/delegates/scheduleMeeting.ts (ADDED) could match 'packages/services/google/src/lib/delegates' -> DELEGATE GENERATOR
+  // then generate the stub code passing it in the request to generate the code changes
+  // once the delegate is found for each block call it passing the plan and ask it to produce the edits for the associated block and only those edits
+  // use promise all settled and retry anything that is 439 rate limit
+  // make sure you get back a structured response
+  // then combine all settled delegate responses and return FileOp[]
+
   // we overwrite every time to take into account that changes may have been introduced that effect the fil list
   // load the contents of the listed file where modified is true and await Promise.all
   const root = process.cwd();

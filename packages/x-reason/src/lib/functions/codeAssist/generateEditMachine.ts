@@ -59,7 +59,7 @@ Your ONLY job is to read a design spec and a repo snapshot and produce a precise
 - Only use the allowed op kinds. No free-form code, no extra fields.
 - Be surgical: smallest possible diff that satisfies the spec. If an edit is already present, omit it.
 - Do not insert comments into mutations that do not support them. For example propertySig can not contain comments!
-- Never under any circumstances just replace the types file! There is no reason to do this.
+- Never under any circumstances createOrReplace the types file! Perform focused edits like replaceType or replaceInterface.
 - Don't invent files or symbols. Only reference files/symbols referenced in the provided design specification.
 - Respect semantics and API constraints from the spec (e.g., types, signatures, limits).
 - If the spec requires work that v0 ops cannot express, list a short note under \`non_applicable\` (do NOT include such work in \`ops\`).
@@ -74,19 +74,41 @@ Your ONLY job is to read a design spec and a repo snapshot and produce a precise
 
 ---
 
-## Minimal-Change Playbook (must apply in this order!)
-*always* sequences dependent edits correctly. 
-Think carefully about the required order!
-Always emit ops in a topologically sorted order where every imported or referenced symbol is declared and exported before any file (new or existing) that imports/uses it.
+# Minimal-Change Playbook (apply in this order)
 
-Concretely:
-Emit ops that introduce or change provider symbols (types/interfaces/enums) in their source file.
-Immediately ensureExport for those providers (if needed).
-Then emit ops that introduce consumers, including createOrReplaceFile text that imports those providers, and any ensureImport ops in existing files.
-Then emit implementation edits (function/method bodies) that rely on those imports.
+1. **Imports:** use \`ensureImport\` / \`removeImportNames\`. Never rewrite import blocks wholesale.
+2. **Object literals (config/maps):** use \`upsertObjectProperty\` per key.
+3. **Interfaces / Type literals:** use \`insertInterfaceProperty\` or \`updateTypeProperty\`.
+4. **Union / Enum additions:** \`addUnionMember\` / \`insertEnumMember\`.
+5. **Functions/Methods:** \`replaceFunctionBody\` and/or \`updateFunctionReturnType\`.
+6. **Type aliases / Interfaces replacement:** only if the entire shape truly changes and cannot be expressed as property edits; otherwise prefer the granular ops.
+7. **Exports:** \`ensureExport\` for existing local symbols.
+8. **Renames:** \`renameSymbol\` (one-shot; don't include it in an idempotent second run).
+9. **Create file:** Only when the spec explicitly adds a new file and provides its full contents. Otherwise put it in \`non_applicable\`.
+
+---
+
+# Capabilities clarification (must follow)
+1 The executor **can create missing top-level declarations** using existing ops:
+  * \`replaceTypeAlias\` → **creates** the alias if it doesn't exist (or updates it if it does).
+  * \`replaceInterface\` → **creates** the interface if it doesn't exist (or replaces it if it does).
+2 After creating a new type/interface, use \`ensureExport\` if it must be exported.
+3 Therefore, **adding new top-level types/interfaces to an existing file *is in scope for v0***.
+  Do **not** mark this as \`non_applicable\`, and do **not** replace the entire types file.
+
+___
+
+# Sequencing/Phases
+*always* sequences dependent edits correctly:
+1. Emit ops that introduce or change provider symbols (types/interfaces/enums) in their source file.
+2. Immediately ensureExport for those providers (if needed).
+3. Then emit ops that introduce consumers, including createOrReplaceFile text that imports those providers, and any ensureImport ops in existing files.
+4. Then emit implementation edits (function/method bodies) that rely on those imports.
 
 This lets the executor avoid diagnostics like “cannot find name/type” during the run.
 
+# Training Data
+### Example A
 For example, a notional spec that introduces a feature to search email might require the following ordered changes:
 Add a new type SearchEmailsInput in packages/types/src/lib/types.ts.
 Create a new file packages/services/email/src/lib/searchEmails.ts that imports SearchEmailsInput and exports searchEmails.
@@ -123,13 +145,283 @@ Resulting in the following edits json
   ]
 }
 
+### Example B — Add a named import without touching others
+**Spec:** “Use \`z\` from \`zod\` in this file.”
+**File:** \`src/user/validate.ts\` currently has no \`zod\` import.
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "ensureImport",
+      "file": "src/user/validate.ts",
+      "from": "zod",
+      "names": ["z"]
+    }
+  ]
+}
+\`\`\`
+
+### Example C — Remove a specific named import (don't rewrite the line)
+
+**Spec:** “Stop importing \`unusedThing\` from \`utils\`.”
+**File:** \`src/feat/mod.ts\`
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "removeImportNames",
+      "file": "src/feat/mod.ts",
+      "from": "utils",
+      "names": ["unusedThing"]
+    }
+  ]
+}
+\`\`\`
+
+### Example D — Add union member if missing (idempotent)
+
+**Spec:** “Add \`'Deleted'\` to \`Status\` union.”
+**File:** \`src/types.ts\` (\`type Status = 'Active' | 'Suspended';\`)
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "addUnionMember",
+      "file": "src/types.ts",
+      "typeName": "Status",
+      "member": "'Deleted'"
+    }
+  ]
+}
+\`\`\`
+
+### Example E — Insert new interface property
+
+**Spec:** “\`User\` gets optional \`email?: string\`.”
+**File:** \`src/types.ts\` (has \`export interface User { id: string }\`)
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "insertInterfaceProperty",
+      "file": "src/types.ts",
+      "interfaceName": "User",
+      "propertySig": "email?: string"
+    }
+  ]
+}
+\`\`\`
+
+### Example F — Update property type in a type-literal alias (not whole replace)
+
+**Spec:** “\`Config.version\` changes to \`'v2'\`.”
+**File:** \`src/types.ts\` (\`export type Config = { version: 'v1'; }\`)
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "updateTypeProperty",
+      "file": "src/types.ts",
+      "typeName": "Config",
+      "property": "version",
+      "newType": "'v2'"
+    }
+  ]
+}
+\`\`\`
+
+### Example G — Insert enum member with initializer
+
+**Spec:** “Add \`Green = 'GREEN'\` to \`Color\`.”
+**File:** \`src/types.ts\` (\`enum Color { Red = 'RED' }\`)
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "insertEnumMember",
+      "file": "src/types.ts",
+      "enumName": "Color",
+      "memberName": "Green",
+      "initializer": "'GREEN'"
+    }
+  ]
+}
+\`\`\`
+
+### Example H — Upsert object property in a config map
+
+**Spec:** “Set \`features.search = true\` in exported \`features\` object.”
+**File:** \`src/config.ts\` (\`export const features = {}\`)
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "upsertObjectProperty",
+      "file": "src/config.ts",
+      "exportName": "features",
+      "key": "search",
+      "valueExpr": "true"
+    }
+  ]
+}
+\`\`\`
+
+### Example I — Replace function body (don’t recreate the function)
+
+**Spec:** “Change \`sum(a,b)\` to return \`a - (-b)\`.”
+**File:** \`src/math.ts\` (\`export function sum(a:number,b:number){ return a+b }\`)
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "replaceFunctionBody",
+      "file": "src/math.ts",
+      "exportName": "sum",
+      "body": "{ return a - (-b); }"
+    }
+  ]
+}
+\`\`\`
+
+### Example J — Update arrow function’s return type only
+
+**Spec:** “Make \`toStr(n)\` return \`string\` explicitly.”
+**File:** \`src/util.ts\` (\`export const toStr = (n:number) => n + ''\`)
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "updateFunctionReturnType",
+      "file": "src/util.ts",
+      "exportName": "toStr",
+      "returnType": "string"
+    }
+  ]
+}
+\`\`\`
+
+### Example K — Replace method body (target only the method)
+
+**Spec:** “\`Greeter.greet(name)\` should return \`hello, \${name}\`.”
+**File:** \`src/greeter.ts\` (\`export class Greeter { greet(n:string){ return 'hi ' + n } }\`)
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "replaceMethodBody",
+      "file": "src/greeter.ts",
+      "className": "Greeter",
+      "methodName": "greet",
+      "body": "{ return \`hello, \${name}\`; }"
+    }
+  ]
+}
+\`\`\`
+
+### Example L — Ensure export of an existing symbol (don't duplicate)
+
+**Spec:** “Export \`hidden\`.”
+**File:** \`src/mod.ts\` (\`const hidden = 1;\`)
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "ensureExport",
+      "file": "src/mod.ts",
+      "name": "hidden"
+    }
+  ]
+}
+\`\`\`
+
+### Example M — Rename symbol (one-shot)
+
+**Spec:** “Rename class \`Greeter\` → \`Speaker\`.”
+**File:** \`src/greeter.ts\`
+
+**Output**
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "renameSymbol",
+      "file": "src/greeter.ts",
+      "oldName": "Greeter",
+      "newName": "Speaker"
+    }
+  ]
+}
+\`\`\`
+
+### Example N — New file creation
+
+**Spec:** “Add new file \`src/lib/newFeature.ts\` with the following contents: …”
+
+\`\`\`json
+{
+  "version": "v0",
+  "ops": [
+    {
+      "kind": "createOrReplaceFile",
+      "file": "src/lib/newFeature.ts",
+      "text": "export const ok = true;\n",
+      "overwrite": false
+    }
+  ]
+}
+\`\`\`
+
 ---
 
 ### Final reminders (you must obey)
 
 * **Always** order ops so that dependencies are considered
 * Avoid broad replacements. **Granular edits first**; replace whole type/interface only when necessary.
-* Omit no-ops (already in desired state).
 * If required work exceeds v0 op capabilities, list it under \`non_applicable\`.
 `;
 
@@ -161,6 +453,10 @@ Produce the v0 edit plan to implement the spec in this repo.
 
 Return ONLY JSON.
 `;
+
+  // TODO use parseCodeEdits passing the file contents then for each returned block call openAiEditOpsGenerator
+  // assemble the results into the return array
+  // determine if order matters and if so manually sort. Roll up operations by file path, then figure out how to phase
 
   const { ops, tokenomics } = await openAiEditOpsGenerator(user, system);
 

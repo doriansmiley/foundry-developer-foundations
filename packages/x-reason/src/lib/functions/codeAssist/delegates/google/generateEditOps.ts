@@ -12,6 +12,7 @@ export async function generateEditOps(user: string, system: string): Promise<{ o
         // tool use with json output is unsupported
         responseMimeType: "application/json",
         responseJsonSchema: EditOpsJsonSchema,
+        temperature: 0,
     };
 
     // Make the request
