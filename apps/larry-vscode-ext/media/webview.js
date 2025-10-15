@@ -7312,14 +7312,14 @@ ${content}
   }
 
   // apps/larry-vscode-ext/webview/src/views/components/StateVisualization.tsx
-  var ArchitecturePhase = () => /* @__PURE__ */ u3("div", { children: "TODO" });
   var SearchDocumentation = () => /* @__PURE__ */ u3("div", {});
   var stateComponentMap = {
     specReview: SpecReview,
     confirmUserIntent: ConfirmUserIntent,
-    architectImplementation: ArchitecturePhase,
+    architectImplementation: ConfirmUserIntent,
     architectureReview: ArchitectureReview,
     searchDocumentation: SearchDocumentation,
+    applyEdits: /* @__PURE__ */ u3("div", { children: "Applying approved code changes..." }),
     codeReview: CodeReview
   };
   function StateVisualization({ data, onSubmit }) {

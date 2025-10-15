@@ -20,9 +20,10 @@ const SearchDocumentation = () => <div></div>;
 const stateComponentMap: Record<string, any> = {
   specReview: SpecReview,
   confirmUserIntent: ConfirmUserIntent,
-  architectImplementation: ArchitecturePhase,
+  architectImplementation: ConfirmUserIntent,
   architectureReview: ArchitectureReview,
   searchDocumentation: SearchDocumentation,
+  applyEdits: <div>Applying approved code changes...</div>,
   codeReview: CodeReview,
 };
 

@@ -33,7 +33,8 @@ export async function applyEdits(
   const { file } = context[generateEditMachineId] as { file: string };
 
   let updatedContents;
-  if (file && !fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
+  if (file && !fs.existsSync(file))
+    throw new Error(`File does not exist: ${file}`);
   if (file) {
     // read the file that may contain updates from the user
     updatedContents = await fs.promises.readFile(file, 'utf8');
@@ -44,15 +45,22 @@ export async function applyEdits(
   const edits = JSON.parse(updatedContents) as { ops: EditOp[] };
 
   const root = process.cwd();
-  const baseDir = root.split('foundry-developer-foundations')[0];
+  const inInLocalDev = root.includes('foundry-developer-foundations');
+  // TODO support an ENV var and fallback to hard coded values
+  const repoRoot = inInLocalDev
+    ? root.split('foundry-developer-foundations')[0]
+    : root.split('workspace')[0];
+  const baseDir = inInLocalDev
+    ? `${repoRoot}/foundry-developer-foundations`
+    : `${repoRoot}/workspace`;
   const options = {
-    baseDir: `${baseDir}foundry-developer-foundations`,
-    tsconfigPath: `${baseDir}foundry-developer-foundations/tsconfig.base.json`,
+    baseDir,
+    tsconfigPath: `${baseDir}/tsconfig.base.json`,
     dryRun: false,
     write: true,
     format: true,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    onLog: () => { },
+    onLog: () => {},
   };
 
   const results = await executeEditMachine(edits.ops, options);
