@@ -7152,35 +7152,57 @@ ${content}
     const codeEdits = useParseCodeEdits(content);
     const [copiedStates, setCopiedStates] = d2({});
     const [fileApprovals, setFileApprovals] = d2({});
+    const [rejectionStates, setRejectionStates] = d2({});
     const codeBlockRefs = A2({});
     const handleIndividualApprove = (filePath) => {
       setFileApprovals((prev) => ({
         ...prev,
         [filePath]: { filePath, approved: true }
       }));
+      setRejectionStates((prev) => {
+        delete prev[filePath];
+        return prev;
+      });
     };
-    const handleIndividualReject = (filePath) => {
+    const handleRejectClick = (filePath) => {
       setFileApprovals((prev) => ({
         ...prev,
         [filePath]: { filePath, approved: false }
       }));
-      onAction("rejectArchitecture", `Rejected files: ${Object.values(fileApprovals).map((approval) => approval?.filePath).join(", ")}`);
+      setRejectionStates((prev) => ({
+        ...prev,
+        [filePath]: { showInput: true, feedback: "", isSubmitted: false }
+      }));
     };
-    const approveArchitecture = () => {
-      const allApprovals = {};
-      codeEdits.forEach((codeEdit) => {
-        allApprovals[codeEdit.filePath] = { filePath: codeEdit.filePath, approved: true };
+    const handleFeedbackChange = (filePath, feedback) => {
+      setRejectionStates((prev) => ({
+        ...prev,
+        [filePath]: { ...prev[filePath], feedback, isSubmitted: false }
+      }));
+    };
+    const handleRejectSubmit = (filePath) => {
+      setFileApprovals((prev) => {
+        delete prev[filePath];
+        return prev;
       });
-      setFileApprovals(allApprovals);
+      setRejectionStates((prev) => ({
+        ...prev,
+        [filePath]: { ...prev[filePath], isSubmitted: true }
+      }));
+    };
+    const handleContinueClick = () => {
+      const rejections = Object.keys(rejectionStates);
+      if (rejections.length > 0) {
+        const rejectionPayload = rejections.reduce((acc, rejectionKey) => {
+          const rejection = rejectionStates[rejectionKey];
+          return `${acc}
+Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
+        }, "");
+        console.log(rejectionPayload);
+        return;
+        onAction("rejectArchitecture", rejectionPayload);
+      }
       onAction("approveArchitecture");
-    };
-    const rejectArchitecture = () => {
-      const allRejections = {};
-      codeEdits.forEach((codeEdit) => {
-        allRejections[codeEdit.filePath] = { filePath: codeEdit.filePath, approved: false };
-      });
-      setFileApprovals(allRejections);
-      onAction("rejectArchitecture");
     };
     const handleCopyClick = async (filePath, code) => {
       try {
@@ -7209,73 +7231,92 @@ ${content}
       DELETE: /* @__PURE__ */ u3(FileMinus2, { className: "delete-icon" })
     };
     return /* @__PURE__ */ u3("div", { className: "ArchitectureReview", children: [
-      /* @__PURE__ */ u3("div", { children: "Please review the architecture:" }),
-      /* @__PURE__ */ u3("br", {}),
+      /* @__PURE__ */ u3(GeneralMessageBubble, { content: "Please **review the changes** file by file and approve \u2705 or reject \u274C. Then press the **Continue** button to proceed." }),
       codeEdits.map((codeEdit) => {
         const approval = fileApprovals[codeEdit.filePath];
         const isApproved = approval?.approved === true;
         const isRejected = approval?.approved === false;
+        const rejectionState = rejectionStates[codeEdit.filePath] || { showInput: false, feedback: "", isSubmitted: false };
         return /* @__PURE__ */ u3("div", { children: [
-          /* @__PURE__ */ u3("div", { className: "codeBlockHeader", children: [
-            lucideIconsMap[codeEdit.type],
-            /* @__PURE__ */ u3("div", { children: codeEdit.filePath })
-          ] }),
           /* @__PURE__ */ u3(
             GeneralMessageBubble,
             {
-              topActions: /* @__PURE__ */ u3("span", {}),
-              bottomActions: /* @__PURE__ */ u3("span", {}),
+              topActions: /* @__PURE__ */ u3("div", { className: "codeBlockHeader", children: [
+                lucideIconsMap[codeEdit.type],
+                /* @__PURE__ */ u3("div", { children: codeEdit.filePath })
+              ] }),
+              bottomActions: /* @__PURE__ */ u3("div", { className: "codeBlockFooter", children: [
+                /* @__PURE__ */ u3("div", { className: "actionButtons", children: [
+                  /* @__PURE__ */ u3(
+                    "div",
+                    {
+                      className: `d-flex text-button ${isApproved ? "selected" : ""}`,
+                      onClick: () => handleIndividualApprove(codeEdit.filePath),
+                      style: { cursor: "pointer" },
+                      children: [
+                        /* @__PURE__ */ u3(Check, { className: "check-icon" }),
+                        "Approve"
+                      ]
+                    }
+                  ),
+                  /* @__PURE__ */ u3(
+                    "div",
+                    {
+                      className: `d-flex text-button ${isRejected && rejectionState.showInput ? "selected" : ""}`,
+                      onClick: () => handleRejectClick(codeEdit.filePath),
+                      style: { cursor: "pointer" },
+                      children: [
+                        /* @__PURE__ */ u3(X2, { className: "reject-icon" }),
+                        "Reject"
+                      ]
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ u3("div", { className: "text-button", children: [
+                  copiedStates[codeEdit.filePath] && /* @__PURE__ */ u3("span", { className: "copied-indicator", style: { marginLeft: "8px", fontSize: "12px", color: "#28a745" }, children: "Copied" }),
+                  /* @__PURE__ */ u3(
+                    Copy,
+                    {
+                      className: "copy-icon",
+                      onClick: () => handleCopyClick(codeEdit.filePath, codeEdit.proposedChange),
+                      style: { cursor: "pointer" }
+                    }
+                  )
+                ] })
+              ] }),
               content: codeEdit.proposedChange,
               contentRef: (el) => {
                 codeBlockRefs.current[codeEdit.filePath] = el;
               }
             }
           ),
-          /* @__PURE__ */ u3("div", { className: "codeBlockFooter", children: [
-            /* @__PURE__ */ u3("div", { className: "actionButtons", children: [
-              /* @__PURE__ */ u3(
-                "div",
-                {
-                  className: `d-flex text-button ${isApproved ? "selected" : ""}`,
-                  onClick: () => handleIndividualApprove(codeEdit.filePath),
-                  style: { cursor: "pointer" },
-                  children: [
-                    /* @__PURE__ */ u3(Check, { className: "check-icon" }),
-                    "Approve"
-                  ]
-                }
-              ),
-              /* @__PURE__ */ u3(
-                "div",
-                {
-                  className: `d-flex text-button ${isRejected ? "selected" : ""}`,
-                  onClick: () => handleIndividualReject(codeEdit.filePath),
-                  style: { cursor: "pointer" },
-                  children: [
-                    /* @__PURE__ */ u3(X2, { className: "reject-icon" }),
-                    "Reject"
-                  ]
-                }
-              )
-            ] }),
-            /* @__PURE__ */ u3("div", { className: "text-button", children: [
-              copiedStates[codeEdit.filePath] && /* @__PURE__ */ u3("span", { className: "copied-indicator", style: { marginLeft: "8px", fontSize: "12px", color: "#28a745" }, children: "Copied" }),
-              /* @__PURE__ */ u3(
-                Copy,
-                {
-                  className: "copy-icon",
-                  onClick: () => handleCopyClick(codeEdit.filePath, codeEdit.proposedChange),
-                  style: { cursor: "pointer" }
-                }
-              )
-            ] })
+          rejectionState.showInput && /* @__PURE__ */ u3("div", { style: { display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px" }, children: [
+            /* @__PURE__ */ u3(
+              "textarea",
+              {
+                className: "form-control",
+                placeholder: "Provide feedback",
+                value: rejectionState.feedback,
+                onChange: (e4) => handleFeedbackChange(codeEdit.filePath, e4.target.value),
+                style: { padding: "4px 8px", fontSize: "14px" }
+              }
+            ),
+            /* @__PURE__ */ u3(
+              "button",
+              {
+                className: rejectionState.feedback && !rejectionState.isSubmitted ? "btn btn-primary" : "btn",
+                disabled: !rejectionState.feedback || rejectionState.isSubmitted,
+                onClick: () => handleRejectSubmit(codeEdit.filePath),
+                children: rejectionState.isSubmitted ? "Rejected" : "Reject"
+              }
+            )
           ] })
         ] }, codeEdit.filePath);
       }),
-      /* @__PURE__ */ u3("hr", {}),
-      machineStatus === "awaiting_human" && /* @__PURE__ */ u3("div", { className: "d-flex mt-2", children: [
-        /* @__PURE__ */ u3("button", { className: "btn btn-primary mr-1 ml-1", onClick: approveArchitecture, children: "Approve All" }),
-        /* @__PURE__ */ u3("button", { className: "btn mr-1 ml-1", onClick: rejectArchitecture, children: "Reject All" })
+      machineStatus === "awaiting_human" && /* @__PURE__ */ u3("hr", {}),
+      machineStatus !== "awaiting_human" && /* @__PURE__ */ u3("div", { style: { marginTop: "16px", display: "flex", flexDirection: "column", alignItems: "flex-start" }, children: [
+        /* @__PURE__ */ u3("button", { className: "btn btn-primary", onClick: handleContinueClick, children: "Continue" }),
+        Object.keys(rejectionStates).length === 0 && /* @__PURE__ */ u3("small", { style: { marginTop: "8px", fontSize: "10px" }, children: "Approve all and continue." })
       ] })
     ] });
   }
@@ -7311,6 +7352,25 @@ ${content}
     ] }) }) });
   }
 
+  // apps/larry-vscode-ext/webview/src/views/components/states/generateEditMachine.tsx
+  function GenerateEditMachine({ data, onAction, machineStatus }) {
+    const file = data.file;
+    const openFile = () => {
+      postMessage({
+        type: "openFile",
+        file
+      });
+    };
+    const message = `Created code edits file: ${file}`;
+    return /* @__PURE__ */ u3("div", { className: "code-review", children: /* @__PURE__ */ u3(GeneralMessageBubble, { content: message, topActions: /* @__PURE__ */ u3("div", { className: "text-button", onClick: openFile, children: [
+      "Open file ",
+      /* @__PURE__ */ u3(FileSymlink, { className: "file-icon" })
+    ] }), bottomActions: /* @__PURE__ */ u3("div", { style: { display: "flex", justifyContent: "flex-end", width: "100%" }, children: /* @__PURE__ */ u3("div", { className: "text-button", onClick: openFile, children: [
+      "Open file ",
+      /* @__PURE__ */ u3(FileSymlink, { className: "file-icon" })
+    ] }) }) }) });
+  }
+
   // apps/larry-vscode-ext/webview/src/views/components/StateVisualization.tsx
   var SearchDocumentation = () => /* @__PURE__ */ u3("div", {});
   var stateComponentMap = {
@@ -7319,6 +7379,7 @@ ${content}
     architectImplementation: ConfirmUserIntent,
     architectureReview: ArchitectureReview,
     searchDocumentation: SearchDocumentation,
+    generateEditMachine: GenerateEditMachine,
     applyEdits: /* @__PURE__ */ u3("div", { children: "Applying approved code changes..." }),
     codeReview: CodeReview
   };
@@ -7496,9 +7557,14 @@ ${input.value}`;
         setInput((curr) => ({ ...curr, placeholder: "Please provide feedback on what you would like changed" }));
         setSpecReviewRejected(true);
       } else if (action === "rejectArchitecture") {
-        setInput((curr) => ({ ...curr, placeholder: "Please provide feedback on what you would like changed" }));
-        setArchitectureReviewRejected(true);
-        setArchitectureReviewPayload(payload);
+        if (!data?.currentState) {
+          console.error("Machine data is missing current state");
+          return;
+        }
+        const messages = data.context?.[data.currentState]?.messages;
+        const lastMessage = messages?.slice().reverse().find((item) => item.user === void 0);
+        lastMessage.user = payload;
+        fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: false, messages } } });
       } else if (action === "rejectCodeReview") {
         if (!data?.currentState) {
           console.error("Machine data is missing current state");

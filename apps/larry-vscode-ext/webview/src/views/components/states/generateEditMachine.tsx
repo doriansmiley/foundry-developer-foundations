@@ -14,7 +14,7 @@ type DataType = {
   reviewRequired: boolean;
 }
 
-export function CodeReview({ data, onAction, machineStatus }: { data: DataType, onAction: (action: string) => void, machineStatus: MachineStatus }) {
+export function GenerateEditMachine({ data, onAction, machineStatus }: { data: DataType, onAction: (action: string) => void, machineStatus: MachineStatus }) {
   const file = data.file;
 
   const openFile = () => {

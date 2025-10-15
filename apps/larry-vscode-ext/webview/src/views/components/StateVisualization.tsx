@@ -13,8 +13,8 @@ import { useNextMachineState } from "../../hooks/useNextState.ts";
 import { ArchitectureReview } from "./states/ArchitectureReview/ArchitectureReview.tsx";
 import { GeneralMessageBubble } from "./GeneralMessageBubble.tsx";
 import { CodeReview } from "./states/CodeReview.tsx";
-// TODO: Import ArchitecturePhase component when it's created
-const ArchitecturePhase = () => <div>TODO</div>;
+import { GenerateEditMachine } from "./states/generateEditMachine.tsx";
+
 const SearchDocumentation = () => <div></div>;
 
 const stateComponentMap: Record<string, any> = {
@@ -23,6 +23,7 @@ const stateComponentMap: Record<string, any> = {
   architectImplementation: ConfirmUserIntent,
   architectureReview: ArchitectureReview,
   searchDocumentation: SearchDocumentation,
+  generateEditMachine: GenerateEditMachine,
   applyEdits: <div>Applying approved code changes...</div>,
   codeReview: CodeReview,
 };
@@ -265,9 +266,18 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
       setInput(curr => ({...curr, placeholder: 'Please provide feedback on what you would like changed'}));
       setSpecReviewRejected(true);
     } else if (action === 'rejectArchitecture') {
-      setInput(curr => ({...curr, placeholder: 'Please provide feedback on what you would like changed'}));
-      setArchitectureReviewRejected(true);
-      setArchitectureReviewPayload(payload);
+      if (!data?.currentState) {
+        console.error('Machine data is missing current state');
+        return;
+      }
+      const messages = data.context?.[data.currentState]?.messages;
+      const lastMessage =
+      messages
+        ?.slice()
+        .reverse()
+        .find((item) => item.user === undefined);
+      lastMessage.user = payload;
+      fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: false,  messages} } });
     } else if (action === 'rejectCodeReview') {
       if (!data?.currentState) {
         console.error('Machine data is missing current state');
