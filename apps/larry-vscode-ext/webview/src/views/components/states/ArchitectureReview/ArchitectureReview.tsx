@@ -4,25 +4,14 @@ import { useState, useRef } from "preact/hooks";
 import { MachineStatus } from "../../../../lib/backend-types"
 import { useContentFromLocalFile } from "../../../../hooks/useContentFromLocalFile";
 import { useParseCodeEdits } from "./useParseCodeEdits";
-import { useMarkdown } from "../../../../hooks/useMarkdown";
 import { LucideFilePlus2, LucideFileDiff, LucideFileMinus2, LucideCopy, LucideCheck, LucideX } from "lucide-preact";
+import { GeneralMessageBubble } from "../../GeneralMessageBubble.tsx";
 
 type DataType = {
   approved: boolean;
   file: string;
   messages: {system?: string, user?: string}[];
   reviewRequired: boolean;
-}
-
-function CodeBlock({ code, codeBlockRef }: { code: string, codeBlockRef: any }) {
-  const mark = useMarkdown();
-  const codeContent = mark(code);
-
-  return (
-    <div className="markdown-content markdown-body" ref={codeBlockRef}>
-      <span dangerouslySetInnerHTML={{ __html: codeContent }} />
-    </div>
-  )
 }
 
 export function ArchitectureReview({ data, id, onAction, machineStatus }: { data: DataType, id: string, onAction: (action: string, payload?: any) => void, machineStatus: MachineStatus }) {
@@ -121,9 +110,11 @@ export function ArchitectureReview({ data, id, onAction, machineStatus }: { data
               {lucideIconsMap[codeEdit.type]}
               <div>{codeEdit.filePath}</div>
             </div>
-            <CodeBlock 
-              code={codeEdit.proposedChange} 
-              codeBlockRef={(el: HTMLDivElement | null) => {
+            <GeneralMessageBubble 
+              topActions={<span></span>}
+              bottomActions={<span></span>}
+              content={codeEdit.proposedChange} 
+              contentRef={(el: HTMLDivElement | null) => {
                 codeBlockRefs.current[codeEdit.filePath] = el;
               }}
             />

@@ -11,6 +11,8 @@ import { useExtensionStore, useExtensionDispatch } from "../../store/store";
 import { SpecReview } from "./states/SpecReview.tsx";
 import { useNextMachineState } from "../../hooks/useNextState.ts";
 import { ArchitectureReview } from "./states/ArchitectureReview/ArchitectureReview.tsx";
+import { GeneralMessageBubble } from "./GeneralMessageBubble.tsx";
+import { CodeReview } from "./states/CodeReview.tsx";
 // TODO: Import ArchitecturePhase component when it's created
 const ArchitecturePhase = () => <div>TODO</div>;
 const SearchDocumentation = () => <div></div>;
@@ -21,6 +23,7 @@ const stateComponentMap: Record<string, any> = {
   architectImplementation: ArchitecturePhase,
   architectureReview: ArchitectureReview,
   searchDocumentation: SearchDocumentation,
+  codeReview: CodeReview,
 };
 
 export function StateVisualization({data, onSubmit}: {data: MachineResponse, onSubmit: (input: string) => void}) {
@@ -239,7 +242,7 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
 
 
   const handleAction = (action: string, payload?: any) => {
-    if (action === 'approveSpec' || action === 'approveArchitecture') {
+    if (action === 'approveSpec' || action === 'approveArchitecture' || action === 'approveCodeReview') {
       setSpecReviewRejected(false);
 
       if (!data?.currentState) {
@@ -264,6 +267,19 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
       setInput(curr => ({...curr, placeholder: 'Please provide feedback on what you would like changed'}));
       setArchitectureReviewRejected(true);
       setArchitectureReviewPayload(payload);
+    } else if (action === 'rejectCodeReview') {
+      if (!data?.currentState) {
+        console.error('Machine data is missing current state');
+        return;
+      }
+      const messages = data.context?.[data.currentState]?.messages;
+      const lastMessage =
+      messages
+        ?.slice()
+        .reverse()
+        .find((item) => item.user === undefined);
+      lastMessage.user = 'Rejected.';
+      fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: false,  messages} } });
     }
   }
 
@@ -273,11 +289,7 @@ return (
       <div className="flex-1 overflow-y-auto" style={{paddingBottom: '50px'}}>
        <div className="space-y-4">
           {data.context?.solution && (
-            <div className="bg-gray-50 rounded border mb-2">
-              Hello! I'm Larry, your AI Coding assistant. I'm working in organized way you will see below.
-              <br />
-              Let's move some couches today!
-            </div>
+            <GeneralMessageBubble content={"Hello! I'm **Larry**, your AI Coding assistant. \n I'm working in organized, state based way. Below you will see the states I'm in and the actions I'm taking."} topActions={null} />
           )}
            {getDeduplicatedStack().map((stateKey, index) => {
             const { stateName, isPrevious, previousNumber } = parseStateKey(stateKey);
