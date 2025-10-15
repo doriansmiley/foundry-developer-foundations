@@ -7281,10 +7281,8 @@ ${content}
   }
 
   // apps/larry-vscode-ext/webview/src/views/components/states/CodeReview.tsx
-  init_hooks_module();
   function CodeReview({ data, onAction, machineStatus }) {
     const file = data.file;
-    const { content } = useContentFromLocalFile(file);
     const openFile = () => {
       postMessage({
         type: "openFile",
@@ -7297,14 +7295,8 @@ ${content}
     const rejectSpec = () => {
       onAction("rejectCodeReview");
     };
-    y2(() => {
-      if (machineStatus === "running") {
-        return;
-      }
-      openFile();
-    }, []);
     const message = `Review ts-morph code edits.`;
-    return /* @__PURE__ */ u3("div", { className: "code-review", children: content && /* @__PURE__ */ u3(GeneralMessageBubble, { content: message, topActions: /* @__PURE__ */ u3("div", { className: "text-button", onClick: openFile, children: [
+    return /* @__PURE__ */ u3("div", { className: "code-review", children: /* @__PURE__ */ u3(GeneralMessageBubble, { content: message, topActions: /* @__PURE__ */ u3("div", { className: "text-button", onClick: openFile, children: [
       "Open file ",
       /* @__PURE__ */ u3(FileSymlink, { className: "file-icon" })
     ] }), bottomActions: /* @__PURE__ */ u3("div", { style: { display: "flex", justifyContent: "space-between", width: "100%" }, children: [

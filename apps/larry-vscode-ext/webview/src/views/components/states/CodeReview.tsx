@@ -17,7 +17,6 @@ type DataType = {
 export function CodeReview({ data, onAction, machineStatus }: { data: DataType, onAction: (action: string) => void, machineStatus: MachineStatus }) {
   const file = data.file;
 
-  const { content } = useContentFromLocalFile(file);
   const openFile = () => {
     // TODO send postMessage to extension to open file
     postMessage({
@@ -34,18 +33,10 @@ export function CodeReview({ data, onAction, machineStatus }: { data: DataType, 
     onAction('rejectCodeReview');
   }
 
-  useEffect(() => {
-    if (machineStatus === 'running') {
-      return;
-    }
-
-    openFile();
-  }, []);
-
   const message = `Review ts-morph code edits.`
   return (
     <div className="code-review">
-      {content && <GeneralMessageBubble content={message} topActions={(
+      {<GeneralMessageBubble content={message} topActions={(
         <div className="text-button" onClick={openFile}>Open file <FileSymlink className="file-icon" /></div>
       )} bottomActions={(
         <div style={{display: 'flex', justifyContent: 'space-between', width: '100%'}}>
