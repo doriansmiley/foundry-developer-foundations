@@ -1,4 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+/* JSX */
+/* @jsxImportSource preact */
+import { useState, useRef, useEffect } from 'preact/hooks';
 import { ChevronDown } from 'lucide-react';
 import type { ThreadListItem } from '../../lib/backend-types';
 

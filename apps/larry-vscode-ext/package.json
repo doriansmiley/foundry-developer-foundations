@@ -66,9 +66,6 @@
     "vsce": "^2.15.0"
   },
   "dependencies": {
-    "@primer/css": "^22.0.2",
-    "@primer/primitives": "^11.0.0",
-    "@primer/react": "^37.31.0",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "dompurify": "^3.2.7",
     "highlight.js": "^11.11.1",

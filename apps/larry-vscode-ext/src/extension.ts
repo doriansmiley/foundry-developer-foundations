@@ -313,6 +313,8 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
   private async startMainDockerContainer(): Promise<void> {
     try {
+      await this.ensureLarryDockerImage();
+
       const foundryProjectRoot = await findProjectRoot();
       if (!foundryProjectRoot) {
         throw new Error('Project root not found.');
@@ -322,10 +324,6 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
       // Clean up existing container if any
       try {
-        // build docker image
-        await execAsync(`docker build -f Larry.Dockerfile -t larry-server .`, {
-          cwd: foundryProjectRoot,
-        });
         await execAsync(`docker rm -f ${containerName}`);
         console.log(`Cleaned up existing main container: ${containerName}`);
       } catch (cleanupError) {
@@ -795,6 +793,9 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     threadId: string | undefined
   ): Promise<string> {
     try {
+      // Ensure Docker image exists before running
+      await this.ensureLarryDockerImage();
+
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (!workspaceFolder) {
         throw new Error('No workspace folder found');
@@ -951,6 +952,24 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       vscode.Uri.file(resolvedPath)
     );
     return Buffer.from(fileContent).toString('utf8');
+  }
+
+  private async ensureLarryDockerImage(): Promise<void> {
+    try {
+      await execAsync('docker image inspect larry-server');
+    } catch (error) {
+      // Image doesn't exist, build it
+      console.log('Docker image larry-server not found, building...');
+      const foundryProjectRoot = await findProjectRoot();
+      if (!foundryProjectRoot) {
+        throw new Error('Project root not found for Docker build.');
+      }
+
+      await execAsync('docker build -f Larry.Dockerfile -t larry-server .', {
+        cwd: foundryProjectRoot,
+      });
+      console.log('Docker image larry-server built successfully');
+    }
   }
 
   resolveWebviewView(view: vscode.WebviewView) {

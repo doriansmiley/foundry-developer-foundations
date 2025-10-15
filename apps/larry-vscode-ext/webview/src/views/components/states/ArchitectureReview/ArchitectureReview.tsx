@@ -4,25 +4,14 @@ import { useState, useRef } from "preact/hooks";
 import { MachineStatus } from "../../../../lib/backend-types"
 import { useContentFromLocalFile } from "../../../../hooks/useContentFromLocalFile";
 import { useParseCodeEdits } from "./useParseCodeEdits";
-import { useMarkdown } from "../../../../hooks/useMarkdown";
-import { LucideFilePlus2, LucideFileDiff, LucideFileMinus2, LucideCopy, LucideCheck, LucideX } from "lucide-preact";
+import { LucideFilePlus2, LucideFileDiff, LucideFileMinus2, LucideCopy, LucideCheck, LucideX, FileSymlink } from "lucide-preact";
+import { GeneralMessageBubble } from "../../GeneralMessageBubble.tsx";
 
 type DataType = {
   approved: boolean;
   file: string;
   messages: {system?: string, user?: string}[];
   reviewRequired: boolean;
-}
-
-function CodeBlock({ code, codeBlockRef }: { code: string, codeBlockRef: any }) {
-  const mark = useMarkdown();
-  const codeContent = mark(code);
-
-  return (
-    <div className="markdown-content markdown-body" ref={codeBlockRef}>
-      <span dangerouslySetInnerHTML={{ __html: codeContent }} />
-    </div>
-  )
 }
 
 export function ArchitectureReview({ data, id, onAction, machineStatus }: { data: DataType, id: string, onAction: (action: string, payload?: any) => void, machineStatus: MachineStatus }) {
@@ -35,8 +24,15 @@ export function ArchitectureReview({ data, id, onAction, machineStatus }: { data
   // State to track which code blocks have been copied
   const [copiedStates, setCopiedStates] = useState<{[key: string]: boolean}>({});
   
-  // State to track individual file approvals/rejections
+
   const [fileApprovals, setFileApprovals] = useState<{[key: string]: {filePath: string, approved: boolean} | null}>({});
+  
+
+  const [rejectionStates, setRejectionStates] = useState<{[key: string]: {
+    showInput: boolean;
+    feedback: string;
+    isSubmitted: boolean;
+  }}>({});
   
   // Refs for each code block
   const codeBlockRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
@@ -46,33 +42,55 @@ export function ArchitectureReview({ data, id, onAction, machineStatus }: { data
       ...prev,
       [filePath]: { filePath, approved: true }
     }));
+    setRejectionStates(prev => {
+      delete prev[filePath];
+      return prev;
+    });
   }
 
-  const handleIndividualReject = (filePath: string) => {
+  const handleRejectClick = (filePath: string) => {
     setFileApprovals(prev => ({
       ...prev,
       [filePath]: { filePath, approved: false }
     }));
-
-    onAction('rejectArchitecture', `Rejected files: ${Object.values(fileApprovals).map(approval => approval?.filePath).join(', ')}`);
+    setRejectionStates(prev => ({
+      ...prev,
+      [filePath]: { showInput: true, feedback: '', isSubmitted: false }
+    }));
   }
 
-  const approveArchitecture = () => {
-    const allApprovals: {[key: string]: {filePath: string, approved: boolean}} = {};
-    codeEdits.forEach(codeEdit => {
-      allApprovals[codeEdit.filePath] = { filePath: codeEdit.filePath, approved: true };
+  const handleFeedbackChange = (filePath: string, feedback: string) => {
+    setRejectionStates(prev => ({
+      ...prev,
+      [filePath]: { ...prev[filePath], feedback, isSubmitted: false }
+    }));
+  }
+
+  const handleRejectSubmit = (filePath: string) => {    
+    setFileApprovals(prev => {
+      delete prev[filePath];
+      return prev;
     });
-    setFileApprovals(allApprovals);
+
+    setRejectionStates(prev => ({
+      ...prev,
+      [filePath]: { ...prev[filePath], isSubmitted: true }
+    }));
+  }
+
+  const handleContinueClick = () => {
+    const rejections = Object.keys(rejectionStates);
+
+    if (rejections.length > 0) {
+    const rejectionPayload = rejections.reduce((acc, rejectionKey) => {
+      const rejection = rejectionStates[rejectionKey];
+        return `${acc}\nRejected ${rejectionKey} with feedback: ${rejection.feedback}`;
+      }, '');
+
+      onAction('rejectArchitecture', rejectionPayload);
+    }
+
     onAction('approveArchitecture');
-  }
-
-  const rejectArchitecture = () => {
-    const allRejections: {[key: string]: {filePath: string, approved: boolean}} = {};
-    codeEdits.forEach(codeEdit => {
-      allRejections[codeEdit.filePath] = { filePath: codeEdit.filePath, approved: false };
-    });
-    setFileApprovals(allRejections);
-    onAction('rejectArchitecture');
   }
 
   const handleCopyClick = async (filePath: string, code: string) => {
@@ -105,67 +123,99 @@ export function ArchitectureReview({ data, id, onAction, machineStatus }: { data
     DELETE: <LucideFileMinus2 className="delete-icon" />,
   }
 
+  const openFile = () => {
+    postMessage({
+      type: 'openFile',
+      file,
+    });
+  }
+
   return (
     <div className="ArchitectureReview">
-      <div>Please review the architecture:</div>
-      <br />
+      <GeneralMessageBubble
+       topActions={<div className="text-button" onClick={openFile}>Open file <FileSymlink className="file-icon" /></div>}
+       content={`Please **review the changes** file by file and approve ✅ or reject ❌. Or review and edit directly in the generated markdown file.\n Then press the **Continue** button to proceed.`} />
       
       {codeEdits.map((codeEdit) => {
         const approval = fileApprovals[codeEdit.filePath];
         const isApproved = approval?.approved === true;
         const isRejected = approval?.approved === false;
+        const rejectionState = rejectionStates[codeEdit.filePath] || { showInput: false, feedback: '', isSubmitted: false };
 
         return (
           <div key={codeEdit.filePath}>
-            <div className="codeBlockHeader">
-              {lucideIconsMap[codeEdit.type]}
-              <div>{codeEdit.filePath}</div>
-            </div>
-            <CodeBlock 
-              code={codeEdit.proposedChange} 
-              codeBlockRef={(el: HTMLDivElement | null) => {
+            <GeneralMessageBubble 
+              topActions={<div className="codeBlockHeader">
+                {lucideIconsMap[codeEdit.type]}
+                <div>{codeEdit.filePath}</div>
+              </div>}
+              bottomActions={<div className="codeBlockFooter">
+                <div className="actionButtons">
+                <div 
+                  className={`d-flex text-button ${isApproved ? 'selected' : ''}`}
+                  onClick={() => handleIndividualApprove(codeEdit.filePath)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <LucideCheck className="check-icon" />
+                  Approve
+                </div>
+                <div 
+                    className={`d-flex text-button ${isRejected && rejectionState.showInput ? 'selected' : ''}`}
+                    onClick={() => handleRejectClick(codeEdit.filePath)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <LucideX className="reject-icon" />
+                    Reject
+                  </div>
+                </div>
+                <div className="text-button">
+                {copiedStates[codeEdit.filePath] && (
+                  <span className="copied-indicator" style={{ marginLeft: '8px', fontSize: '12px', color: '#28a745' }}>
+                    Copied
+                  </span>
+                )}
+                <LucideCopy 
+                  className="copy-icon" 
+                  onClick={() => handleCopyClick(codeEdit.filePath, codeEdit.proposedChange)}
+                  style={{ cursor: 'pointer' }}
+                /></div>
+              </div>}
+              content={codeEdit.proposedChange} 
+              contentRef={(el: HTMLDivElement | null) => {
                 codeBlockRefs.current[codeEdit.filePath] = el;
               }}
             />
-            <div className="codeBlockFooter">
-              <div className="actionButtons">
-              <div 
-                className={`d-flex text-button ${isApproved ? 'selected' : ''}`}
-                onClick={() => handleIndividualApprove(codeEdit.filePath)}
-                style={{ cursor: 'pointer' }}
+            {rejectionState.showInput && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+              <textarea
+                className="form-control"
+                placeholder="Provide feedback"
+                value={rejectionState.feedback}
+                onChange={(e) => handleFeedbackChange(codeEdit.filePath, (e.target as HTMLInputElement).value)}
+                style={{ padding: '4px 8px', fontSize: '14px' }}
+              />
+              <button
+                className={rejectionState.feedback && !rejectionState.isSubmitted ? 'btn btn-primary' : 'btn'}
+                disabled={!rejectionState.feedback || rejectionState.isSubmitted}
+                onClick={() => handleRejectSubmit(codeEdit.filePath)}
               >
-                <LucideCheck className="check-icon" />
-                Approve
-              </div>
-              <div 
-                className={`d-flex text-button ${isRejected ? 'selected' : ''}`}
-                onClick={() => handleIndividualReject(codeEdit.filePath)}
-                style={{ cursor: 'pointer' }}
-              >
-                <LucideX className="reject-icon" />
-                Reject
-              </div></div>
-              <div className="text-button">
-              {copiedStates[codeEdit.filePath] && (
-                <span className="copied-indicator" style={{ marginLeft: '8px', fontSize: '12px', color: '#28a745' }}>
-                  Copied
-                </span>
-              )}
-              <LucideCopy 
-                className="copy-icon" 
-                onClick={() => handleCopyClick(codeEdit.filePath, codeEdit.proposedChange)}
-                style={{ cursor: 'pointer' }}
-              /></div>
+                {rejectionState.isSubmitted ? 'Rejected' : 'Reject'}
+              </button>
             </div>
+            )}
           </div>
         )
       })}
 
-      <hr />
       {machineStatus === 'awaiting_human' && (
-      <div className="d-flex mt-2">
-          <button className="btn btn-primary mr-1 ml-1" onClick={approveArchitecture}>Approve All</button>
-          <button className="btn mr-1 ml-1" onClick={rejectArchitecture}>Reject All</button>
+          <hr />
+      )}
+      {machineStatus === 'awaiting_human' && (
+      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <button className="btn btn-primary" onClick={handleContinueClick}>
+            Continue
+          </button>
+          <small style={{ marginTop: '8px', fontSize: '10px' }}>By clicking continue you eaither did review the changes displayed above or you reviewed and edit generated markdown file.</small>
         </div>
       )}
     </div>
