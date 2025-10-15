@@ -111,7 +111,7 @@ export class Larry extends Text2Action {
       generatedTaskList,
       true,
       threadId,
-      undefined,
+      JSON.stringify({ initialUserPrompt: query }),
       SupportedEngines.GOOGLE_SERVICES_CODE_ASSIST,
       true
     );

@@ -2,7 +2,6 @@
 
 import { input, select } from '@inquirer/prompts';
 import * as fs from 'fs';
-import * as path from 'path';
 
 import {
   Larry,
@@ -23,19 +22,18 @@ import { applyEdits } from './assets/applyEdits';
 export async function googleCodingAgent(executionId?: string, contextUpdateInput?: string, task?: string) {
   const larry = new Larry();
   let result: LarryResponse | undefined;
-  let answer;
 
   if (!executionId) {
     // start a new execution and thread using the input task
-    answer = task;
     executionId = uuidv4();
 
     result = await larry.askLarry(
       `# User Question
-      ${answer}
+      ${task}
       `,
       process.env.FOUNDRY_TEST_USER
     );
+
     executionId = result.executionId;
   } else {
     // restart where we left off
@@ -127,8 +125,11 @@ async function main() {
   const whichAgent = await select({ message: 'select the agent', choices: ['googleCodingAgent', 'applyEdits'] })
 
   if (whichAgent === 'googleCodingAgent') {
-    const task = await input({ message: 'What would you like to do today:' });
-    await googleCodingAgent(undefined, undefined, task);
+    const file = await input({ message: 'Enter the full file path to your prompt:' });
+    if (!fs.existsSync(file)) throw new Error('file not found!');
+
+    const prompt = await fs.promises.readFile(file, 'utf8');
+    await googleCodingAgent(undefined, undefined, prompt);
   }
 
   if (whichAgent === 'applyEdits') {

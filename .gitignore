@@ -23,6 +23,7 @@ project-graph.json
 **/proposedCodeEdits-**.md
 **/readme-**.md
 **/codeEdits-**.json
+**/prompt-**.md
 
 # dev TLS certs/keys
 apps/**/certificates/*.pem

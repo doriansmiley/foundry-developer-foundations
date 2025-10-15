@@ -378,10 +378,28 @@ function replaceInterface(
     sf: SourceFile,
     op: Extract<EditOp, { kind: 'replaceInterface' }>
 ) {
-    const i = sf.getInterfaceOrThrow(op.interfaceName);
-    const target = i.getText();
-    if (normalizeWS(target) === normalizeWS(op.interfaceText)) return;
-    i.replaceWithText(op.interfaceText.trim());
+    const newText = op.interfaceText.trim();
+    const intf = sf.getInterface(op.interfaceName);
+
+    // If it doesn't exist, add the full text and return
+    if (!intf) {
+        // interfaceText is full text (may already include `export`)
+        sf.addStatements(newText);
+        return;
+    }
+
+    // No-op if text is already equivalent
+    if (normalizeWS(intf.getText()) === normalizeWS(newText)) return;
+
+    // Primary path: replace the interface text
+    try {
+        intf.replaceWithText(newText);
+    } catch {
+        // Fallback: remove and re-insert at the same position to avoid structural issues
+        const insertIndex = intf.getChildIndex();
+        intf.remove();
+        sf.insertStatements(insertIndex, newText);
+    }
 }
 
 function insertEnumMember(
