@@ -500,15 +500,22 @@ Produce the v0 edit plan to implement the spec in this repo.
 Return ONLY JSON.
 `;
 
-  const { ops, tokenomics } = await openAiEditOpsGenerator(user, system);
+  const { ops, tokenomics, non_applicable, version } = await openAiEditOpsGenerator(user, system);
 
-  const completeOps = [
-    ...ops,
-    ...createOrReplaceEdits,
-  ]
+  const completeOps = {
+    version,
+    ops: [
+      ...ops,
+      ...createOrReplaceEdits,
+    ],
+    non_applicable,
+  }
+
+  const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `codeEdits-${context.machineExecutionId}.json`);
+  await fs.promises.writeFile(abs, JSON.stringify(completeOps, null, 2), 'utf8');
 
   parsedMessages.push({
-    system: JSON.stringify(completeOps),
+    system: `Edits file produced: ${abs}`,
   });
 
   await threadsDao.upsert(
@@ -516,9 +523,6 @@ Return ONLY JSON.
     'cli-tool',
     context.machineExecutionId!
   );
-
-  const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `codeEdits-${context.machineExecutionId}.json`);
-  await fs.promises.writeFile(abs, JSON.stringify(completeOps, null, 2), 'utf8');
 
   return {
     file: abs,

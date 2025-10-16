@@ -4,7 +4,7 @@ import { getTokenomics } from "./utils";
 export async function generateEditOps(
     user: string,
     system: string,
-): Promise<{ ops: EditOp[], tokenomics: Tokenomics }> {
+): Promise<{ ops: EditOp[], tokenomics: Tokenomics, non_applicable: string[] | null, version: string }> {
 
     const response = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
@@ -29,7 +29,7 @@ export async function generateEditOps(
             text: {
                 format: {
                     type: 'json_schema',
-                    name: 'EditPlanV0',
+                    name: 'EditPlan',
                     schema: EditOpsJsonSchema,
                     strict: true,
                 },
@@ -49,11 +49,11 @@ export async function generateEditOps(
         throw new Error('No message block found in output');
     }
     // TODO wrap in try catch and implement retry on error
-    const ops = JSON.parse(msg).ops as EditOp[];
+    const { ops, version, non_applicable } = (JSON.parse(msg) as { version: string, ops: EditOp[], non_applicable: string[] | null });
 
     // TODO post this to Foundry
     const tokenomics = getTokenomics(resp);
 
-    return { ops, tokenomics };
+    return { version, non_applicable, ops, tokenomics };
 
 }

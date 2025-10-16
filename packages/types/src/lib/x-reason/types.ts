@@ -181,11 +181,11 @@ export type FileOp = {
 
 export const EditOpsJsonSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
-  title: 'EditPlanV0',
+  title: 'EditPlan',
   type: 'object',
   additionalProperties: false,
   properties: {
-    version: { type: 'string', enum: ['v0'] },
+    version: { type: 'string', enum: ['v1'] },
     ops: {
       type: 'array',
       items: {
