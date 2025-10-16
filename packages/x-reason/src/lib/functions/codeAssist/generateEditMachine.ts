@@ -3,6 +3,7 @@ import * as fs from 'fs';
 
 import { container } from '@codestrap/developer-foundations-di';
 import {
+  CodeEdits,
   Context,
   MachineEvent,
   ThreadsDao,
@@ -10,6 +11,7 @@ import {
   UserIntent,
 } from '@codestrap/developer-foundations-types';
 import { openAiEditOpsGenerator } from './delegates';
+import { parseCodeEdits } from '@codestrap/developer-foundations-utils';
 
 export async function generateEditMachine(
   context: Context,
@@ -36,6 +38,43 @@ export async function generateEditMachine(
   if (!file || !fs.existsSync(file)) throw new Error(`File does not exist: ${file}`);
   // reload the file to get the latest contents so we can capture user edits
   const plan = await fs.promises.readFile(file, 'utf8');
+
+  const editsBlocks = parseCodeEdits(plan)
+    .reduce((acc, cur) => {
+      switch (cur.type) {
+        case 'MODIFY':
+          acc.modified.push(cur);
+          break;
+        case 'CREATE':
+          acc.added.push(cur);
+          break;
+      }
+      return acc;
+    }, { modified: [], added: [] } as { modified: CodeEdits[], added: CodeEdits[] });
+
+  const planParts = plan.split('# The complete current contents of all files being modified without any changes applied')
+  const requiredFiles = planParts[1];
+  // assemble the edit blocks for files being edited only.
+  const modifiedFiles = editsBlocks.modified.map((item) => {
+    return `
+File: ${item.filePath} (MODIFIED)
+\`\`\`diff
+${item.proposedChange}
+\`\`\`
+`
+  });
+  // now manually assemble the added blocks since they don't need precise edits. 
+  // All the code is already contained in the blocks and not extra operations are needed
+  // if for some reason the model failed to export a function etc just fix it manually
+  const createOrReplaceEdits = editsBlocks.added.map(item => {
+    const overwrite = fs.existsSync(item.filePath)
+    return {
+      kind: 'createOrReplaceFile',
+      file: item.filePath,
+      text: item.proposedChange,
+      overwrite,
+    };
+  })
 
   const generateEditMachineId =
     context.stack
@@ -425,6 +464,7 @@ Resulting in the following edits json
 * If required work exceeds v0 op capabilities, list it under \`non_applicable\`.
 `;
 
+  // only have the model figure out modifications since create or replace files already have code generated where as diffs need precise edits
   // if there is a spec on file be sure to use that instead of the plan as it can be edited by the user
   const user = userResponse ?
     `
@@ -437,7 +477,10 @@ ${updatedContents}
 \`\`\`
 
 # THE DESIGN SPEC
-${plan}
+${modifiedFiles}
+
+# The complete current contents of all files being modified without any changes applied
+${requiredFiles}
 
 # TASK
 Produce the v0 edit plan to implement THE DESIGN SPEC taking into account the user feedback and your previous response.
@@ -446,7 +489,10 @@ Correct any errors the user has asked for. Return ONLY valid JSON.
     :
     `
 # THE DESIGN SPEC
-${plan}
+${modifiedFiles}
+
+# The complete current contents of all files being modified without any changes applied
+${requiredFiles}
 
 # TASK
 Produce the v0 edit plan to implement the spec in this repo.
@@ -454,14 +500,15 @@ Produce the v0 edit plan to implement the spec in this repo.
 Return ONLY JSON.
 `;
 
-  // TODO use parseCodeEdits passing the file contents then for each returned block call openAiEditOpsGenerator
-  // assemble the results into the return array
-  // determine if order matters and if so manually sort. Roll up operations by file path, then figure out how to phase
-
   const { ops, tokenomics } = await openAiEditOpsGenerator(user, system);
 
+  const completeOps = [
+    ...ops,
+    ...createOrReplaceEdits,
+  ]
+
   parsedMessages.push({
-    system: JSON.stringify(ops),
+    system: JSON.stringify(completeOps),
   });
 
   await threadsDao.upsert(
@@ -471,7 +518,7 @@ Return ONLY JSON.
   );
 
   const abs = path.resolve(process.env.BASE_FILE_STORAGE || process.cwd(), `codeEdits-${context.machineExecutionId}.json`);
-  await fs.promises.writeFile(abs, JSON.stringify(ops, null, 2), 'utf8');
+  await fs.promises.writeFile(abs, JSON.stringify(completeOps, null, 2), 'utf8');
 
   return {
     file: abs,

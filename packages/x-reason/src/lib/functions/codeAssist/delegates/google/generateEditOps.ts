@@ -23,7 +23,7 @@ ${user}`,
         config,
     });
 
-    const ops = JSON.parse(response.text || '[]') as EditOp[];
+    const ops = JSON.parse(response.text || '{"ops": []}').ops as EditOp[];
     const tokenomics = getTokenomics(response, 'gemini-2.5-flash');
 
     return {

@@ -49,7 +49,7 @@ export async function generateEditOps(
         throw new Error('No message block found in output');
     }
     // TODO wrap in try catch and implement retry on error
-    const ops = JSON.parse(msg) as EditOp[];
+    const ops = JSON.parse(msg).ops as EditOp[];
 
     // TODO post this to Foundry
     const tokenomics = getTokenomics(resp);

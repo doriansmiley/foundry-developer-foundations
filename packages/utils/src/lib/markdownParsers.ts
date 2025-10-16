@@ -19,8 +19,9 @@ export function parseCodeEdits(input: string): CodeEdits[] {
         const endIdx = nextMatch ? nextMatch.index : input.length;
         fileRegex.lastIndex = nextMatch ? nextMatch.index : input.length;
         const blockContent = input.slice(startIdx, endIdx).trim();
-        const codeBlockMatch = blockContent.match(/```[\s\S]*?```/);
-        const proposedChange = codeBlockMatch ? codeBlockMatch[0] : '';
+        //Regex101: https://regex101.com/r/IofxyI/1
+        const codeBlockMatch = blockContent.match(/```([a-zA-Z]+)(?:\r?\n|\\n)([\s\S]*?)(?:\r?\n|\\n)```/);
+        const proposedChange = codeBlockMatch ? codeBlockMatch[2] : '';
         blocks.push({ filePath, type, proposedChange });
     }
 
