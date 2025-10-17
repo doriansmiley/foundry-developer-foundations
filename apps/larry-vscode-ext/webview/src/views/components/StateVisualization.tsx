@@ -30,7 +30,7 @@ const stateComponentMap: Record<string, any> = {
 
 export function StateVisualization({data, onSubmit}: {data: MachineResponse, onSubmit: (input: string) => void}) {
   const { apiUrl } = useExtensionStore();
-  const [optimisticState, setOptimisticState] = useState<'running' | undefined>();
+  const [optimisticState, setOptimisticState] = useState<'running' | 'editsApplied' | undefined>();
   const { fetch: fetchGetNextState } = useNextMachineState(apiUrl);
   const [specReviewRejected, setSpecReviewRejected] = useState(false);
   const [architectureReviewRejected, setArchitectureReviewRejected] = useState(false);
@@ -141,8 +141,8 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
   }, [data.context?.currentState, data.context?.stateId]);
 
   useEffect(() => {
-    if (data.status !== 'running') {
-      setOptimisticState(undefined);
+    if (data.status !== 'running' ) {
+      setOptimisticState(prev => prev === 'editsApplied' ? prev : undefined);
     }
   }, [data.status]);
 
@@ -261,6 +261,13 @@ export function StateVisualization({data, onSubmit}: {data: MachineResponse, onS
       lastMessage.user = 'Looks good, approved.';
 
       fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: true,  messages} } });
+
+      if (action === 'approveCodeReview') {
+        setTimeout(() => {
+          setOptimisticState('editsApplied');
+        }, 15000);
+        return;
+      }
     } else if (action === 'rejectSpec') {
 
       setInput(curr => ({...curr, placeholder: 'Please provide feedback on what you would like changed'}));
@@ -350,6 +357,11 @@ return (
         {(data.status === 'running' || optimisticState === 'running') && (
     <div>
       <span className="shimmer-loading">Working</span><AnimatedEllipsis />
+    </div>
+  )}
+  {optimisticState === 'editsApplied' && (
+    <div>
+      <span>Code changes applied, review them and commit.</span>
     </div>
   )}
   {(data.status === 'pending' && !optimisticState) && (

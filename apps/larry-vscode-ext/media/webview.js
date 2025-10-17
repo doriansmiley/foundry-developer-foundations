@@ -59372,7 +59372,7 @@ Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
     }, [data.context?.currentState, data.context?.stateId]);
     y2(() => {
       if (data.status !== "running") {
-        setOptimisticState(void 0);
+        setOptimisticState((prev) => prev === "editsApplied" ? prev : void 0);
       }
     }, [data.status]);
     const toggleCollapse = (stateKey) => {
@@ -59455,6 +59455,12 @@ ${input.value}`;
         const lastMessage = messages?.slice().reverse().find((item) => item.user === void 0);
         lastMessage.user = "Looks good, approved.";
         fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: true, messages } } });
+        if (action === "approveCodeReview") {
+          setTimeout(() => {
+            setOptimisticState("editsApplied");
+          }, 15e3);
+          return;
+        }
       } else if (action === "rejectSpec") {
         setInput((curr) => ({ ...curr, placeholder: "Please provide feedback on what you would like changed" }));
         setSpecReviewRejected(true);
@@ -59525,6 +59531,7 @@ ${input.value}`;
           /* @__PURE__ */ u3("span", { className: "shimmer-loading", children: "Working" }),
           /* @__PURE__ */ u3(AnimatedEllipsis, {})
         ] }),
+        optimisticState === "editsApplied" && /* @__PURE__ */ u3("div", { children: /* @__PURE__ */ u3("span", { children: "Code changes applied, review them and commit." }) }),
         data.status === "pending" && !optimisticState && /* @__PURE__ */ u3("div", { children: [
           /* @__PURE__ */ u3("div", { className: "mb-2", children: 'Cannot automatically proceed to next state. Click "Continue" button to proceed.' }),
           /* @__PURE__ */ u3(
