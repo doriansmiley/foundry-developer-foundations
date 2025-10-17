@@ -3801,7 +3801,7 @@
   var vscode = typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : {
     postMessage: (_5) => void 0
   };
-  function postMessage2(msg) {
+  function postMessage(msg) {
     vscode.postMessage(msg);
   }
   function onMessage(cb) {
@@ -4072,7 +4072,7 @@
     }, [items, selectedThreadId]);
     function openWorktreeExisting() {
       if (!selected) return;
-      postMessage2({
+      postMessage({
         type: "open_worktree",
         worktreeName: selected.worktreeName,
         threadId: selected.id,
@@ -4083,7 +4083,7 @@
     function openWorktreeNew() {
       setSelectedThreadId(void 0);
       if (!newLabel.trim()) return;
-      postMessage2({ type: "open_worktree", worktreeName: "", threadId: "", label: newLabel.trim() });
+      postMessage({ type: "open_worktree", worktreeName: "", threadId: "", label: newLabel.trim() });
       setSetupPhase("creating_worktree");
     }
     return /* @__PURE__ */ u3("div", { className: "Box d-flex flex-column gap-3 p-3", children: [
@@ -7032,7 +7032,7 @@ Please report this to https://github.com/markedjs/marked.`, e4) {
           setContent(msg.content);
         }
       });
-      postMessage2({
+      postMessage({
         type: "readFile",
         filePath
       });
@@ -7047,7 +7047,7 @@ Please report this to https://github.com/markedjs/marked.`, e4) {
     const isPrev = id.includes("|prev-");
     const { content } = useContentFromLocalFile(file);
     const openFile = () => {
-      postMessage2({
+      postMessage({
         type: "openFile",
         file
       });
@@ -7339,7 +7339,7 @@ Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
   function CodeReview({ data, onAction, machineStatus }) {
     const file = data.file;
     const openFile = () => {
-      postMessage2({
+      postMessage({
         type: "openFile",
         file
       });
@@ -7370,7 +7370,7 @@ Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
   function GenerateEditMachine({ data, onAction, machineStatus }) {
     const file = data.file;
     const openFile = () => {
-      postMessage2({
+      postMessage({
         type: "openFile",
         file
       });
@@ -7855,7 +7855,7 @@ ${input.value}`;
         }
       };
       const cleanupListener = onMessage(handleMessage);
-      postMessage2({ type: "getCurrentWorktree" });
+      postMessage({ type: "getCurrentWorktree" });
       return () => {
         if (typeof cleanupListener === "function") {
           cleanupListener();

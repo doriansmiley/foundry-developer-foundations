@@ -6,6 +6,7 @@ import { useContentFromLocalFile } from "../../../../hooks/useContentFromLocalFi
 import { useParseCodeEdits } from "./useParseCodeEdits";
 import { LucideFilePlus2, LucideFileDiff, LucideFileMinus2, LucideCopy, LucideCheck, LucideX, FileSymlink } from "lucide-preact";
 import { GeneralMessageBubble } from "../../GeneralMessageBubble.tsx";
+import { postMessage } from "../../../../lib/vscode";
 
 type DataType = {
   approved: boolean;
