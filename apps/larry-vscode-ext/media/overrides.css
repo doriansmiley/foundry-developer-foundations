@@ -96,6 +96,54 @@ label {
 .markdown-body pre { background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); padding: 8px; border-radius: 6px; overflow: auto; }
 .markdown-body pre code { background: transparent; padding: 0; } 
 
+/* Highlight.js minimal theme tuned for VS Code webview */
+.markdown-body pre code.hljs {
+	display: block;
+	overflow-x: auto;
+	background: var(--vscode-editor-background);
+	color: var(--vscode-editor-foreground);
+}
+.hljs {
+	background: var(--vscode-editor-background);
+	color: var(--vscode-editor-foreground);
+}
+.hljs-comment, .hljs-quote {
+	color: #6A9955; /* VS Code dark comment green */
+	font-style: italic;
+}
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link {
+	color: #C586C0; /* purple */
+}
+.hljs-string, .hljs-attribute, .hljs-template-variable {
+	color: #CE9178; /* orange */
+}
+.hljs-number, .hljs-regexp, .hljs-symbol, .hljs-bullet {
+	color: #B5CEA8; /* light green */
+}
+.hljs-title, .hljs-function .hljs-title {
+	color: #DCDCAA; /* yellow */
+}
+.hljs-type, .hljs-class .hljs-title, .hljs-built_in, .hljs-builtin-name {
+	color: #4EC9B0; /* teal */
+}
+.hljs-variable, .hljs-params, .hljs-property {
+	color: #9CDCFE; /* light blue */
+}
+.hljs-meta {
+	color: #D4D4D4;
+}
+.hljs-operator, .hljs-punctuation {
+	color: var(--vscode-editor-foreground);
+}
+.hljs-addition {
+	color: #9CDCFE;
+}
+.hljs-deletion {
+	color: #F44747;
+}
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+
 /* Shimmer text effect */
 .shimmer {
 	color: var(--vscode-foreground);

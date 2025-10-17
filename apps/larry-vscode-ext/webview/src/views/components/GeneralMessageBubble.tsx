@@ -4,9 +4,10 @@
 import { useMarkdown } from "../../hooks/useMarkdown";
 
 
-export function GeneralMessageBubble({ content, topActions, bottomActions, contentRef }: { content: string, topActions?: any, bottomActions?: any, contentRef?: any }) {
+export function GeneralMessageBubble({ content, topActions, bottomActions, contentRef, codeFormattingEnabled = false }: { content: string, topActions?: any, bottomActions?: any, contentRef?: any, codeFormattingEnabled?: boolean }) {
   const mark = useMarkdown();
-const formattedContent = mark(content);
+
+const formattedContent = mark(content, codeFormattingEnabled);
   return (
     <div className="mb-2 generalMessageBubbleWrapper">
       {topActions && <div className="topActions">{topActions}</div>}

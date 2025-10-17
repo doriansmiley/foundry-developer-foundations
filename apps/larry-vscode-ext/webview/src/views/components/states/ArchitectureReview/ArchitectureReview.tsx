@@ -146,6 +146,7 @@ export function ArchitectureReview({ data, id, onAction, machineStatus }: { data
         return (
           <div key={codeEdit.filePath}>
             <GeneralMessageBubble 
+              codeFormattingEnabled
               topActions={<div className="codeBlockHeader">
                 {lucideIconsMap[codeEdit.type]}
                 <div>{codeEdit.filePath}</div>
@@ -187,7 +188,7 @@ export function ArchitectureReview({ data, id, onAction, machineStatus }: { data
               }}
             />
             {rejectionState.showInput && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', marginBottom: '8px' }}>
               <textarea
                 className="form-control"
                 placeholder="Provide feedback"
