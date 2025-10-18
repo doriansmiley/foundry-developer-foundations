@@ -4,9 +4,12 @@ import { SupportedFoundryClients } from "@codestrap/developer-foundations-types"
 declare global {
     namespace NodeJS {
         interface ProcessEnv {
+            // controls running of e2e tests, defaults to false
             E2E: string;
+            // the bae url of our Foundry stack
             FOUNDRY_STACK_URL: string;
             FOUNDRY_TOKEN: string;
+            // the hard coded uid of the user to use for testing, defaults to CodeStrap
             FOUNDRY_TEST_USER: string;
             OSDK_CLIENT_ID: string;
             OSDK_CLIENT_SECRET: string;

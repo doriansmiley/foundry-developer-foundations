@@ -50,7 +50,7 @@ async function loadPageContent(results: SearchResultItem[], app: FirecrawlApp): 
 }
 
 
-async function synthesizeAnswer(summaries: string[], originalQuery: string): Promise<string> {
+async function synthesizeAnswer(summaries: string[], originalQuery: string, citations: SearchResultItem[]): Promise<string> {
     if (!summaries || summaries.length === 0) {
         return "No relevant information found.";
     }
@@ -60,8 +60,17 @@ async function synthesizeAnswer(summaries: string[], originalQuery: string): Pro
         model: 'gemini-2.0-flash-001',
         contents,
     });
-    return geminiProResponse.text ?? "Could not synthesize an answer.";
+
+    const answer = geminiProResponse.text ?? "Could not synthesize an answer.";
+    const sources =
+        (citations || [])
+            .filter(c => typeof c.link === 'string' && c.link!.trim() !== '')
+            .map((c, i) => `${i + 1}. [${c.title || c.link}](${c.link}) — ${c.snippet || ''}`)
+            .join('\n');
+
+    return sources ? `${answer}\n\n---\n**Sources**\n${sources}` : answer;
 }
+
 
 async function performSearch(
     query: string,
@@ -94,9 +103,12 @@ async function performSearch(
 }
 
 async function generateSearchQueries(userInput: string): Promise<string[]> {
-    const contents = `You are a helpful AI market analyst that specializes in writing search queries based on the user query.
+    const contents = `You are a helpful AI search assistant that specializes in writing search queries based on the user query.
     You carefully deconstruct keywords for the search queries to ensure the user gets valid search results
     Users tend to supply lots of information in their queries and passing this directly to the search engine will cause it to return null results
+
+    Be mindful to include all relevant keywords to help isolate the most relevant search results.
+
     Decompose the following user query into the required number of searches to cover their request while obtaining valid search results: 
     "${userInput}"
     You can only respond in JSON in the following format:
@@ -160,7 +172,7 @@ export async function researchAssistant(
             const batchResults = await loadPageContent(batch, app);
             summaries.push(...batchResults.flat());
         }
-        return synthesizeAnswer(summaries, userInput);
+        return synthesizeAnswer(summaries, userInput, flattenedResults);
     } catch (e) {
         console.log((e as Error).message);
         console.log((e as Error).stack);

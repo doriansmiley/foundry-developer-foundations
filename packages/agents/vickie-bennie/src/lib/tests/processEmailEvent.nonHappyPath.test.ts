@@ -92,6 +92,14 @@ jest.mock('googleapis', () => ({
   ...jest.requireActual('googleapis'), // Keep other actual exports
 
   google: {
+    // mock drive
+    drive: jest.fn((version: string, auth: any) => {
+      return {
+        files: {
+          list: jest.fn(),
+        },
+      };
+    }),
     // Mock the 'gmail' function as before
     gmail: jest.fn((version: string, auth: any) => {
       return {

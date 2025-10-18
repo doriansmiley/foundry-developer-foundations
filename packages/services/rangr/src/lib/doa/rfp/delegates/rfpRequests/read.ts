@@ -33,7 +33,5 @@ export async function readRfpRequest(
     );
   }
 
-  console.log(`the threads ontology returned: ${JSON.stringify(apiResponse)}`);
-
   return apiResponse as RfpRequests;
 }

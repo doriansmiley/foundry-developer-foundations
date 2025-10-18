@@ -56,7 +56,5 @@ export async function searchRfpRequest(
     );
   }
 
-  console.log(`the threads ontology returned: ${JSON.stringify(apiResponse)}`);
-
   return apiResponse.data as RfpRequests[];
 }

@@ -124,52 +124,52 @@ function generateStateConfig(
 
   const stateConfig: any = !isNestedState
     ? {
-        entry: (context: Context, event: MachineEvent) => {
+      entry: (context: Context, event: MachineEvent) => {
+        console.log('Received Event:', event.type);
+        context.stack?.push(state.id);
+        // if the function is async, we ignore the promise as this is fire and forget.
+        // it's up to the function to dispatch the CONTINUE event on the machine to capture results
+        // in the vent payload and continue execution
+        console.log('Executing function:', functionName);
+        retrievedFunction.implementation(context, event, state.task);
+      },
+    }
+    : {
+      invoke: {
+        src: async (context: Context, event: MachineEvent) => {
           console.log('Received Event:', event.type);
           context.stack?.push(state.id);
           // if the function is async, we ignore the promise as this is fire and forget.
           // it's up to the function to dispatch the CONTINUE event on the machine to capture results
           // in the vent payload and continue execution
-          console.log('Executing function:', functionName);
-          retrievedFunction.implementation(context, event, state.task);
+          console.log('Executing nested state function:', functionName);
+          const result = await retrievedFunction.implementation(
+            context,
+            event,
+            state.task
+          );
+          console.log(
+            `received result from nested state function: ${result}`
+          );
+          const returnValue = {
+            stateId: state.id,
+            [state.id]: {
+              // we destructure to preserve other keys like result which holds values from user interaction
+              ...context[state.id],
+              ...(result as any),
+            },
+          };
+          return returnValue;
         },
-      }
-    : {
-        invoke: {
-          src: async (context: Context, event: MachineEvent) => {
-            console.log('Received Event:', event.type);
-            context.stack?.push(state.id);
-            // if the function is async, we ignore the promise as this is fire and forget.
-            // it's up to the function to dispatch the CONTINUE event on the machine to capture results
-            // in the vent payload and continue execution
-            console.log('Executing nested state function:', functionName);
-            const result = await retrievedFunction.implementation(
-              context,
-              event,
-              state.task
-            );
-            console.log(
-              `received result from nested state function: ${result}`
-            );
-            const returnValue = {
-              stateId: state.id,
-              [state.id]: {
-                // we destructure to preserve other keys like result which holds values from user interaction
-                ...context[state.id],
-                ...(result as any),
-              },
-            };
-            return returnValue;
-          },
-          onDone: {
-            target: 'success',
-            actions: 'saveResult',
-          },
-          onError: {
-            target: 'failure',
-          },
+        onDone: {
+          target: 'success',
+          actions: 'saveResult',
         },
-      };
+        onError: {
+          target: 'failure',
+        },
+      },
+    };
 
   stateConfig.id = state.id;
   // TODO augment with retrievedFunction.transitions.
@@ -194,7 +194,6 @@ function generateStateConfig(
     // we add stateConfig.on[transition.target] to support dynamic transitions added by the LLM
     // The LLM will determine which event to dispatch
     state.transitions
-      .filter((transition) => transition.on === 'CONTINUE')
       .forEach((transition) => {
         stateConfig.on[transition.target] = {
           target: transition.target,

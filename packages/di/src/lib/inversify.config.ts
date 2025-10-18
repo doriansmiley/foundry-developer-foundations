@@ -1,7 +1,10 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
 
-import { SupportedFoundryClients, TYPES } from '@codestrap/developer-foundations-types';
+import {
+  SupportedFoundryClients,
+  TYPES,
+} from '@codestrap/developer-foundations-types';
 import { openWeatherService } from '@codestrap/developer-foundations-services-weather';
 import {
   foundryClientFactory,
@@ -37,6 +40,7 @@ import { makeTicketsDao } from '@codestrap/developer-foundations-services-palant
 import { makeSlackClient } from '@codestrap/developer-foundations-services-slack';
 import { createLoggingService } from '@codestrap/developer-foundations-utils';
 import { eiaService } from '@codestrap/developer-foundations-services-eia';
+import { makeSqlLiteThreadsDao } from '@codestrap/sql-lite';
 
 const container = new Container();
 
@@ -47,7 +51,12 @@ const container = new Container();
 
 container
   .bind(TYPES.FoundryClient)
-  .toConstantValue(foundryClientFactory(process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE, undefined))
+  .toConstantValue(
+    foundryClientFactory(
+      process.env.FOUNDRY_CLIENT_TYPE || SupportedFoundryClients.PRIVATE,
+      undefined
+    )
+  );
 
 container
   .bind(TYPES.RangrClient)
@@ -96,9 +105,7 @@ container
   // globalBytes 64 MB max size
   .toConstantValue(createLoggingService(1 * 1024 * 1024, 64 * 1024 * 1024));
 
-container
-  .bind(TYPES.ResearchAssistant)
-  .toConstantValue(researchAssistant);
+container.bind(TYPES.ResearchAssistant).toConstantValue(researchAssistant);
 
 // IMPORTANT use container.getAsync when retrieving!
 container

@@ -11,6 +11,19 @@ testGitWorklows.sh
 .nx/cache
 .nx/workspace-data
 /packages/**/.env
+.idea/
+
+project-graph.json
+
+**/*-spec-output.md
+**/*-ops.json
+**/*-spec.md
+**/spec-**.md
+**/designDoc-**.md
+**/proposedCodeEdits-**.md
+**/readme-**.md
+**/codeEdits-**.json
+**/prompt-**.md
 
 # dev TLS certs/keys
 apps/**/certificates/*.pem
@@ -28,3 +41,10 @@ apps/**/certificates/*.pem
 # Next.js
 .next
 out
+
+/apps/cli-tools/db
+/apps/**/dist
+/apps/**/*.vsix
+
+# Larry worktrees files
+.larry/worktrees/**/*

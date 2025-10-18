@@ -32,9 +32,5 @@ export async function readTicket(
     );
   }
 
-  console.log(
-    `the ticket execution ontology returned: ${JSON.stringify(apiResponse)}`
-  );
-
   return apiResponse as Tickets;
 }

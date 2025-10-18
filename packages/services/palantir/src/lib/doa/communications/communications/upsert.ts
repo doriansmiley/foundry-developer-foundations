@@ -75,9 +75,6 @@ export async function upsertCommunications(
   });
 
   const comms = (await fetchResults.json()) as Communications;
-  console.log(
-    `the machine execution ontology returned: ${JSON.stringify(comms)}`
-  );
 
   return comms;
 }

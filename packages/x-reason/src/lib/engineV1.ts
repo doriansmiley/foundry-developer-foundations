@@ -238,9 +238,12 @@ Do not be chatty!
 
   value = coercedResponse ?? '';
   value = value.trim();
+  // check that there is a | followed by a GUID
+  // https://regex101.com/r/D5Dq4R/1
+  const matchGuid = value.match(/\|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/)?.[0]
 
   // TODO improve retry mechanism
-  if (currentState.indexOf(value) < 0) {
+  if (!currentState.includes(value) || !matchGuid) {
     const updatedUserMessage = `${user}
 your generated solution:
 ${value}

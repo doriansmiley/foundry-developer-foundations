@@ -60,7 +60,5 @@ export async function searchContacts(
     );
   }
 
-  console.log(`the Contacts ontology returned: ${JSON.stringify(apiResponse)}`);
-
   return apiResponse.data as Contacts[];
 }

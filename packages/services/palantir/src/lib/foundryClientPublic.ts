@@ -15,13 +15,6 @@ export function getFoundryClient(): FoundryClient {
 }
 
 function createFoundryClient(): FoundryClient {
-  // log ENV vars
-  console.log('Environment variable keys:');
-  Object.keys(process.env).forEach((key) => {
-    if (key.indexOf('NEXT_PUBLIC_') >= 0) {
-      console.log(`- ${key}`);
-    }
-  });
 
   if (!process.env['NEXT_PUBLIC_OSDK_CLIENT_ID']
     || !process.env['NEXT_PUBLIC_REDIRECT_URL']

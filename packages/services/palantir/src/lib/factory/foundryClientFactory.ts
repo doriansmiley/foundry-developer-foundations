@@ -22,11 +22,15 @@ const factory = curry((
 
 const clients = {
     public: (config?: Record<string, any>) => {
-        console.log(`config for getFoundryClientPublic is: ${config}`);
+        if (config) {
+            console.log(`config for getFoundryClientPublic is: ${config}`);
+        }
         return getFoundryClientPublic();
     },
     private: (config?: Record<string, any>) => {
-        console.log(`config for getFoundryClientPrivate is: ${config}`);
+        if (config) {
+            console.log(`config for getFoundryClientPrivate is: ${config}`);
+        }
         return getFoundryClientPrivate();
     }
 }

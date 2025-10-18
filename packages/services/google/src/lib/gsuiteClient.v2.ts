@@ -13,7 +13,7 @@ import { summarizeCalendars } from './delegates/summerizeCalanders';
 import { searchDriveFiles } from './delegates/searchDriveFiles';
 import { wallClockToUTC, workingHoursUTCForDate } from '@codestrap/developer-foundations-utils';
 import { google } from 'googleapis';
-import { loadServiceAccountFromEnv, makeGoogleAuth } from '../helpers/googleAuth';
+import { loadServiceAccountFromEnv, makeGoogleAuth } from './helpers/googleAuth';
 
 export async function makeGSuiteClientV2(
   user: string
@@ -100,7 +100,7 @@ export async function makeGSuiteClientV2(
     },
     searchDriveFiles: async (params: DriveSearchParams): Promise<DriveSearchOutput> => {
       const result = await searchDriveFiles(driveClient, params);
-      
+
       return {
         message: `Found ${result.files.length} files matching your search criteria`,
         files: result.files,

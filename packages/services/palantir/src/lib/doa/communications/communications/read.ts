@@ -36,9 +36,5 @@ export async function readCommunications(
     );
   }
 
-  console.log(
-    `the machine execution ontology returned: ${JSON.stringify(apiResponse)}`
-  );
-
   return apiResponse as Communications;
 }

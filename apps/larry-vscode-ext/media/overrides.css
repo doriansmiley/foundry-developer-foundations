@@ -1,0 +1,374 @@
+/* Larry webview overrides to match VS Code scale */
+:root {
+	--fdry-gap: 8px;
+	--borderColor-default: rgba(255,255,255,.2);
+}
+
+body {
+	padding: 0 5px !important;
+}
+
+html, body, #root, .app { height: 100%; }
+html, body, #root { font-family: var(--vscode-font-family); color: var(--vscode-foreground); margin: 0; }
+
+/* Layout helpers */
+.p-3 { padding: 8px !important; }
+.p-1 { padding: 4px !important; }
+.mb-2 { margin-bottom: 8px !important; }
+.gap-2 > * + * { margin-top: 8px; }
+
+.app { display: flex; flex-direction: column; }
+.messages { flex: 1 1 auto; overflow: auto; }
+.composer { flex: 0 0 auto; }
+
+/* Buttons */
+.btn {
+	padding: 3px 6px !important;
+	min-height: 0 !important;
+	line-height: 1.4 !important;
+	border-radius: 6px !important;
+	background: var(--vscode-button-secondaryBackground) !important;
+	color: var(--vscode-foreground) !important;
+	border-color: var(--vscode-button-border, transparent) !important;
+	white-space: normal !important;
+	word-break: break-word !important;
+	overflow-wrap: anywhere !important;
+	font-size: 12px !important;
+}
+.btn-primary {
+	background: var(--vscode-button-background) !important;
+	color: var(--vscode-button-foreground) !important;
+}
+/* Icon-only button */
+.btn-icon { display: inline-flex !important; align-items: center; justify-content: center; padding: 4px !important; }
+.btn-icon svg { display: block; }
+
+/* Session items */
+.session-item { 
+	cursor: pointer !important; 
+	transition: background-color 0.2s ease !important;
+	border: 1px solid var(--vscode-panel-border, transparent) !important;
+}
+.session-item:hover { 
+	background: var(--vscode-list-hoverBackground, var(--vscode-editor-background)) !important;
+}
+.session-item:active { 
+	background: var(--vscode-list-activeSelectionBackground, var(--vscode-editor-selectionBackground)) !important;
+}
+.sessions-list { flex: 1 1 auto; overflow: auto; }
+
+/* Form elements */
+.form-label { 
+	display: block !important; 
+	margin-bottom: 4px !important; 
+	color: var(--vscode-foreground) !important;
+}
+input[type="radio"] { 
+	margin-right: 8px !important; 
+}
+label { 
+	cursor: pointer !important; 
+	display: flex !important; 
+	align-items: center !important; 
+	padding: 4px 0 !important;
+}
+
+/* Inputs */
+.form-control {
+	font-size: 12px !important;
+	padding: 4px 6px !important;
+	height: auto !important;
+	background: var(--vscode-input-background) !important;
+	color: var(--vscode-input-foreground) !important;
+	border-color: var(--vscode-input-border, transparent) !important;
+
+}
+.form-control.pr-40 {
+	padding-right: 40px !important;
+}
+
+/* Markdown rendering */
+.markdown-body { font-size: 12px; line-height: 1.5; border: 1px solid rgba(255,255,255,.2); background-color: var(--vscode-editor-background); }
+.markdown-body p { margin: 6px 0; }
+.markdown-body ul, .markdown-body ol { margin: 6px 0 6px 0; padding-left: 1.2rem; }
+.markdown-body li { margin: 2px 0; }
+.markdown-body code { background: var(--vscode-editorInlayHint-background, var(--vscode-editor-background)); padding: 1px 4px; border-radius: 4px; }
+.markdown-body pre { background: var(--vscode-editor-background); color: var(--vscode-editor-foreground); padding: 8px; border-radius: 6px; overflow: auto; }
+.markdown-body pre code { background: transparent; padding: 0; } 
+
+/* Highlight.js minimal theme tuned for VS Code webview */
+.markdown-body pre code.hljs {
+	display: block;
+	overflow-x: auto;
+	background: var(--vscode-editor-background);
+	color: var(--vscode-editor-foreground);
+}
+.hljs {
+	background: var(--vscode-editor-background);
+	color: var(--vscode-editor-foreground);
+}
+.hljs-comment, .hljs-quote {
+	color: #6A9955; /* VS Code dark comment green */
+	font-style: italic;
+}
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link {
+	color: #C586C0; /* purple */
+}
+.hljs-string, .hljs-attribute, .hljs-template-variable {
+	color: #CE9178; /* orange */
+}
+.hljs-number, .hljs-regexp, .hljs-symbol, .hljs-bullet {
+	color: #B5CEA8; /* light green */
+}
+.hljs-title, .hljs-function .hljs-title {
+	color: #DCDCAA; /* yellow */
+}
+.hljs-type, .hljs-class .hljs-title, .hljs-built_in, .hljs-builtin-name {
+	color: #4EC9B0; /* teal */
+}
+.hljs-variable, .hljs-params, .hljs-property {
+	color: #9CDCFE; /* light blue */
+}
+.hljs-meta {
+	color: #D4D4D4;
+}
+.hljs-operator, .hljs-punctuation {
+	color: var(--vscode-editor-foreground);
+}
+.hljs-addition {
+	color: #9CDCFE;
+}
+.hljs-deletion {
+	color: #F44747;
+}
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }
+
+/* Shimmer text effect */
+.shimmer {
+	color: var(--vscode-foreground);
+	background: linear-gradient(
+		90deg,
+		var(--vscode-foreground) 0%,
+		var(--vscode-textLink-foreground) 25%,
+		var(--vscode-textLink-activeForeground) 50%,
+		var(--vscode-textLink-foreground) 75%,
+		var(--vscode-foreground) 100%
+	);
+	background-size: 200% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer 2s ease-in-out infinite;
+}
+
+.shimmer-subtle {
+	color: var(--vscode-foreground);
+	background: linear-gradient(
+		90deg,
+		rgba(var(--vscode-foreground), 0.6) 0%,
+		var(--vscode-foreground) 50%,
+		rgba(var(--vscode-foreground), 0.6) 100%
+	);
+	background-size: 200% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer 3s ease-in-out infinite;
+}
+
+.shimmer-loading {
+	color: var(--vscode-descriptionForeground);
+	background: linear-gradient(
+		90deg,
+		var(--vscode-descriptionForeground) 0%,
+		var(--vscode-foreground) 50%,
+		var(--vscode-descriptionForeground) 100%
+	);
+	background-size: 200% 100%;
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+
+
+.ArchitectureReview .codeBlockHeader {
+	display: flex;
+	align-items: center;
+  gap: 4px;
+	width: 100%;
+	background: var(--vscode-editor-background);
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	font-size: 12px;
+	border-bottom: none;
+	overflow-y: scroll;
+}
+
+.ArchitectureReview .text-button {
+	gap: 2px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+
+.ArchitectureReview .actionButtons {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	font-weight: 500;
+}
+.ArchitectureReview .actionButtons .text-button {
+	opacity: 0.4;
+}
+
+.ArchitectureReview .actionButtons .text-button:hover {
+	opacity: 0.6;
+}
+
+.ArchitectureReview .actionButtons .text-button.selected {
+	opacity: 1;
+}
+
+
+.ArchitectureReview .codeBlockFooter {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 4px;
+	width: 100%;
+	background: var(--vscode-editor-background);
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-top: none;
+}
+
+.generalMessageBubble {
+	background: var(--vscode-editor-background);
+	padding: 4px 8px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 4px;
+}
+
+.generalMessageBubble.hasTopActions {
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+}
+
+.generalMessageBubble.hasBottomActions {
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.generalMessageBubbleWrapper .topActions, .generalMessageBubbleWrapper .bottomActions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 4px;
+	background: var(--vscode-editor-background);
+	padding: 4px 8px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-bottom: none;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+}
+
+.generalMessageBubbleWrapper .bottomActions {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+	border-top: none;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.generalMessageBubbleWrapper .topActions .text-button, .generalMessageBubbleWrapper .bottomActions .text-button {
+	opacity: 0.4;
+	cursor: pointer;
+	font-size: 11px;
+	display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.generalMessageBubbleWrapper .topActions .file-icon, .generalMessageBubbleWrapper .bottomActions .file-icon {
+	width: 12px;
+	height: 12px;
+}
+
+.generalMessageBubbleWrapper .topActions .text-button:hover, .generalMessageBubbleWrapper .bottomActions .text-button:hover {
+	opacity: 0.6;
+}
+
+.generalMessageBubbleWrapper .topActions .text-button.selected, .generalMessageBubbleWrapper .bottomActions .text-button.selected {
+	opacity: 1;
+}
+
+.ArchitectureReview .copy-icon {
+	color: var(--vscode-button-secondaryBackground);
+	width: 12px;
+	height: 12px;
+	cursor: pointer;
+}
+
+.ArchitectureReview .check-icon {
+	color: #009744;
+	width: 12px;
+	height: 12px;
+	cursor: pointer;
+}
+
+.ArchitectureReview .reject-icon {
+	color: #970028;
+	width: 12px;
+	height: 12px;
+	cursor: pointer;
+}
+
+.ArchitectureReview .create-icon {
+	color: #007c38;
+	width: 16px;
+	height: 16px;
+}
+
+.ArchitectureReview .modify-icon {
+	color: #a08800;
+	width: 16px;
+	height: 16px;
+}
+
+.ArchitectureReview .delete-icon {
+	color: #7c0017;
+	width: 16px;
+	height: 16px;
+}
+
+
+.custom-select-list {
+	background: var(--vscode-editor-background);
+	padding: 4px;
+	border-radius: 6px;
+	box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+}
+
+.form-control.input-sm {
+	height: 20px !important;
+	min-height: 20px !important;
+	font-size: 11px !important;
+	padding-right: 28px !important;
+	width: 100% !important;
+}

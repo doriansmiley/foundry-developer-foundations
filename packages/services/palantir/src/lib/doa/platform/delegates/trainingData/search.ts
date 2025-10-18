@@ -56,7 +56,5 @@ export async function searchTrainingData(
     );
   }
 
-  console.log(`the threads ontology returned: ${JSON.stringify(apiResponse)}`);
-
   return apiResponse.data as TrainingData[];
 }

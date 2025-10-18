@@ -22,11 +22,44 @@ import {
   Communications,
   LoggingService,
 } from '@codestrap/developer-foundations-types';
+import type { User } from '@codestrap/developer-foundations-types';
 import { container } from '@codestrap/developer-foundations-di';
 import { State } from 'xstate';
 
 // use classes to take advantage of trace decorator
 export class Text2Action {
+  @Trace({
+    resource: {
+      service_name: 'text2action',
+      service_instance_id: 'production',
+      telemetry_sdk_name: 'xreason-functions',
+      telemetry_sdk_version: '7.0.2',
+      host_hostname: 'codestrap.usw-3.palantirfoundry.com',
+      host_architecture: 'prod',
+    },
+    operationName: 'recall',
+    kind: 'Server',
+    samplingDecision: 'RECORD_AND_SAMPLE',
+    samplingRate: 1.0,
+    attributes: {
+      endpoint: `/api/v2/ontologies/${process.env.ONTOLOGY_ID}/queries/recall/execute`,
+    },
+  })
+  public async recall(query: string, userProfile: User) {
+    const recalledInformation = await recall(
+      {
+        requestId: '1234',
+        status: 0,
+        stack: ['userProfile'],
+        userProfile,
+      },
+      undefined,
+      query
+    );
+
+    return recalledInformation;
+  }
+
   @Trace({
     resource: {
       service_name: 'vickie',
@@ -66,16 +99,7 @@ export class Text2Action {
       userProfile,
     });
 
-    const recalledInformation = await recall(
-      {
-        requestId: '1234',
-        status: 0,
-        stack: ['userProfile'],
-        userProfile,
-      },
-      undefined,
-      query
-    );
+    const recalledInformation = await this.recall(query, userProfile);
 
     // TODO: remove the bard coded context information once CodeStrap employeed slack channels are added to the contacts dataset
     const groudingContext = `
@@ -143,14 +167,16 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
     forward = true,
     executionId?: string,
     inputs = '{}',
-    xreason: string = SupportedEngines.COMS
+    xreason: string = SupportedEngines.COMS,
+    persistMachineOnTransition = false,
   ): Promise<GetNextStateResult> {
     const machine = await this.upsertState(
       plan,
       forward,
       executionId,
       inputs,
-      xreason
+      xreason,
+      persistMachineOnTransition
     );
 
     if (machine?.state) {
@@ -203,7 +229,8 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
     forward = true,
     executionId?: string,
     inputs = '{}',
-    xreason: string = SupportedEngines.COMS
+    xreason: string = SupportedEngines.COMS,
+    persistMachineOnTransition = false,
   ): Promise<MachineExecutions> {
     const solution = {
       input: '', //not relevant for this
@@ -215,22 +242,39 @@ Dorian Smiley <dsmiley@codestrap.me> - Dorian is the CTO who manages the softwar
       solution,
       forward,
       JSON.parse(inputs),
-      xreason as SupportedEngines
+      xreason as SupportedEngines,
+      persistMachineOnTransition
     );
 
     const { getLog } = container.get<LoggingService>(TYPES.LoggingService);
 
     const machineDao = container.get<MachineDao>(TYPES.MachineDao);
-    const machine = await machineDao.upsert(
-      solution.id,
-      JSON.stringify(result.stateMachine),
-      result.jsonState,
-      getLog(solution.id) ?? '',
-      '', // we have to send default values for lockOwner and lockUntil or the OSDK will shit a brick. It still can't handle optional params
-      1
-    );
 
-    return machine;
+    // this is to prevent race condition because edits resulting from the state transition when auto save is on
+    // may still be ongoing. This results in errors in platforms like Foundry where stale writes are detected and prevented
+    if (!persistMachineOnTransition) {
+      const machine = await machineDao.upsert(
+        solution.id,
+        JSON.stringify(result.stateMachine),
+        result.jsonState,
+        getLog(solution.id) ?? '',
+        '', // we have to send default values for lockOwner and lockUntil or the OSDK will shit a brick. It still can't handle optional params
+        1
+      );
+
+      return machine;
+    }
+
+    const state = JSON.parse(result.jsonState);
+
+    return {
+      id: solution.id,
+      currentState: state.value,
+      logs: getLog(solution.id) ?? '',
+      machine: JSON.stringify(result.stateMachine),
+      state: result.jsonState,
+    }
+
   }
 
   @Trace({
