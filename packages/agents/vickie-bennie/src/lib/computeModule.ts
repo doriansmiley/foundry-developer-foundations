@@ -12,10 +12,25 @@ import {
 } from '@codestrap/developer-foundations-types';
 import { Bennie } from './Bennie';
 import { uuidv4 } from '@codestrap/developer-foundations-utils';
+import { Larry } from './Larry';
 
 dotenv.config();
 
 const Schemas = {
+  askLarry: {
+    input: Type.Object({
+      query: Type.String(),
+      userId: Type.String(),
+      threadId: Type.Optional(Type.String()),
+    }),
+    output: Type.Object({
+      status: Type.Integer(),
+      message: Type.String(),
+      executionId: Type.String(),
+      taskList: Type.Optional(Type.String()),
+      error: Type.Optional(Type.String()),
+    }),
+  },
   askVickie: {
     input: Type.Object({
       query: Type.String(),
@@ -171,6 +186,7 @@ function createComputeModule(): ComputeModuleType {
 
   const vickie = new Vickie();
   const bennie = new Bennie();
+  const larry = new Larry();
 
   // IMPORTANT: wrap all execution in try catch so you do not crash the container!
   // node exists on unhandled exceptions
@@ -178,6 +194,7 @@ function createComputeModule(): ComputeModuleType {
     logger: console,
     sources: {},
     definitions: {
+      askLarry: Schemas.askLarry,
       askVickie: Schemas.askVickie,
       askBennie: Schemas.askBennie,
       createVickieTasks: Schemas.createVickieTasks,
@@ -408,7 +425,31 @@ function createComputeModule(): ComputeModuleType {
         };
       }
     })
-    .on('responsive', () => console.log('Bennie is ready'));
+    .register('askLarry', async ({ query, userId, threadId }) => {
+      try {
+        const user = {
+          id: userId,
+          username: '',
+          realm: '',
+          attributes: {},
+        };
+
+        return withRequestContext({ user, requestId: uuidv4() }, async () => {
+          const result = await larry.askLarry(query, userId, threadId);
+          return result;
+        });
+      } catch (e) {
+        console.log((e as Error).stack);
+        return {
+          status: 500,
+          message: `Error: ${(e as Error).message}`,
+          executionId: 'error',
+          taskList: 'error',
+          error: `Error: ${(e as Error).message}`,
+        };
+      }
+    })
+    .on('responsive', () => console.log('Larry is ready'));
 
   module.on('responsive', () => {
     console.log(
