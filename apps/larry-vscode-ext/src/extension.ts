@@ -231,21 +231,25 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
   // Thread ID file management
   private async readCurrentThreadId(
     worktreeName: string
-  ): Promise<string | undefined> {
+  ): Promise<string[] | undefined> {
     try {
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (!workspaceFolder) {
         return undefined;
       }
 
-      const threadIdFilePath = vscode.Uri.joinPath(
+      const threadIdsFilePath = vscode.Uri.joinPath(
         workspaceFolder.uri,
+        '.larry',
+        'worktrees',
+        worktreeName,
         'tmp',
-        'currentThreadId.txt'
+        'worktreeLocalThreads.json'
       );
 
-      const fileContent = await vscode.workspace.fs.readFile(threadIdFilePath);
-      return fileContent.toString().trim();
+      const fileContent = await vscode.workspace.fs.readFile(threadIdsFilePath);
+      const threadIds = JSON.parse(fileContent.toString());
+      return Array.isArray(threadIds) ? threadIds : [];
     } catch (error) {
       // File doesn't exist or can't be read
       return undefined;
@@ -273,13 +277,32 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       // Create tmp directory if it doesn't exist
       await vscode.workspace.fs.createDirectory(tmpDir);
 
-      const threadIdFilePath = vscode.Uri.joinPath(
+      const threadIdsFilePath = vscode.Uri.joinPath(
         tmpDir,
-        'currentThreadId.txt'
+        'worktreeLocalThreads.json'
       );
+
+      // Read existing thread IDs or initialize empty array
+      let existingThreadIds: string[] = [];
+      try {
+        const fileContent = await vscode.workspace.fs.readFile(
+          threadIdsFilePath
+        );
+        existingThreadIds = JSON.parse(fileContent.toString());
+      } catch (error) {
+        // File doesn't exist or can't be parsed, start with empty array
+        existingThreadIds = [];
+      }
+
+      // Add new thread ID if it doesn't already exist
+      if (!existingThreadIds.includes(threadId)) {
+        existingThreadIds.push(threadId);
+      }
+
+      // Write updated thread IDs back to file
       await vscode.workspace.fs.writeFile(
-        threadIdFilePath,
-        Buffer.from(threadId, 'utf8')
+        threadIdsFilePath,
+        Buffer.from(JSON.stringify(existingThreadIds, null, 2), 'utf8')
       );
     } catch (error) {
       console.error('Error writing thread ID file:', error);
@@ -454,7 +477,12 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
     // If in worktree, try to read thread ID from file
     if (isInWorktree && worktreeId) {
       try {
-        currentThreadId = await this.readCurrentThreadId(worktreeId);
+        const threadIds = await this.readCurrentThreadId(worktreeId);
+        // Use the most recent thread ID (last in the array) if available
+        currentThreadId =
+          threadIds && threadIds.length > 0
+            ? threadIds[threadIds.length - 1]
+            : undefined;
       } catch (error) {
         console.error('Error reading thread ID for worktree:', error);
       }
