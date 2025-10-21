@@ -1065,6 +1065,33 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         return;
       }
 
+      if (msg?.type === 'saveThreadId') {
+        await this.writeCurrentThreadId(msg.worktreeName, msg.threadId);
+        const threadIds = await this.readCurrentThreadId(msg.worktreeName);
+
+        view.webview.postMessage({
+          type: 'threadIds',
+          worktreeName: msg.worktreeName,
+          threadIds: threadIds,
+        });
+        view.webview.postMessage({
+          type: 'threadIdSaved',
+          worktreeName: msg.worktreeName,
+          threadId: msg.threadId,
+        });
+        return;
+      }
+
+      if (msg?.type === 'readThreadIds') {
+        const threadIds = await this.readCurrentThreadId(msg.worktreeName);
+        view.webview.postMessage({
+          type: 'threadIds',
+          worktreeName: msg.worktreeName,
+          threadIds: threadIds,
+        });
+        return;
+      }
+
       if (msg?.type === 'readFile') {
         const content = await this.readFileContent(msg.filePath);
         view.webview.postMessage({

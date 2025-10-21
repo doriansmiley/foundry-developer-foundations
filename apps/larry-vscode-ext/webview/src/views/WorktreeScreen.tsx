@@ -6,6 +6,7 @@ import { AnimatedEllipsis } from './components/AnimatedEllipsis';
 import { useThreadsQuery } from '../hooks/useThreadsQuery';
 import { useMachineQuery } from '../hooks/useMachineQuery';
 import { StateVisualization } from './components/StateVisualization';
+import { useWorktreeThreads } from '../hooks/useWorktreeThreads';
 
 export function WorktreeScreen() {
   const [firstMessage, setFirstMessage] = useState('');
@@ -30,8 +31,6 @@ export function WorktreeScreen() {
     // This effect is only for debug purposes, not doing anything more
     console.log('MACHINE DATA::')
     console.log(machineData)
-    console.log('THREADS DATA::')
-    console.log(threadsData)
   }, [machineData, threadsData]);
   
   // Find current thread label from threads list
