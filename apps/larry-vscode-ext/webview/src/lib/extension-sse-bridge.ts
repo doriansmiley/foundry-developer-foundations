@@ -16,7 +16,13 @@ export function handleForwardedSSE(
   storeValues: {
     clientRequestId: string;
     dispatch: (action: ExtensionAction) => void;
-    saveThreadId: (worktreeName: string, threadId: string) => void;
+    saveThreadId: ({
+      worktreeName,
+      threadId,
+    }: {
+      worktreeName: string;
+      threadId: string;
+    }) => any;
   }
 ) {
   const { baseUrl, event, data } = msg;
@@ -25,7 +31,10 @@ export function handleForwardedSSE(
     if (event === 'thread.created') {
       const evt: ThreadCreatedEvent = JSON.parse(data);
       // Update threads list cache for THIS baseUrl
-      storeValues.saveThreadId(evt.worktreeName, evt.threadId);
+      storeValues.saveThreadId({
+        worktreeName: evt.worktreeName,
+        threadId: evt.threadId,
+      });
 
       queryClient.setQueryData(
         ['threads', { baseUrl }],

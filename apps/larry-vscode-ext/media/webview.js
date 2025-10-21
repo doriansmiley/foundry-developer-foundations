@@ -53973,12 +53973,15 @@
         get: (target, key) => {
           this.trackProp(key);
           onPropTracked?.(key);
-          if (key === "promise" && !this.options.experimental_prefetchInRender && __privateGet(this, _currentThenable).status === "pending") {
-            __privateGet(this, _currentThenable).reject(
-              new Error(
-                "experimental_prefetchInRender feature flag is not enabled"
-              )
-            );
+          if (key === "promise") {
+            this.trackProp("data");
+            if (!this.options.experimental_prefetchInRender && __privateGet(this, _currentThenable).status === "pending") {
+              __privateGet(this, _currentThenable).reject(
+                new Error(
+                  "experimental_prefetchInRender feature flag is not enabled"
+                )
+              );
+            }
           }
           return Reflect.get(target, key);
         }
@@ -55419,7 +55422,7 @@
         return {
           ...state,
           currentThreadState: "ready",
-          currentThreadId: action.payload.threadId || state.currentThreadId,
+          currentThreadId: action.payload.currentThreadId || state.currentThreadId,
           currentWorktreeName: action.payload.worktreeName || state.currentWorktreeName
         };
       case "SET_WORKTREE_SETUP_ERROR":
@@ -58616,6 +58619,28 @@ Please report this to https://github.com/markedjs/marked.`, e4) {
     ]
   ]);
 
+  // node_modules/lucide-preact/dist/esm/icons/plus.js
+  var Plus = createLucideIcon2("plus", [
+    ["path", { d: "M5 12h14", key: "1ays0h" }],
+    ["path", { d: "M12 5v14", key: "s699le" }]
+  ]);
+
+  // node_modules/lucide-preact/dist/esm/icons/refresh-ccw.js
+  var RefreshCcw = createLucideIcon2("refresh-ccw", [
+    ["path", { d: "M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8", key: "14sxne" }],
+    ["path", { d: "M3 3v5h5", key: "1xhq8a" }],
+    ["path", { d: "M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16", key: "1hlbsb" }],
+    ["path", { d: "M16 16h5v5", key: "ccwih5" }]
+  ]);
+
+  // node_modules/lucide-preact/dist/esm/icons/refresh-cw.js
+  var RefreshCw = createLucideIcon2("refresh-cw", [
+    ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
+    ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
+    ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
+    ["path", { d: "M8 16H3v5", key: "1cv678" }]
+  ]);
+
   // node_modules/lucide-preact/dist/esm/icons/send.js
   var Send = createLucideIcon2("send", [
     [
@@ -59571,10 +59596,34 @@ ${input.value}`;
     ] });
   }
 
+  // apps/larry-vscode-ext/webview/src/hooks/useWorktreeThreads.ts
+  init_hooks_module();
+  function useWorktreeThreads(worktreeName) {
+    const [threads, setThreads] = d2(null);
+    y2(() => {
+      if (!worktreeName) {
+        return;
+      }
+      const cleanup = onMessage((msg) => {
+        if (msg.type === "threadIds" && msg.worktreeName === worktreeName) {
+          setThreads(msg.threadIds);
+        }
+      });
+      postMessage({
+        type: "readThreadIds",
+        worktreeName
+      });
+      return cleanup;
+    }, [worktreeName]);
+    return { threads };
+  }
+
   // apps/larry-vscode-ext/webview/src/views/WorktreeScreen.tsx
   function WorktreeScreen() {
     const [firstMessage, setFirstMessage] = d2("");
     const [provisioning, setProvisioning] = d2(false);
+    const [previousThreadId, setPreviousThreadId] = d2(void 0);
+    const dispatch = useExtensionDispatch();
     const { apiUrl, clientRequestId, currentThreadId, currentWorktreeName } = useExtensionStore();
     console.log("CURRENT THREAD ID::", currentThreadId);
     y2(() => {
@@ -59584,11 +59633,10 @@ ${input.value}`;
     }, [currentThreadId]);
     const { data: machineData, isLoading } = useMachineQuery(apiUrl, currentThreadId);
     const { data: threadsData } = useThreadsQuery(apiUrl);
+    const { threads: localThreads } = useWorktreeThreads(currentWorktreeName);
     y2(() => {
       console.log("MACHINE DATA::");
       console.log(machineData);
-      console.log("THREADS DATA::");
-      console.log(threadsData);
     }, [machineData, threadsData]);
     const currentThread = threadsData?.items?.find((t4) => t4.id === currentThreadId);
     const sessionLabel = currentThread?.label || "Session";
@@ -59609,14 +59657,44 @@ ${input.value}`;
     }
     const handleSubmit = async (input) => {
     };
+    const handleAddThread = () => {
+      setPreviousThreadId(currentThreadId);
+      dispatch({
+        type: "SET_CURRENT_THREAD_ID",
+        payload: void 0
+      });
+    };
+    const handleBackToPreviousThread = () => {
+      dispatch({
+        type: "SET_CURRENT_THREAD_ID",
+        payload: previousThreadId
+      });
+      setPreviousThreadId(void 0);
+    };
+    if (currentThreadId && !machineData) {
+      return /* @__PURE__ */ u3("div", { children: "Loading thread..." });
+    }
     if (currentThreadId && machineData) {
       return /* @__PURE__ */ u3("div", { className: "min-h-screen", children: [
-        /* @__PURE__ */ u3("div", { className: "d-flex flex-justify-between flex-items-center mb-2", children: /* @__PURE__ */ u3("h4", { className: "h3 m-0", children: sessionLabel }) }),
-        isLoading ? /* @__PURE__ */ u3("div", { className: "color-fg-muted", children: "Loading history\u2026" }) : /* @__PURE__ */ u3(StateVisualization, { data: machineData, onSubmit: handleSubmit })
+        /* @__PURE__ */ u3("div", { className: "threadsTabsList", children: [
+          /* @__PURE__ */ u3("div", { className: "threadsTabsList__items", children: localThreads?.map((threadId, index3) => /* @__PURE__ */ u3("div", { className: `threadsTabsList__item ${threadId === currentThreadId ? "active" : ""}`, children: [
+            "Thread ",
+            index3 + 1
+          ] })) }),
+          /* @__PURE__ */ u3("div", { className: "threadsTabsList__add", onClick: handleAddThread, children: /* @__PURE__ */ u3(Plus, { className: "threadsTabsList__addIcon" }) })
+        ] }),
+        /* @__PURE__ */ u3("div", { className: "mb-2", children: [
+          /* @__PURE__ */ u3("h4", { className: "h4 m-0", children: sessionLabel }),
+          /* @__PURE__ */ u3("small", { children: currentThreadId })
+        ] }),
+        isLoading ? /* @__PURE__ */ u3("div", { className: "color-fg-muted", children: "Loading thread..." }) : /* @__PURE__ */ u3(StateVisualization, { data: machineData, onSubmit: handleSubmit })
       ] });
     }
     return /* @__PURE__ */ u3("div", { className: "Box p-3 d-flex flex-column gap-2", children: [
-      /* @__PURE__ */ u3("h2", { className: "h3 m-0", children: "New Session" }),
+      /* @__PURE__ */ u3("div", { className: "d-flex flex-justify-between flex-items-center", children: [
+        /* @__PURE__ */ u3("h2", { className: "h4 m-0", children: "New thread" }),
+        !provisioning && previousThreadId && /* @__PURE__ */ u3("button", { className: "btn btn-primary", onClick: handleBackToPreviousThread, children: "Back" })
+      ] }),
       /* @__PURE__ */ u3(
         "textarea",
         {
@@ -59646,12 +59724,24 @@ ${input.value}`;
   }
 
   // apps/larry-vscode-ext/webview/src/views/AppRoot.tsx
+  init_hooks_module();
   function AppRoot() {
     const { isInWorktree, isLoadingApp } = useExtensionStore();
+    const [isReloading, setIsReloading] = d2(false);
+    const handleReloadExtension = () => {
+      setIsReloading(true);
+      postMessage({ type: "reload_extension" });
+    };
     if (isLoadingApp) {
       return /* @__PURE__ */ u3("div", { className: "p-3", children: /* @__PURE__ */ u3(Loader, { message: "Initializing Larry" }) });
     }
-    return /* @__PURE__ */ u3("div", { className: "p-3", children: isInWorktree ? /* @__PURE__ */ u3(WorktreeScreen, {}) : /* @__PURE__ */ u3(MainRepoScreen, {}) });
+    return /* @__PURE__ */ u3("div", { className: "p-3", children: [
+      /* @__PURE__ */ u3("div", { className: "mb-2 d-flex flex-justify-end", children: [
+        !isReloading && /* @__PURE__ */ u3(RefreshCcw, { className: "refresh-extension", onClick: handleReloadExtension }),
+        isReloading && /* @__PURE__ */ u3(RefreshCw, { className: "refresh-extension" })
+      ] }),
+      isInWorktree ? /* @__PURE__ */ u3(WorktreeScreen, {}) : /* @__PURE__ */ u3(MainRepoScreen, {})
+    ] });
   }
 
   // apps/larry-vscode-ext/webview/src/views/BootChannel.tsx
@@ -59663,6 +59753,10 @@ ${input.value}`;
     try {
       if (event === "thread.created") {
         const evt = JSON.parse(data);
+        storeValues.saveThreadId({
+          worktreeName: evt.worktreeName,
+          threadId: evt.threadId
+        });
         queryClient.setQueryData(
           ["threads", { baseUrl }],
           (prev) => {
@@ -59708,10 +59802,30 @@ ${input.value}`;
     }
   }
 
+  // apps/larry-vscode-ext/webview/src/hooks/useSaveThreadId.ts
+  init_hooks_module();
+  function useSaveThreadId() {
+    const saveThreadId = q2(
+      ({
+        worktreeName,
+        threadId
+      }) => {
+        postMessage({
+          type: "saveThreadId",
+          worktreeName,
+          threadId
+        });
+      },
+      []
+    );
+    return { fetch: saveThreadId };
+  }
+
   // apps/larry-vscode-ext/webview/src/views/BootChannel.tsx
   function BootChannel() {
     const dispatch = useExtensionDispatch();
     const { clientRequestId } = useExtensionStore();
+    const { fetch: saveThreadId } = useSaveThreadId();
     y2(() => {
       const handleMessage = (msg) => {
         if (!msg || typeof msg !== "object") return;
@@ -59729,7 +59843,7 @@ ${input.value}`;
           dispatch({
             type: "SET_WORKTREE_READY",
             payload: {
-              threadId: msg.threadId,
+              currentThreadId: msg.threadId,
               worktreeName: msg.worktreeName
             }
           });
@@ -59745,7 +59859,7 @@ ${input.value}`;
           console.log("\u{1F4E8} Webview received SSE event:", msg);
           handleForwardedSSE(
             { baseUrl: msg.baseUrl, event: msg.event, data: msg.data },
-            { clientRequestId, dispatch }
+            { clientRequestId, dispatch, saveThreadId }
           );
         }
       };
@@ -59912,6 +60026,30 @@ lucide-preact/dist/esm/icons/file-plus-2.js:
    *)
 
 lucide-preact/dist/esm/icons/file-symlink.js:
+  (**
+   * @license lucide-preact v0.544.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-preact/dist/esm/icons/plus.js:
+  (**
+   * @license lucide-preact v0.544.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-preact/dist/esm/icons/refresh-ccw.js:
+  (**
+   * @license lucide-preact v0.544.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+
+lucide-preact/dist/esm/icons/refresh-cw.js:
   (**
    * @license lucide-preact v0.544.0 - ISC
    *

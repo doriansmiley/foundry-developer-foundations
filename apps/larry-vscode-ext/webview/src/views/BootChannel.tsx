@@ -27,7 +27,7 @@ export function BootChannel() {
         dispatch({
           type: 'SET_WORKTREE_READY',
           payload: {
-            threadId: msg.threadId,
+            currentThreadId: msg.threadId,
             worktreeName: msg.worktreeName,
           },
         });

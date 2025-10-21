@@ -486,6 +486,29 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
       } catch (error) {
         console.error('Error reading thread ID for worktree:', error);
       }
+
+      const containerName = `larry-worktree-${worktreeId}`;
+      try {
+        const { stdout: inspectOutput } = await execAsync(
+          `docker inspect ${containerName}`
+        );
+        const containerInfo = JSON.parse(inspectOutput);
+
+        if (containerInfo.length > 0) {
+          const container = containerInfo[0];
+          const isRunning = container.State.Running;
+          const containerId = container.Id;
+
+          if (!isRunning) {
+            await execAsync(`docker start ${containerId}`);
+            this.runningContainers.set(worktreeId, containerId);
+          } else {
+            this.runningContainers.set(worktreeId, containerId);
+          }
+        }
+      } catch (inspectError) {
+        await this.startWorktreeDockerContainer(worktreeId, currentThreadId);
+      }
     }
 
     const message = {
@@ -1045,6 +1068,12 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
     view.webview.onDidReceiveMessage(async (msg) => {
       // New flow message handlers
+      if (msg?.type === 'reload_extension') {
+        console.log('🔄 Reloading extension...');
+        await vscode.commands.executeCommand('workbench.action.reloadWindow');
+        return;
+      }
+
       if (msg?.type === 'open_worktree') {
         await this.handleOpenWorktree(
           msg.worktreeName || '',
