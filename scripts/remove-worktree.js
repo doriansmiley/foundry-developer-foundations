@@ -2,6 +2,22 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+function removeDockerContainer(containerName) {
+    try {
+        // Check if the container exists
+        const existingContainers = execSync(`docker ps -a --filter "name=${containerName}" --format "{{.Names}}"`).toString();
+        if (existingContainers.includes(containerName)) {
+            console.log(`Removing Docker container: ${containerName}`);
+            execSync(`docker rm -f ${containerName}`);
+            console.log(`Container ${containerName} removed successfully.`);
+        } else {
+            console.log(`No Docker container found with the name: ${containerName}`);
+        }
+    } catch (error) {
+        console.error('Error during Docker container removal:', error.message);
+    }
+}
+
 function removeWorktrees(worktreeNames) {
     const worktreePath = path.join(process.cwd(), '.larry', 'worktrees');
     
@@ -9,17 +25,15 @@ function removeWorktrees(worktreeNames) {
         console.error('Worktrees directory does not exist.');
         return;
     }
-    console.log(`Removing worktrees from: ${worktreePath}`);
 
     try {
         if (worktreeNames.includes('--all')) {
             // Remove all worktrees
-            console.log(fs.readdirSync(worktreePath))
             fs.readdirSync(worktreePath).forEach((dir) => {
-                const fullPath = path.join(worktreePath, dir);
                 console.log(`Removing worktree: ${dir}`);
+                const fullPath = path.join(worktreePath, dir);
                 execSync(`rm -rf ${fullPath}`);
-                execSync(`git worktree prune`);
+                removeDockerContainer(`larry-worktree-${dir}`);
             });
         } else {
             // Remove specified worktrees
@@ -28,13 +42,14 @@ function removeWorktrees(worktreeNames) {
                 if (fs.existsSync(fullPath)) {
                     console.log(`Removing worktree: ${name}`);
                     execSync(`rm -rf ${fullPath}`);
-                    execSync(`git worktree prune`);
+                    removeDockerContainer(`larry-worktree-${name}`);
                 } else {
                     console.error(`Worktree "${name}" does not exist.`);
                 }
             });
         }
-
+        
+        execSync(`git worktree prune`);
         console.log('Cleanup complete.');
     } catch (error) {
         console.error('Error during worktree removal:', error.message);
@@ -43,6 +58,4 @@ function removeWorktrees(worktreeNames) {
 
 // Get arguments from command line
 const args = process.argv.slice(2);
-console.log(args)
-console.log(process.argv)
 removeWorktrees(args);
