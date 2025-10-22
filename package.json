@@ -40,6 +40,8 @@
     "build": "nx run-many --target=build",
     "test": "nx run-many --target=test",
     "lint": "nx run-many --target=lint",
+    "remove-worktree": "node scripts/remove-worktree.js",
+    "remove-worktree-all": "node scripts/remove-worktree.js -- --all",
     "clean": "nx reset && rm -rf node_modules",
     "prebuild": "nx run-many --target=clean"
   },

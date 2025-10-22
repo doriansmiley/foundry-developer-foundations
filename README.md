@@ -61,6 +61,7 @@ npx nx --version
 Checkout the [hello world](/hello-world/README.md) sample application to see an implementation of this pattern. Then explore our open source projects including Foundry Tracing Foundation and X-Reason!
 
 ### NX Run
+
 ```
 # In VS Code Run
 cmd + shift + p
@@ -69,8 +70,22 @@ Then in search bar type "nx run" then select the project then the command you wa
 Run "nx generate" to see a list of generators
 
 ```
+
 From terminal run
+
 ```
 # to see the dependency graph
 nx dep-graph
-``` 
+```
+
+## Worktree cleanup
+
+```
+npm run remove-worktree wotkree-name-1 wotkree-name-n
+```
+
+Remove all worktrees
+
+```
+npm run remove-worktree-all
+```
