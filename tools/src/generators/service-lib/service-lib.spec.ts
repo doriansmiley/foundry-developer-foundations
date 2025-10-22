@@ -9,8 +9,10 @@ import { ServiceLibGeneratorSchema } from './schema';
 
 describe('service-lib generator', () => {
   let tree: Tree;
-  const options: ServiceLibGeneratorSchema = { name: 'test' };
-  const root = 'packages/services/test';
+  const name = 'testName';
+  const expectedFileName = 'test-name';
+  const options: ServiceLibGeneratorSchema = { name };
+  const root = `packages/services/${expectedFileName}`;
 
   beforeEach(() => {
     tree = createTreeWithEmptyWorkspace();
@@ -18,9 +20,9 @@ describe('service-lib generator', () => {
 
   it('should register project configuration', async () => {
     await serviceLibGenerator(tree, options);
-    const config = readProjectConfiguration(tree, 'test');
+    const config = readProjectConfiguration(tree, expectedFileName);
     expect(config).toBeDefined();
-    expect(config.name).toBe('test');
+    expect(config.name).toBe(expectedFileName);
     expect(config.root).toBe(root);
     expect(config.sourceRoot).toBe(`${root}/src`);
     expect(config.projectType).toBe('library');
@@ -37,7 +39,7 @@ describe('service-lib generator', () => {
 
   it('should configure targets correctly', async () => {
     await serviceLibGenerator(tree, options);
-    const config = readProjectConfiguration(tree, 'test');
+    const config = readProjectConfiguration(tree, expectedFileName);
 
     // build target
     expect(config.targets?.build?.executor).toBe('@nx/js:tsc');
@@ -60,26 +62,41 @@ describe('service-lib generator', () => {
   it('should scaffold required files', async () => {
     await serviceLibGenerator(tree, options);
 
-    // existence checks
-    [
-      `${root}/eslint.config.mjs`,
-      `${root}/jest.config.ts`,
-      `${root}/tsconfig.json`,
-      `${root}/tsconfig.lib.json`,
-      `${root}/tsconfig.spec.json`,
-      `${root}/src/index.ts`,
-    ].forEach((p) => expect(tree.exists(p)).toBe(true));
+    expect(tree.exists(`${root}/eslint.config.mjs`)).toBe(true);
+    expect(tree.exists(`${root}/jest.config.ts`)).toBe(true);
+    expect(tree.exists(`${root}/tsconfig.json`)).toBe(true);
+    expect(tree.exists(`${root}/tsconfig.lib.json`)).toBe(true);
+    expect(tree.exists(`${root}/tsconfig.spec.json`)).toBe(true);
+    expect(tree.exists(`${root}/src/index.ts`)).toBe(true);
+
 
     // content checks: jest loads dotenv
     const jestCfg = tree.read(`${root}/jest.config.ts`, 'utf-8')!;
     expect(jestCfg).toContain("import * as dotenv from 'dotenv'");
     expect(jestCfg).toContain('dotenv.config();');
-    expect(jestCfg).toContain(`displayName: 'test'`);
+    expect(jestCfg).toContain(`displayName: '${expectedFileName}'`);
     expect(jestCfg).toContain(`coverageDirectory: '../../../coverage/${root}'`);
 
     // content checks: eslint uses JSONC parser
     const eslintCfg = tree.read(`${root}/eslint.config.mjs`, 'utf-8')!;
-    expect(eslintCfg).toContain("await import('jsonc-eslint-parser')");
-    expect(eslintCfg).toContain("import baseConfig from '../../../eslint.config.mjs'");
+    expect(eslintCfg.trim()).toBe(`import baseConfig from '../../eslint.config.mjs';
+
+export default [
+  ...baseConfig,
+  {
+    files: ['**/*.json'],
+    rules: {
+      '@nx/dependency-checks': [
+        'error',
+        {
+          ignoredFiles: ['{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}'],
+        },
+      ],
+    },
+    languageOptions: {
+      parser: await import('jsonc-eslint-parser'),
+    },
+  },
+];`);
   });
 });

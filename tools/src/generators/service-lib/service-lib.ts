@@ -5,6 +5,7 @@ import {
   generateFiles,
   joinPathFragments,
   readProjectConfiguration,
+  names,
 } from '@nx/devkit';
 import { libraryGenerator as nodeLibraryGenerator } from '@nx/node';
 import * as path from 'node:path';
@@ -14,11 +15,17 @@ export async function serviceLibGenerator(
   tree: Tree,
   options: ServiceLibGeneratorSchema
 ) {
+  // mormalizes names like myName to my-name
+  const libNames = names(options.name);
+  // Destination path in the user's workspace
+  const directory = `packages/services/${libNames.fileName}`;
+  // The path to the 'files' directory within the generator.
+  const filesPath = joinPathFragments(__dirname, './files');
 
   // 1) Generate a Node TS library under packages/services/<name>
   await nodeLibraryGenerator(tree, {
-    name: options.name,
-    directory: 'packages/services',
+    name: libNames.fileName,
+    directory,
     linter: 'eslint',
     unitTestRunner: 'jest',
     strict: true,
@@ -30,7 +37,7 @@ export async function serviceLibGenerator(
   });
 
   // 2) read the actual project config Nx created and use its root everywhere
-  const project = readProjectConfiguration(tree, options.name);
+  const project = readProjectConfiguration(tree, libNames.fileName);
   const projectRoot = project.root;
 
   // 2) Patch project.json with your release + publish targets and normalize build options
@@ -91,13 +98,13 @@ export async function serviceLibGenerator(
   }
 
   // 4) (Optional) Add/override any extra files via templates
-  generateFiles(tree, path.join(__dirname, 'files'), projectRoot, {
+  generateFiles(
+    tree, 
+    filesPath, 
+    projectRoot, {
     ...options,
-    tmpl: '',
-    name: options.name,
-    projectRoot,
-    eslintBaseImport: '../../../eslint.config.mjs',
-    coverageDir: `../../../coverage/${projectRoot}`,
+    ...libNames,     // Pass the normalized library names.
+    tmpl: '',        // A common convention to remove the '__tmpl__' suffix from filenames.
   });
 
   await formatFiles(tree);
