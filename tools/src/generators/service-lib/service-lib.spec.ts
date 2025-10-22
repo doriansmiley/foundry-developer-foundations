@@ -79,7 +79,7 @@ describe('service-lib generator', () => {
 
     // content checks: eslint uses JSONC parser
     const eslintCfg = tree.read(`${root}/eslint.config.mjs`, 'utf-8')!;
-    expect(eslintCfg.trim()).toBe(`import baseConfig from '../../eslint.config.mjs';
+    expect(eslintCfg.trim()).toBe(`import baseConfig from '../../../eslint.config.mjs';
 
 export default [
   ...baseConfig,
