@@ -49,5 +49,5 @@ out
 # Larry worktrees files
 .larry/worktrees/**/*
 
-apps/larry-vscode-ext/media/webview.js
-apps/larry-vscode-ext/media/webview.js.map
+/apps/larry-vscode-ext/media/webview.js
+/apps/larry-vscode-ext/media/webview.js.map
