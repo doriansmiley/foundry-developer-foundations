@@ -494,6 +494,8 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         );
         const containerInfo = JSON.parse(inspectOutput);
 
+        console.log('Container info:', containerInfo);
+
         if (containerInfo.length > 0) {
           const container = containerInfo[0];
           const isRunning = container.State.Running;
@@ -507,7 +509,8 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
           }
         }
       } catch (inspectError) {
-        await this.startWorktreeDockerContainer(worktreeId, currentThreadId);
+        console.error('Error inspecting container:', inspectError);
+        await this.startWorktreeDockerContainer(worktreeId, undefined, true);
       }
     }
 
@@ -841,7 +844,8 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
 
   async startWorktreeDockerContainer(
     worktreeName: string,
-    threadId: string | undefined
+    threadId: string | undefined,
+    isInWorktree?: boolean
   ): Promise<string> {
     try {
       // Ensure Docker image exists before running
@@ -861,13 +865,15 @@ class LarryViewProvider implements vscode.WebviewViewProvider {
         // Container doesn't exist, which is fine
       }
 
-      const worktreePath = vscode.Uri.joinPath(
-        workspaceFolder.uri,
-        '.larry',
-        'worktrees',
-        worktreeName
-      ).fsPath;
-
+      const worktreePath = !isInWorktree
+        ? vscode.Uri.joinPath(
+            workspaceFolder.uri,
+            '.larry',
+            'worktrees',
+            worktreeName
+          ).fsPath
+        : vscode.Uri.joinPath(workspaceFolder.uri, '').fsPath;
+      console.log(worktreePath);
       // Start worktree container on port 4220
       const threadIdEnv = threadId ? `-e THREAD_ID=${threadId}` : '';
       const { stdout } = await execAsync(

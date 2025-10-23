@@ -82,6 +82,13 @@ export function WorktreeScreen() {
     setPreviousThreadId(undefined);
   }
 
+  const handleThreadClick = (threadId: string) => {
+    dispatch({
+      type: 'SET_CURRENT_THREAD_ID',
+      payload: threadId,
+    });
+  }
+
   if (currentThreadId && !machineData) {
     return <div>Loading thread...</div>
   }
@@ -92,7 +99,7 @@ export function WorktreeScreen() {
         <div className="threadsTabsList">
           <div className="threadsTabsList__items">
             {localThreads?.map((threadId, index) => (
-              <div className={`threadsTabsList__item ${threadId === currentThreadId ? 'active' : ''}`}>Thread {index + 1}</div>
+              <div className={`threadsTabsList__item ${threadId === currentThreadId ? 'active' : ''}`} onClick={() => handleThreadClick(threadId)}>Thread {index + 1}</div>
             ))}
           </div>
           <div className="threadsTabsList__add" onClick={handleAddThread}>

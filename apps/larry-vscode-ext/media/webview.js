@@ -55958,7 +55958,16 @@
       {
         enabled: !!machineId,
         queryKey: ["machine", { baseUrl, machineId }],
-        queryFn: () => fetchMachine(baseUrl, machineId)
+        queryFn: () => fetchMachine(baseUrl, machineId),
+        retry: (failureCount, error) => {
+          if (failureCount >= 10) return false;
+          return true;
+        },
+        retryDelay: (attemptIndex) => {
+          return 5e3;
+        },
+        staleTime: 1e3,
+        refetchInterval: false
       },
       queryClient
     );
@@ -59307,12 +59316,11 @@ Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
     architectureReview: ArchitectureReview,
     searchDocumentation: SearchDocumentation,
     generateEditMachine: GenerateEditMachine,
-    applyEdits: /* @__PURE__ */ u3("div", { children: "Applying approved code changes..." }),
+    applyEdits: () => /* @__PURE__ */ u3("div", { children: "Applied code changes..." }),
     codeReview: CodeReview
   };
   function StateVisualization({ data, onSubmit }) {
     const { apiUrl } = useExtensionStore();
-    const [optimisticState, setOptimisticState] = d2();
     const { fetch: fetchGetNextState } = useNextMachineState(apiUrl);
     const [specReviewRejected, setSpecReviewRejected] = d2(false);
     const [architectureReviewRejected, setArchitectureReviewRejected] = d2(false);
@@ -59395,11 +59403,6 @@ Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
         });
       }
     }, [data.context?.currentState, data.context?.stateId]);
-    y2(() => {
-      if (data.status !== "running") {
-        setOptimisticState((prev) => prev === "editsApplied" ? prev : void 0);
-      }
-    }, [data.status]);
     const toggleCollapse = (stateKey) => {
       const newCollapsed = new Set(collapsedStates);
       if (newCollapsed.has(stateKey)) {
@@ -59437,7 +59440,6 @@ Rejected ${rejectionKey} with feedback: ${rejection.feedback}`;
     };
     const continueToNextState = () => {
       fetchGetNextState({ machineId: data.id, contextUpdate: {} });
-      setOptimisticState("running");
     };
     const handleSubmit = (e4) => {
       e4.preventDefault();
@@ -59480,12 +59482,6 @@ ${input.value}`;
         const lastMessage = messages?.slice().reverse().find((item) => item.user === void 0);
         lastMessage.user = "Looks good, approved.";
         fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: true, messages } } });
-        if (action === "approveCodeReview") {
-          setTimeout(() => {
-            setOptimisticState("editsApplied");
-          }, 15e3);
-          return;
-        }
       } else if (action === "rejectSpec") {
         setInput((curr) => ({ ...curr, placeholder: "Please provide feedback on what you would like changed" }));
         setSpecReviewRejected(true);
@@ -59509,6 +59505,7 @@ ${input.value}`;
         fetchGetNextState({ machineId: data.id, contextUpdate: { [data.currentState]: { approved: false, messages } } });
       }
     };
+    const finished = data.currentState === "applyEdits" || data.currentState === "success" || getDeduplicatedStack().includes("success");
     return /* @__PURE__ */ u3("div", { className: "flex flex-col h-screen max-w-4xl mx-auto", children: [
       /* @__PURE__ */ u3("div", { className: "flex-1 overflow-y-auto", style: { paddingBottom: "50px" }, children: [
         /* @__PURE__ */ u3("div", { className: "space-y-4", children: [
@@ -59552,12 +59549,12 @@ ${input.value}`;
             );
           })
         ] }),
-        (data.status === "running" || optimisticState === "running") && /* @__PURE__ */ u3("div", { children: [
+        data.status === "running" && !finished && /* @__PURE__ */ u3("div", { children: [
           /* @__PURE__ */ u3("span", { className: "shimmer-loading", children: "Working" }),
           /* @__PURE__ */ u3(AnimatedEllipsis, {})
         ] }),
-        optimisticState === "editsApplied" && /* @__PURE__ */ u3("div", { children: /* @__PURE__ */ u3("span", { children: "Code changes applied, review them and commit." }) }),
-        data.status === "pending" && !optimisticState && /* @__PURE__ */ u3("div", { children: [
+        finished && /* @__PURE__ */ u3("div", { children: /* @__PURE__ */ u3("span", { children: "Code changes applied, review them and commit." }) }),
+        data.status === "pending" && !finished && /* @__PURE__ */ u3("div", { children: [
           /* @__PURE__ */ u3("div", { className: "mb-2", children: 'Cannot automatically proceed to next state. Click "Continue" button to proceed.' }),
           /* @__PURE__ */ u3(
             "button",
@@ -59671,13 +59668,19 @@ ${input.value}`;
       });
       setPreviousThreadId(void 0);
     };
+    const handleThreadClick = (threadId) => {
+      dispatch({
+        type: "SET_CURRENT_THREAD_ID",
+        payload: threadId
+      });
+    };
     if (currentThreadId && !machineData) {
       return /* @__PURE__ */ u3("div", { children: "Loading thread..." });
     }
     if (currentThreadId && machineData) {
       return /* @__PURE__ */ u3("div", { className: "min-h-screen", children: [
         /* @__PURE__ */ u3("div", { className: "threadsTabsList", children: [
-          /* @__PURE__ */ u3("div", { className: "threadsTabsList__items", children: localThreads?.map((threadId, index3) => /* @__PURE__ */ u3("div", { className: `threadsTabsList__item ${threadId === currentThreadId ? "active" : ""}`, children: [
+          /* @__PURE__ */ u3("div", { className: "threadsTabsList__items", children: localThreads?.map((threadId, index3) => /* @__PURE__ */ u3("div", { className: `threadsTabsList__item ${threadId === currentThreadId ? "active" : ""}`, onClick: () => handleThreadClick(threadId), children: [
             "Thread ",
             index3 + 1
           ] })) }),

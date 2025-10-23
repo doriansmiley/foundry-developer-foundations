@@ -394,6 +394,12 @@ label {
 	border-radius: 4px;
 	cursor: pointer;
 	opacity: 0.6;
+	white-space: nowrap;
+	width: 75px;
+	min-width: 70px;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	text-align: center;
 }
 
 .threadsTabsList__item:hover, .threadsTabsList__item.active {
