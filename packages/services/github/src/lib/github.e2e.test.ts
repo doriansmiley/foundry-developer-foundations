@@ -1,5 +1,4 @@
 import { getGithubAuth } from "./github";
-import { createAppAuth } from "@octokit/auth-app";
 
 describe("getGithubAuth", () => {
 

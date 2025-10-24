@@ -101,13 +101,13 @@ Your ONLY job is to read a design spec and a repo snapshot and produce a precise
 - Never under any circumstances createOrReplace the types file! Perform focused edits like replaceType or replaceInterface.
 - Don't invent files or symbols. Only reference files/symbols referenced in the provided design specification.
 - Respect semantics and API constraints from the spec (e.g., types, signatures, limits).
-- If the spec requires work that v0 ops cannot express, list a short note under \`non_applicable\` (do NOT include such work in \`ops\`).
+- If the spec requires work that v1 ops cannot express, list a short note under \`non_applicable\` (do NOT include such work in \`ops\`).
 - Obey the rules in the Minimal-Change Playbook below
 
 ---
 
 # Output fields:
-- \`version\`: "v0"
+- \`version\`: "v1"
 - \`ops\`: array of edit ops (see schema)
 - \`non_applicable\`: optional string array of items that require a human or a future opcode.
 
@@ -132,7 +132,7 @@ Your ONLY job is to read a design spec and a repo snapshot and produce a precise
   * \`replaceTypeAlias\` → **creates** the alias if it doesn't exist (or updates it if it does).
   * \`replaceInterface\` → **creates** the interface if it doesn't exist (or replaces it if it does).
 2 After creating a new type/interface, use \`ensureExport\` if it must be exported.
-3 Therefore, **adding new top-level types/interfaces to an existing file *is in scope for v0***.
+3 Therefore, **adding new top-level types/interfaces to an existing file *is in scope for v1***.
   Do **not** mark this as \`non_applicable\`, and do **not** replace the entire types file.
 
 ___
@@ -154,7 +154,7 @@ Create a new file packages/services/email/src/lib/searchEmails.ts that imports S
 Update the app entry packages/app/src/index.ts to import searchEmails.
 Resulting in the following edits json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "replaceTypeAlias",
@@ -191,7 +191,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "ensureImport",
@@ -212,7 +212,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "removeImportNames",
@@ -233,7 +233,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "addUnionMember",
@@ -254,7 +254,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "insertInterfaceProperty",
@@ -275,7 +275,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "updateTypeProperty",
@@ -297,7 +297,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "insertEnumMember",
@@ -319,7 +319,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "upsertObjectProperty",
@@ -341,7 +341,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "replaceFunctionBody",
@@ -362,7 +362,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "updateFunctionReturnType",
@@ -383,7 +383,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "replaceMethodBody",
@@ -405,7 +405,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "ensureExport",
@@ -425,7 +425,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "renameSymbol",
@@ -443,7 +443,7 @@ Resulting in the following edits json
 
 \`\`\`json
 {
-  "version": "v0",
+  "version": "v1",
   "ops": [
     {
       "kind": "createOrReplaceFile",
@@ -461,7 +461,7 @@ Resulting in the following edits json
 
 * **Always** order ops so that dependencies are considered
 * Avoid broad replacements. **Granular edits first**; replace whole type/interface only when necessary.
-* If required work exceeds v0 op capabilities, list it under \`non_applicable\`.
+* If required work exceeds v1 op capabilities, list it under \`non_applicable\`.
 `;
 
   // only have the model figure out modifications since create or replace files already have code generated where as diffs need precise edits
@@ -483,7 +483,7 @@ ${modifiedFiles}
 ${requiredFiles}
 
 # TASK
-Produce the v0 edit plan to implement THE DESIGN SPEC taking into account the user feedback and your previous response.
+Produce the v1 edit plan to implement THE DESIGN SPEC taking into account the user feedback and your previous response.
 Correct any errors the user has asked for. Return ONLY valid JSON.
 `
     :
@@ -495,7 +495,7 @@ ${modifiedFiles}
 ${requiredFiles}
 
 # TASK
-Produce the v0 edit plan to implement the spec in this repo.
+Produce the v1 edit plan to implement the spec in this repo.
 
 Return ONLY JSON.
 `;
