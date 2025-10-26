@@ -53973,12 +53973,15 @@
         get: (target, key) => {
           this.trackProp(key);
           onPropTracked?.(key);
-          if (key === "promise" && !this.options.experimental_prefetchInRender && __privateGet(this, _currentThenable).status === "pending") {
-            __privateGet(this, _currentThenable).reject(
-              new Error(
-                "experimental_prefetchInRender feature flag is not enabled"
-              )
-            );
+          if (key === "promise") {
+            this.trackProp("data");
+            if (!this.options.experimental_prefetchInRender && __privateGet(this, _currentThenable).status === "pending") {
+              __privateGet(this, _currentThenable).reject(
+                new Error(
+                  "experimental_prefetchInRender feature flag is not enabled"
+                )
+              );
+            }
           }
           return Reflect.get(target, key);
         }
