@@ -17,6 +17,6 @@ export function getGithubAuth() {
     authInstance = auth;
   }
   
-  return authInstance;
+  return authInstance as AuthInterface;
 }
 
