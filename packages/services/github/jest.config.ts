@@ -9,6 +9,9 @@ export default {
   transform: {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },
+  transformIgnorePatterns: [
+    '/node_modules/(?!(@octokit|universal-user-agent|universal-github-app-jwt)/)',
+  ],
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../../coverage/packages/services/github',
 };
