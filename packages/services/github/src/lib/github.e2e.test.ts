@@ -95,7 +95,7 @@ describe("getFile", () => {
 });
 
 describeIf(ALLOW_WRITES)("checkinFile (write tests)", () => {
-  const testPath = `tmp/github-e2e-${Date.now()}.txt`;
+  const testPath = `tmp/github-test-e2e-${Date.now()}.txt`;
   const message1 = `[test] create ${testPath}`;
   const message2 = `[test] update ${testPath}`;
 
